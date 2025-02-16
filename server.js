@@ -102,6 +102,7 @@ const userBannerRoutes = require("./routes/userBannerRoutes");
 // Routes
 app.use("/api/user", userRoutes);
 app.use("/api/user", userServiceRoutes);
+// app.use("/api/user", userTranscationRoutes);
 app.use("/api/user", userBookingRoutes);
 app.use("/api/user/account", userAccountRoutes);
 app.use("/api/partner", partnerRoutes);

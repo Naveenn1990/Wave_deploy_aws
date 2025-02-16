@@ -385,9 +385,12 @@ exports.getProfile = async (req, res, next) => {
         name: user.name,
         email: user.email,
         phone: user.phone,
-        address: user.address,
-        landmark: user.landmark,
-        addressType: user.addressType,
+        // address: user.address,
+        password: user.password,
+        // confirmPassword: user.confirmPassword,
+        profilePicture: user.profilePicture,
+        // landmark: user.landmark,
+        // addressType: user.addressType,
         isVerified: user.isVerified,
         status: user.status,
         createdAt: user.createdAt,
@@ -409,14 +412,13 @@ exports.getProfile = async (req, res, next) => {
 // Update profile
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, email } = req.body;
-    const updates = { name, email };
+    const { name, email, password, profilePicture, phone } = req.body;
+    const updates = { name, email, password, profilePicture, phone };
 
     // Handle profile picture if uploaded
     if (req.file) {
       updates.profilePicture = path.basename(req.file.path);
     }
-
     const user = await User.findByIdAndUpdate(
       req.user._id,
       { $set: updates },
