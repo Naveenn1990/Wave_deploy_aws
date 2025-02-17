@@ -29,8 +29,14 @@ router.put("/partners/:partnerId/kyc", adminAuth, adminController.verifyPartnerK
 // Service Category Management
 router.post("/service-category", adminAuth, upload.single('icon'), processFilePath, adminServiceController.createCategory);
 router.get("/service-categories", adminAuth, adminServiceController.getAllCategories);
+router.get("/categories", adminAuth, adminServiceController.getAllCategoriesWithDetails);
+router.get("/categories-with-details", adminAuth, adminServiceController.getAllCategoriesWithDetails);
+router.get("/categories-with-sub-categories", adminAuth, adminServiceController.getAllCategoriesWithDetails);
 router.put("/service-category/:categoryId", adminAuth, upload.single('icon'), processFilePath, adminServiceController.updateServiceCategory);
 router.delete("/service-category/:categoryId", adminAuth, adminServiceController.deleteServiceCategory);
+
+// Sub-Category Management
+router.post("/sub-category", adminAuth, adminController.addSubCategory);
 
 // Service Management
 router.post("/service", adminAuth, upload.single('icon'), processFilePath, adminServiceController.createService);
@@ -40,9 +46,11 @@ router.put("/service/:serviceId", adminAuth, upload.single('icon'), processFileP
 router.delete("/service/:serviceId", adminAuth, adminServiceController.deleteService);
 
 // Sub-Service Management
+router.post("/sub-service", adminAuth, upload.single('icon'), processFilePath, adminServiceController.createSubService);
 router.post("/service/:serviceId/sub-service", adminAuth, upload.single('icon'), processFilePath, adminServiceController.addSubService);
 router.put("/service/:serviceId/sub-service/:subServiceId", adminAuth, upload.single('icon'), processFilePath, adminServiceController.updateSubService);
 router.delete("/service/:serviceId/sub-service/:subServiceId", adminAuth, adminServiceController.deleteSubService);
+router.post("/service/:serviceId/sub-service/create", adminAuth, upload.single('icon'), processFilePath, adminServiceController.createSubService);
 
 // Service Analytics
 router.get("/services/:categoryId/analytics", adminAuth, adminServiceController.getServiceAnalytics);
@@ -57,6 +65,9 @@ router.get("/banners", adminAuth, bannerController.getAllBanners);
 router.put("/banners/:bannerId", adminAuth, upload.single('image'), processFilePath, bannerController.updateBanner);
 router.delete("/banners/:bannerId", adminAuth, bannerController.deleteBanner);
 
+// Review Management
+router.get("/reviews", adminAuth, adminController.getAllReviews);
+
 // Settings management
 router.get("/settings", adminAuth, adminSettingsController.getAllSettings);
 router.put("/settings", adminAuth, adminSettingsController.updateSettings);
@@ -70,5 +81,8 @@ router.get("/reports/revenue", adminAuth, adminReportController.getRevenueAnalyt
 router.get("/reports/partners/performance", adminAuth, adminReportController.getPartnerPerformance);
 router.get("/reports/users", adminAuth, adminReportController.getUserAnalytics);
 router.get("/reports/transactions", adminAuth, adminReportController.getTransactionReport);
+
+// Get all categories with sub-categories, services, and sub-services
+router.get("/categories", adminAuth, adminServiceController.getAllCategoriesWithDetails);
 
 module.exports = router;

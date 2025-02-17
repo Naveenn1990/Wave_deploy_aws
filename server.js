@@ -5,10 +5,11 @@ const connectDB = require("./config/database");
 const path = require("path");
 const multer = require("multer");
 const morgan = require("morgan");
-const fs = require("fs");
-const swaggerUi = require("swagger-ui-express");
-const swaggerSpec = require("./config/swagger");
+const fs = require("fs"); 
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 require("dotenv").config();
+const bodyParser = require('body-parser');
 
 const app = express();
 
@@ -24,23 +25,21 @@ connectDB()
 
 // Middleware
 app.use(morgan("dev"));
-app.use(cors());
-
-// {
-//   origin: "*", // Allow all origins for development
-//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-//   allowedHeaders: ["Content-Type", "Authorization"],
-// }
-
-// Swagger Documentation
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
-  "/api-docs",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, {
-    customCss: ".swagger-ui .topbar { display: none }",
-    customSiteTitle: "Wave API Documentation",
+  cors({
+    origin: "*", // Allow all origins for development
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: "Wave API Documentation"
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -57,10 +56,10 @@ const dirs = [
   path.join(__dirname, "uploads"),
   path.join(__dirname, "uploads", "banners"),
   path.join(__dirname, "uploads", "promotional-banners"),
-  path.join(__dirname, "uploads", "company-banners"),
+  path.join(__dirname, "uploads", "company-banners")
 ];
 
-dirs.forEach((dir) => {
+dirs.forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -68,22 +67,18 @@ dirs.forEach((dir) => {
 
 // Serve static files with proper headers
 const staticDirs = [
-  { url: "/uploads", dir: "uploads" },
-  { url: "/uploads/banners", dir: "uploads/banners" },
-  { url: "/uploads/promotional-banners", dir: "uploads/promotional-banners" },
-  { url: "/uploads/company-banners", dir: "uploads/company-banners" },
+  { url: '/uploads', dir: 'uploads' },
+  { url: '/uploads/banners', dir: 'uploads/banners' },
+  { url: '/uploads/promotional-banners', dir: 'uploads/promotional-banners' },
+  { url: '/uploads/company-banners', dir: 'uploads/company-banners' }
 ];
 
 staticDirs.forEach(({ url, dir }) => {
-  app.use(
-    url,
-    (req, res, next) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-      next();
-    },
-    express.static(path.join(__dirname, dir))
-  );
+  app.use(url, (req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  }, express.static(path.join(__dirname, dir)));
 });
 
 // Import routes
@@ -98,11 +93,12 @@ const bannerRoutes = require("./routes/bannerRoutes");
 const serviceHierarchyRoutes = require("./routes/serviceHierarchyRoutes");
 const adminBannerRoutes = require("./routes/adminBannerRoutes");
 const userBannerRoutes = require("./routes/userBannerRoutes");
+const adminBookingRoutes = require("./routes/adminBookingRoutes");
+const adminBookingController = require('./controllers/adminBookingController');
 
 // Routes
 app.use("/api/user", userRoutes);
 app.use("/api/user", userServiceRoutes);
-// app.use("/api/user", userTranscationRoutes);
 app.use("/api/user", userBookingRoutes);
 app.use("/api/user/account", userAccountRoutes);
 app.use("/api/partner", partnerRoutes);
@@ -112,9 +108,16 @@ app.use("/api/banners", bannerRoutes);
 app.use("/api/public", serviceHierarchyRoutes);
 app.use("/api/admin/banners", adminBannerRoutes);
 app.use("/api/user/banners", userBannerRoutes);
+app.use("/api/admin/bookings", adminBookingRoutes);
 
-// 404 handler
+// Add this console.log
+console.log('Registering admin routes...');
+
+app.get('/admin/bookings', adminBookingController.getAllBookings);
+
+// Keep only this 404 handler
 app.use((req, res, next) => {
+  console.log(`404 - Route not found: ${req.method} ${req.originalUrl}`);  // Added logging
   res.status(404).json({
     success: false,
     message: `Route ${req.method} ${req.path} not found`,
@@ -176,5 +179,5 @@ async function startServer(port) {
 }
 
 // Use port from environment variable or default to 3000
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 9000;
 startServer(PORT);

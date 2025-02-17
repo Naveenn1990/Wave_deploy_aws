@@ -2,6 +2,7 @@ const Booking = require("../models/booking");
 const Service = require("../models/Service");
 const ServiceCategory = require("../models/ServiceCategory");
 const User = require("../models/User"); // Added User model
+const Review = require("../models/Review"); // Added Review model
 const mongoose = require('mongoose');
 
 // Create a new booking
@@ -9,14 +10,24 @@ exports.createBooking = async (req, res) => {
   try {
     console.log("Create Booking - Request Body:", req.body);
 
-    const { categoryId, serviceId, scheduledDate, scheduledTime, location, userId } = req.body;
+    const { categoryId, serviceId, scheduledDate, scheduledTime, location, userId, paymentMode } = req.body;
 
     // Validate required fields
-    if (!categoryId || !serviceId || !scheduledDate || !scheduledTime || !location || !userId) {
-      console.log("Missing required fields:", { categoryId, serviceId, scheduledDate, scheduledTime, location, userId });
+    if (!categoryId || !serviceId || !scheduledDate || !scheduledTime || !location || !userId || !paymentMode) {
+      console.log("Missing required fields:", { categoryId, serviceId, scheduledDate, scheduledTime, location, userId, paymentMode });
       return res.status(400).json({
         success: false,
-        message: "Missing required fields. categoryId, serviceId, scheduledDate, scheduledTime, location, and userId are required",
+        message: "Missing required fields. categoryId, serviceId, scheduledDate, scheduledTime, location, userId, and paymentMode are required",
+      });
+    }
+
+    // Validate payment mode
+    const validPaymentModes = ['credit card', 'cash', 'paypal', 'bank transfer'];
+    if (!validPaymentModes.includes(paymentMode)) {
+      console.log("Invalid payment mode:", paymentMode);
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment mode. Accepted values are: 'credit card', 'cash', 'paypal', 'bank transfer'",
       });
     }
 
@@ -132,7 +143,8 @@ exports.createBooking = async (req, res) => {
         pincode: location.pincode
       },
       amount: service.basePrice,
-      status: 'pending'
+      status: 'pending',
+      paymentMode
     });
 
     await booking.save();
@@ -480,8 +492,7 @@ exports.cancelBooking = async (req, res) => {
 // Add review
 exports.addReview = async (req, res) => {
   try {
-    const { bookingId } = req.params;
-    const { rating, comment } = req.body;
+    const { rating, comment, type } = req.body;
 
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({
@@ -490,51 +501,21 @@ exports.addReview = async (req, res) => {
       });
     }
 
-    const booking = await Booking.findOne({
-      _id: bookingId,
+    // Create a new review instance
+    const review = new Review({
       user: req.user._id,
-    });
-
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: "Booking not found",
-      });
-    }
-
-    if (booking.status !== "completed") {
-      return res.status(400).json({
-        success: false,
-        message: "Can only review completed bookings",
-      });
-    }
-
-    if (booking.review) {
-      return res.status(400).json({
-        success: false,
-        message: "Review already exists for this booking",
-      });
-    }
-
-    booking.review = {
+      booking: req.params.bookingId, // Include the booking ID from the URL
       rating,
       comment,
-      createdAt: new Date(),
-    };
-
-    await booking.save();
-    await booking.populate({
-      path: 'service',
-      populate: {
-        path: 'category',
-        select: 'name'
-      }
+      type: type || 'booking'
     });
 
-    res.status(200).json({
+    await review.save();
+
+    res.status(201).json({
       success: true,
       message: "Review added successfully",
-      data: booking,
+      data: review,
     });
   } catch (error) {
     console.error("Error in addReview:", error);
@@ -678,3 +659,5 @@ exports.getBookingsByStatus = async (req, res) => {
     });
   }
 };
+
+// Removed getCategories function as it has been moved to userServiceController.js

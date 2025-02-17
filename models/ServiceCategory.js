@@ -4,56 +4,28 @@ const serviceCategorySchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
-        trim: true
+        unique: true
     },
     description: {
         type: String,
-        required: true,
-        trim: true
-    },
-    subCategoryTitle: {
-        type: String,
-        trim: true,
-        required: true,
-        default: function() {
-            return `${this.name} Services`;
-        }
+        required: true
     },
     icon: {
-        type: String,
-        required: true,
-        get: function(icon) {
-            if (icon && icon.includes('/')) {
-                return icon.split('/').pop();
-            }
-            return icon;
-        }
+        type: String, // URL or path to the icon
+        required: true
     },
-    status: {
-        type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
+    subcategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SubCategory' }],
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
 }, {
     timestamps: true,
-    collection: 'servicecategories', 
-    toJSON: {
-        getters: true,
-        transform: function(doc, ret) {
-            if (ret.icon && ret.icon.includes('/')) {
-                ret.icon = ret.icon.split('/').pop();
-            }
-            return ret;
-        }
-    }
-});
-
-// Pre-save middleware to ensure subCategoryTitle is set
-serviceCategorySchema.pre('save', function(next) {
-    if (!this.subCategoryTitle) {
-        this.subCategoryTitle = `${this.name} Services`;
-    }
-    next();
+    collection: 'servicecategories'
 });
 
 const ServiceCategory = mongoose.model('ServiceCategory', serviceCategorySchema);

@@ -2,11 +2,13 @@ const Admin = require("../models/admin");
 const Partner = require("../models/Partner");
 const User = require("../models/User");
 const booking = require("../models/booking");
+const Review = require("../models/Review"); // Assuming Review model is defined in a separate file
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const ServiceCategory = require("../models/ServiceCategory");
 const Service = require("../models/Service");
 const path = require('path');
+const SubCategory = require("../models/SubCategory"); // Assuming SubCategory model is defined in a separate file
 
 // Admin login
 exports.loginAdmin = async (req, res) => {
@@ -19,7 +21,7 @@ exports.loginAdmin = async (req, res) => {
     }
 
     const token = jwt.sign({ adminId: admin._id }, process.env.JWT_SECRET, {
-      expiresIn: "24h",
+      expiresIn: "7d",
     });
 
     res.json({
@@ -845,6 +847,77 @@ exports.completeBooking = async (req, res) => {
       success: false,
       message: "Error completing booking",
       error: error.message
+    });
+  }
+};
+
+// Get all reviews
+exports.getAllReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find()
+      .populate('user', 'name email') // Populate customer details
+      .populate({
+        path: 'booking', // Populate booking
+        populate: {
+          path: 'partner', // Now populate partner from the booking
+          select: 'name' // Select the fields you want from the partner
+        }
+      });
+
+    // Format the response to include desired fields
+    const formattedReviews = reviews.map(review => ({
+      customer: {
+        name: review.user.name,
+        email: review.user.email
+      },
+      date: review.createdAt,
+      partner: review.booking ? review.booking.partner : null, // Check if booking is defined
+      rating: review.rating,
+      comment: review.comment
+    }));
+
+    res.status(200).json({
+      success: true,
+      message: 'Fetched all reviews successfully',
+      data: formattedReviews
+    });
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching reviews'
+    });
+  }
+};
+
+// Add Sub Category
+exports.addSubCategory = async (req, res) => {
+  try {
+    console.log("Request Body:", req.body);
+
+    if (!req.body.name || !req.body.category) {
+      return res.status(400).json({ message: "Name and category are required." });
+    }
+
+    const { name, category } = req.body;
+
+    const subCategory = new SubCategory({
+      name,
+      category
+    });
+
+    await subCategory.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Sub-Category created successfully',
+      data: subCategory
+    });
+  } catch (error) {
+    console.error('Error creating sub-category:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error creating sub-category'
     });
   }
 };

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const ServiceCategory = require("../models/ServiceCategory");
 const Service = require("../models/Service");
 const SubService = require("../models/SubService");
-
+const SubCategory = require("../models/SubCategory");
 // Helper function to get clean image filename
 function getCleanImageName(imagePath) {
     if (!imagePath) return null;
@@ -97,90 +97,33 @@ async function getServiceHierarchy(req, res) {
   }
 }
 
-// Get all service categories with their services and sub-services
-async function getCategories(req, res) {
+const getCategories = async (req, res) => {
     try {
-        // Get all categories with populated services and sub-services
-        const categories = await ServiceCategory.find({})
-            .select('name description icon status subCategoryTitle createdAt updatedAt')
-            .lean();
-
-        if (!categories || categories.length === 0) {
-            return res.status(200).json({
-                success: true,
-                message: "No categories found in the database",
-                data: []
+        const categories = await ServiceCategory.find({ isActive: true })
+            .populate({
+                path: 'subcategories',
+                match: { isActive: true },
+                populate: {
+                    path: 'services',
+                    match: { isActive: true },
+                    populate: {
+                        path: 'subservices',
+                        match: { isActive: true }
+                    }
+                }
             });
-        }
 
-        // Process each category to include its services and sub-services
-        const categoriesWithServices = await Promise.all(categories.map(async (category) => {
-            // Get all services for this category
-            const services = await Service.find({
-                category: category._id,
-                isActive: true
-            })
-            .select('name description icon basePrice duration isRecommended isMostBooked')
-            .lean();
-
-            // Get and format services with their sub-services
-            const servicesWithSubServices = await Promise.all(services.map(async (service) => {
-                // Get sub-services for this service
-                const subServices = await SubService.find({
-                    service: service._id,
-                    isActive: true
-                })
-                .select('name description icon price duration')
-                .lean();
-
-                // Format sub-services
-                const formattedSubServices = subServices.map(subService => ({
-                    _id: subService._id,
-                    name: subService.name,
-                    description: subService.description,
-                    icon: getCleanImageName(subService.icon),
-                    price: subService.price,
-                    duration: subService.duration
-                }));
-
-                // Return formatted service with its sub-services
-                return {
-                    _id: service._id,
-                    name: service.name,
-                    description: service.description,
-                    icon: getCleanImageName(service.icon),
-                    basePrice: service.basePrice,
-                    duration: service.duration,
-                    isRecommended: service.isRecommended,
-                    isMostBooked: service.isMostBooked,
-                    subServices: formattedSubServices
-                };
-            }));
-
-            // Return category with its services
-            return {
-                _id: category._id,
-                name: category.name,
-                description: category.description,
-                icon: getCleanImageName(category.icon),
-                status: category.status,
-                subCategoryTitle: category.subCategoryTitle,
-                services: servicesWithSubServices
-            };
-        }));
+        console.log('Fetched Categories:', categories); // Log fetched categories
 
         res.status(200).json({
             success: true,
-            data: categoriesWithServices
+            data: categories
         });
     } catch (error) {
-        console.error('Get Categories Error:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        console.error('Error fetching categories:', error); // Log errors
+        res.status(500).json({ success: false, message: error.message });
     }
-}
+};
 
 // Get services by category
 async function getCategoryServices(req, res) {
@@ -414,7 +357,7 @@ async function getAllServices(req, res) {
         category: {
           _id: service.category?._id,
           name: service.category?.name
-        }
+      }
       }))
     });
   } catch (error) {
@@ -427,6 +370,179 @@ async function getAllServices(req, res) {
   }
 }
 
+const getAllServicesForUser = async (req, res) => {
+    try {
+        const services = await Service.find({ isActive: true }); // Fetch active services
+
+        res.status(200).json({
+            success: true,
+            data: services
+        });
+    } catch (error) {
+        console.error('Error fetching services:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// const getAllSubCategories = async (req, res) => {
+//   try {
+//       const subcategories = await SubCategory.find({ isActive: true })
+//           .populate('category'); // Populate the category field to get full details
+
+//       res.status(200).json({
+//           success: true,
+//           data: subcategories
+//       });
+//   } catch (error) {
+//       console.error('Error fetching subcategories:', error);
+//       res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+const getAllSubCategories = async (req, res) => {
+  try {
+      const subcategories = await SubCategory.find({ isActive: true })
+          .populate('category')
+          .populate({
+              path: 'services',
+              model: 'Service',
+              populate: { 
+                  path: 'subCategory', 
+                  model: 'SubCategory' 
+              }
+          })
+          .populate({
+              path: 'subservices',   // <-- Add this to fetch subservices
+              model: 'SubService'
+          });
+
+      res.status(200).json({
+          success: true,
+          data: subcategories
+      });
+  } catch (error) {
+      console.error('Error fetching subcategories:', error);
+      res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
+
+const getAllSubCategoriesForUser = async (req, res) => {
+    try {
+        const subcategories = await SubCategory.find({ isActive: true }); // Fetch active subcategories
+
+        res.status(200).json({
+            success: true,
+            data: subcategories
+        });
+    } catch (error) {
+        console.error('Error fetching subcategories:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const getAllSubServices = async (req, res) => {
+    try {
+        const subservices = await SubService.find({ isActive: true }).populate('service');; // Fetch active subservices
+        console.log('Fetched Subservices:', subservices);
+        res.status(200).json({
+            success: true,
+            data: subservices
+        });
+    } catch (error) {
+        console.error('Error fetching subservices:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const getAllSubServicesForUser = async (req, res) => {
+    try {
+        const subservices = await SubService.find({ isActive: true }); // Fetch active subservices
+
+        res.status(200).json({
+            success: true,
+            data: subservices
+        });
+    } catch (error) {
+        console.error('Error fetching subservices:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const getAllCategoriesForUser = async (req, res) => {
+    try {
+        const categories = await ServiceCategory.find(); // Fetch active categories
+        console.log(categories)
+        res.status(200).json({
+            success: true,
+            data: categories
+        });
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const getAllCategories = async (req, res) => {
+    try {
+        const categories = await ServiceCategory.find({ isActive: true }); // Fetch active categories
+
+        res.status(200).json({
+            success: true,
+            data: categories
+        });
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const getSubCategoryHierarchy = async (req, res) => {
+    try {
+        const subcategories = await SubCategory.find({ isActive: true })
+            .populate({
+                path: 'services',
+                match: { isActive: true },
+                populate: {
+                    path: 'subservices',
+                    match: { isActive: true }
+                }
+            });
+
+        res.status(200).json({
+            success: true,
+            data: subcategories
+        });
+    } catch (error) {
+        console.error('Error fetching subcategory hierarchy:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const getUserSubCategoryHierarchy = async (req, res) => {
+    try {
+        const subcategories = await SubCategory.find({ isActive: true })
+            .populate({
+                path: 'services',
+                match: { isActive: true },
+                populate: {
+                    path: 'subservices',
+                    match: { isActive: true }
+                }
+            });
+
+        res.status(200).json({
+            success: true,
+            data: subcategories
+        });
+    } catch (error) {
+        console.error('Error fetching subcategory hierarchy for user:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
   getCategories,
   getCategoryServices,
@@ -434,5 +550,14 @@ module.exports = {
   searchServices,
   getPopularServices,
   getServiceHierarchy,
-  getAllServices
+  getAllServices,
+  getAllServicesForUser,
+  getAllSubCategories,
+  getAllSubCategoriesForUser,
+  getAllSubServices,
+  getAllSubServicesForUser,
+  getAllCategoriesForUser,
+  getAllCategories,
+  getSubCategoryHierarchy,
+  getUserSubCategoryHierarchy
 };

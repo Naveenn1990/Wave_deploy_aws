@@ -5,6 +5,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require('fs');
 const crypto = require('crypto');
+const partnerServiceController = require('../controllers/partnerServiceController');
 
 // Create upload directories if they don't exist
 const uploadDir = path.join(__dirname, '..', 'uploads');
@@ -23,8 +24,9 @@ const {
   getCurrentService,
   getServiceHistory,
   updateServiceStatus,
-  getMatchingBookings
-} = require("../controllers/partnerServiceController");
+  getMatchingBookings,
+  acceptBooking
+} = partnerServiceController;
 
 const {
   sendLoginOTP,
@@ -144,6 +146,7 @@ router.get("/services/current", auth, getCurrentService);
 router.get("/services/history", auth, getServiceHistory);
 router.put("/services/status", auth, updateServiceStatus);
 router.get("/bookings/matching", auth, getMatchingBookings);
+router.put("/bookings/:bookingId/accept", auth, partnerServiceController.acceptBooking);
 
 // Dropdown data route
 router.get("/dropdown/categories", getAllCategories);

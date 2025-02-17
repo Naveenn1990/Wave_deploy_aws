@@ -4,34 +4,34 @@ const subServiceSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
-        trim: true
+        unique: true
     },
     description: {
         type: String,
-        default: ''
-    },
-    price: {
-        type: Number,
-        required: true,
-        min: 0
-    },
-    duration: {
-        type: Number,
-        required: true,
-        min: 0
-    },
-    isActive: {
-        type: Boolean,
-        default: true
+        required: true
     },
     service: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Service',
         required: true
+    },
+    price: {
+        type: Number,
+        required: true
+    },
+    images: [{
+        type: String // Array of URLs or paths to images
+    }],
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
-}, {
-    timestamps: true
 });
 
-// Check if model exists before creating
-module.exports = mongoose.models.SubService || mongoose.model('SubService', subServiceSchema);
+const SubService = mongoose.model('SubService', subServiceSchema);
+
+module.exports = SubService;

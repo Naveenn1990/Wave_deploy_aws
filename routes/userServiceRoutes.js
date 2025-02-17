@@ -66,7 +66,21 @@ router.get("/all-services", userServiceController.getAllServices);
  *       500:
  *         description: Server error
  */
-router.get("/categories", userServiceController.getCategories);
+router.get("/categories", userServiceController.getAllCategories);
+
+/**
+ * @swagger
+ * /api/user/categories-for-user:
+ *   get:
+ *     summary: Get all service categories for user
+ *     tags: [User Services]
+ *     responses:
+ *       200:
+ *         description: Categories retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get("/categories-for-user", userServiceController.getAllCategoriesForUser);
 
 /**
  * @swagger
@@ -150,6 +164,104 @@ router.get("/search", userServiceController.searchServices);
  *         description: Server error
  */
 router.get("/popular", userServiceController.getPopularServices);
+
+/**
+ * @swagger
+ * /api/user/subcategories:
+ *   get:
+ *     summary: Get all subcategories
+ *     tags: [User Services]
+ *     responses:
+ *       200:
+ *         description: Subcategories retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/subcategories', userServiceController.getAllSubCategories);
+
+/**
+ * @swagger
+ * /api/user/subservices:
+ *   get:
+ *     summary: Get all subservices
+ *     tags: [User Services]
+ *     responses:
+ *       200:
+ *         description: Subservices retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/subservices', userServiceController.getAllSubServices);
+
+/**
+ * @swagger
+ * /api/user/subservices:
+ *   get:
+ *     summary: Get all subservices for user
+ *     tags: [User Services]
+ *     responses:
+ *       200:
+ *         description: Subservices retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/subservices', userServiceController.getAllSubServicesForUser);
+
+/**
+ * @swagger
+ * /api/user/services:
+ *   get:
+ *     summary: Get all services for user
+ *     tags: [User Services]
+ *     responses:
+ *       200:
+ *         description: Services retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/services', userServiceController.getAllServicesForUser);
+
+/**
+ * @swagger
+ * /api/user/services:
+ *   get:
+ *     summary: Get all services
+ *     tags: [User Services]
+ *     responses:
+ *       200:
+ *         description: Services retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/services', userServiceController.getAllServices);
+
+/**
+ * @swagger
+ * /api/user/subcategory-hierarchy:
+ *   get:
+ *     summary: Get subcategory hierarchy
+ *     tags: [User Services]
+ *     responses:
+ *       200:
+ *         description: Subcategory hierarchy retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/subcategory-hierarchy', userServiceController.getSubCategoryHierarchy);
+
+/**
+ * @swagger
+ * /api/user/subcategory-hierarchy:
+ *   get:
+ *     summary: Get subcategory hierarchy
+ *     tags: [User Services]
+ *     responses:
+ *       200:
+ *         description: Subcategory hierarchy retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/subcategory-hierarchy', userServiceController.getSubCategoryHierarchy);
 
 // Cart routes
 /**
@@ -298,5 +410,7 @@ router.get("/bookings/:bookingId", auth, getBookingDetails);
 router.put("/bookings/:bookingId", auth, updateBooking);
 router.put("/bookings/:bookingId/cancel", auth, cancelBooking);
 router.post("/bookings/:bookingId/review", auth, addReview);
+
+router.get('/categories', userServiceController.getAllCategories);
 
 module.exports = router;

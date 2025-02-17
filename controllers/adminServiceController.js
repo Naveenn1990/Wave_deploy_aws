@@ -5,7 +5,7 @@ const Booking = require("../models/booking");
 const SubService = require('../models/SubService');
 const path = require('path');
 const { stripUrl } = require('../middleware/upload');
-
+const SubCategory = require("../models/SubCategory");
 // Get all services
 exports.getAllServices = async (req, res) => {
   try {
@@ -32,17 +32,17 @@ exports.getAllServices = async (req, res) => {
 // Create service
 exports.createService = async (req, res) => {
   try {
-    console.log('Create Service Request:', {
-      body: req.body,
-      file: req.file,
-      headers: req.headers['content-type']
-    });
+    // console.log('Create Service Request:', {
+    //   body: req.body,
+    //   file: req.file,
+    //   headers: req.headers['content-type']
+    // });
 
     // Validate required fields
-    if (!req.body.name || !req.body.description || !req.body.category || !req.body.basePrice || !req.body.duration) {
+    if (!req.body.name || !req.body.description || !req.body.subCategory) {
       return res.status(400).json({
         success: false,
-        message: 'Name, description, category, basePrice, and duration are required'
+        message: 'Name, description, subCategory, basePrice, and duration are required'
       });
     }
 
@@ -55,8 +55,8 @@ exports.createService = async (req, res) => {
     }
 
     // Validate category exists
-    const category = await ServiceCategory.findById(req.body.category);
-    if (!category) {
+    const subCategory = await SubCategory.findById(req.body.subCategory);
+    if (!subCategory) {
       return res.status(404).json({
         success: false,
         message: 'Category not found'
@@ -64,15 +64,17 @@ exports.createService = async (req, res) => {
     }
 
     const service = new Service({
-      category: req.body.category,
+      subCategory: req.body.subCategory,
       name: req.body.name,
       description: req.body.description,
-      icon: path.basename(req.file.path),
-      basePrice: req.body.basePrice,
-      duration: req.body.duration
+      icon: path.basename(req.file.path), 
     });
 
     await service.save();
+    subCategory.services.push(service._id);
+    await subCategory.save();
+
+
 
     res.status(201).json({
       success: true,
@@ -173,6 +175,9 @@ exports.addSubService = async (req, res) => {
       });
     }
 
+
+    
+
     // Create sub-service
     const subService = new SubService({
       service: serviceId,
@@ -184,15 +189,26 @@ exports.addSubService = async (req, res) => {
       status: 'active'
     });
 
-    await subService.save();
+    try {
+      await subService.save(); // Save the new subservice
+      service.subServices.push(subService._id); // Add the subservice ID to the service
+      await service.save(); // Save the updated service
+  } catch (error) {
+      console.error('Error adding subservice:', error);
+      // Handle the error (e.g., send a response or throw an error)
+  }
+  //  Populate service details in response
+  //   const populatedSubService = await SubService.findById(subService._id).populate('service');
 
-    // Add sub-service reference to parent service
-    service.subServices = service.subServices || [];
-    service.subServices.push(subService._id);
-    await service.save();
+    // const subCategory = await SubCategory.findById(service.subCategory);
+    // if (subCategory) {
+    //     subCategory.subservices.push(subService._id);
+    //     await subCategory.save();
+    // } 
+    
 
-    // Populate service details in response
-    const populatedSubService = await SubService.findById(subService._id).populate('service');
+
+
 
     res.status(201).json({
       success: true,
@@ -423,16 +439,13 @@ exports.getAllSubServices = async (req, res) => {
         console.log('SubService Model:', !!SubService);
 
         // First get all sub-services without population to check raw data
-        const rawSubServices = await SubService.find();
+        const rawSubServices = await SubService.find().populate();
         console.log('Raw data count:', rawSubServices.length);
         console.log('First raw item:', rawSubServices[0]);
 
         // Now try to populate
         const subServices = await SubService.find()
-            .populate({
-                path: 'service',
-                select: 'name'
-            });
+            .populate('service');
 
         console.log('After populate count:', subServices.length);
         console.log('First populated item:', JSON.stringify(subServices[0], null, 2));
@@ -479,197 +492,52 @@ exports.getAllSubServices = async (req, res) => {
     }
 };
 
-// Create service
-exports.createService = async (req, res) => {
+// Create sub-service
+exports.createSubService = async (req, res) => {
     try {
-        console.log('Create Service Request:', {
-            body: req.body,
-            file: req.file,
-            headers: req.headers['content-type']
-        });
+        const { name, description, service, price } = req.body;
 
         // Validate required fields
-        if (!req.body.name || !req.body.description || !req.body.category || !req.body.basePrice || !req.body.duration) {
+        if (!name || !description || !service || !price) {
             return res.status(400).json({
                 success: false,
-                message: 'Name, description, category, basePrice, and duration are required'
+                message: 'Name, description, service, and price are required'
             });
         }
 
-        // Validate file upload
-        if (!req.file) {
-            return res.status(400).json({
-                success: false,
-                message: 'Image file is required'
-            });
-        }
-
-        // Validate category exists
-        const category = await ServiceCategory.findById(req.body.category);
-        if (!category) {
+        // Check if the service exists
+        const existingService = await Service.findById(service);
+        if (!existingService) {
             return res.status(404).json({
                 success: false,
-                message: 'Category not found'
+                message: 'Service not found'
             });
         }
 
-        const service = new Service({
-            category: req.body.category,
-            name: req.body.name,
-            description: req.body.description,
-            icon: path.basename(req.file.path),
-            basePrice: req.body.basePrice,
-            duration: req.body.duration
+        // Create the sub-service
+        const subService = new SubService({
+            name,
+            description,
+            service,
+            price,
+            images : req.file.filename,
+            isActive: true
         });
 
-        await service.save();
+        const savedSubService = await subService.save();
 
         res.status(201).json({
             success: true,
-            message: 'Service created successfully',
-            data: service
+            message: 'Sub-Service created successfully',
+            subService: savedSubService
         });
     } catch (error) {
-        console.error('Create Service Error:', error);
+        console.error('Create Sub-Service Error:', error);
         res.status(500).json({
             success: false,
-            message: error.message
+            message: 'Error creating sub-service'
         });
     }
-};
-
-// Get all services
-exports.getAllServices = async (req, res) => {
-    try {
-        const services = await Service.find().populate('category');
-        res.json({
-            success: true,
-            data: services
-        });
-    } catch (error) {
-        console.error('Get Services Error:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
-
-// Get services by category
-exports.getServicesByCategory = async (req, res) => {
-    try {
-        const services = await Service.find({ 
-            category: req.params.categoryId 
-        }).populate('category');
-        
-        res.json({
-            success: true,
-            data: services
-        });
-    } catch (error) {
-        console.error('Get Services by Category Error:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
-
-// Create sub-service
-exports.createSubService = async (req, res) => {
-  try {
-    const {
-      name,
-      description,
-      basePrice,
-      duration,
-      order,
-      isActive
-    } = req.body;
-    const { serviceId } = req.params;
-
-    // Validate required fields
-    if (!name || !description || !basePrice || !duration) {
-      return res.status(400).json({
-        success: false,
-        message: "Name, description, basePrice, and duration are required"
-      });
-    }
-
-    // Check if service exists
-    const service = await Service.findById(serviceId);
-    if (!service) {
-      return res.status(404).json({
-        success: false,
-        message: "Service not found"
-      });
-    }
-
-    // Validate icon upload
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Sub-service icon is required"
-      });
-    }
-
-    // Validate numeric fields
-    const parsedBasePrice = Number(basePrice);
-    const parsedDuration = Number(duration);
-
-    if (isNaN(parsedBasePrice) || parsedBasePrice <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Base price must be a positive number"
-      });
-    }
-
-    if (isNaN(parsedDuration) || parsedDuration <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Duration must be a positive number"
-      });
-    }
-
-    // Create sub-service
-    const subService = new SubService({
-      service: serviceId,
-      name,
-      description,
-      basePrice: parsedBasePrice,
-      duration: parsedDuration,
-      icon: path.basename(req.file.path),
-      order: order || 0,
-      isActive: isActive === 'true'
-    });
-
-    await subService.save();
-
-    res.status(201).json({
-      success: true,
-      message: "Sub-service created successfully",
-      data: {
-        subService: {
-          _id: subService._id,
-          name: subService.name,
-          description: subService.description,
-          service: subService.service,
-          basePrice: subService.basePrice,
-          duration: subService.duration,
-          icon: subService.icon,
-          order: subService.order,
-          isActive: subService.isActive
-        }
-      }
-    });
-  } catch (error) {
-    console.error("Create Sub-Service Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error creating sub-service",
-      error: error.message
-    });
-  }
 };
 
 // Update service
@@ -957,4 +825,40 @@ exports.getMostBookedServices = async (req, res) => {
       message: error.message
     });
   }
+};
+
+// Get all categories with sub-categories, services, and sub-services
+exports.getAllCategoriesWithDetails = async (req, res) => {
+    try {
+        const categories = await ServiceCategory.find()
+            .populate({
+                path: 'subCategories', // Assuming the ServiceCategory model has a field 'subCategories'
+                populate: {
+                    path: 'services', // Assuming the SubCategory model has a field 'services'
+                    populate: {
+                        path: 'subServices' // Assuming the Service model has a field 'subServices'
+                    }
+                }
+            });
+
+        // Format the response to include sub-categories nested within categories
+        const formattedCategories = categories.map(category => ({
+            _id: category._id,
+            name: category.name,
+            description: category.description,
+            icon: category.icon,
+            subCategories: category.subCategories // This will include services and sub-services
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: formattedCategories
+        });
+    } catch (error) {
+        console.error('Get All Categories Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
 };

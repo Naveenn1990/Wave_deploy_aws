@@ -1,53 +1,34 @@
 const mongoose = require('mongoose');
 
 const serviceSchema = new mongoose.Schema({
-    category: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'ServiceCategory',
-        required: true
-    },
     name: {
         type: String,
         required: true,
-        trim: true
+        unique: true
     },
     description: {
         type: String,
-        required: true,
-        trim: true
-    },
-    icon: {
-        type: String,
         required: true
     },
-    basePrice: {
-        type: Number,
-        required: true,
-        min: 0
+    icon: {
+        type: String, // URL or path to the icon
+        required: true
     },
-    duration: {
-        type: Number,
-        required: true,
-        min: 0
+    subCategory: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'SubCategory',
+        required: true
     },
+    subServices: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SubService' }], // ✅ Ensure this field exists
+
     isActive: {
         type: Boolean,
         default: true
     },
-    order: {
-        type: Number,
-        default: 0
-    },
-    isRecommended: {
-        type: Boolean,
-        default: false
-    },
-    isMostBooked: {
-        type: Boolean,
-        default: false
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
-}, {
-    timestamps: true
 });
 
 const Service = mongoose.model('Service', serviceSchema);

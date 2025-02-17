@@ -48,9 +48,14 @@ const bookingSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    paymentMode: {
+      type: String,
+      enum: ['credit card', 'cash', 'paypal', 'bank transfer'], 
+      required: true,
+    },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "in_progress", "completed", "cancelled"],
+      enum: ["pending", "confirmed", "in_progress", "completed", "cancelled", "accepted"],
       default: "pending",
     },
     paymentStatus: {
@@ -68,7 +73,12 @@ const bookingSchema = new mongoose.Schema(
       },
       comment: String,
       createdAt: Date
-    }
+    },
+    partner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Partner', // Reference to the Partner model
+      required: false
+    },
   },
   { 
     timestamps: true,

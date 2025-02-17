@@ -361,16 +361,19 @@ exports.getMatchingBookings = async (req, res) => {
       paymentStatus: booking.paymentStatus,
       location: booking.location,
       user: {
-        name: booking.user.name,
-        phone: booking.user.phone
+        name: booking.user ? booking.user.name : 'N/A',
+        phone: booking.user ? booking.user.phone : 'N/A',
+        email: booking.user ? booking.user.email : 'N/A'
       },
       service: {
-        name: booking.service.name,
-        basePrice: booking.service.basePrice,
-        duration: booking.service.duration
+        name: booking.service ? booking.service.name : 'N/A',
+        basePrice: booking.service ? booking.service.basePrice : 0,
+        duration: booking.service ? booking.service.duration : 'N/A',
+        description: booking.service ? booking.service.description : 'N/A'
       },
       category: {
-        name: booking.category.name
+        name: booking.category ? booking.category.name : 'N/A',
+        description: booking.category ? booking.category.description : 'N/A'
       }
     }));
 
@@ -390,6 +393,48 @@ exports.getMatchingBookings = async (req, res) => {
       success: false,
       message: "Error fetching matching bookings",
       error: error.message
+    });
+  }
+};
+
+// Accept booking
+exports.acceptBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    // Find the booking by ID
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    // Check if the booking is already accepted or canceled
+    if (booking.status === "accepted" || booking.status === "canceled") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot accept this booking",
+      });
+    }
+
+    // Update booking status to accepted
+    booking.status = "accepted";
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Booking accepted successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Error accepting booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error accepting booking",
+      error: error.message,
     });
   }
 };
