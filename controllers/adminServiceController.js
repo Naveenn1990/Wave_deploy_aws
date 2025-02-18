@@ -228,32 +228,39 @@ exports.addSubService = async (req, res) => {
 // Update service category
 exports.updateServiceCategory = async (req, res) => {
   try {
-    const { name, description, icon, status } = req.body;
-    const category = await ServiceCategory.findByIdAndUpdate(
-      req.params.categoryId,
-      {
-        $set: {
-          name,
-          description,
-          icon: path.basename(icon),
-          status
-        }
-      },
-      { new: true }
-    );
-    
-    if (!category) {
+    const { name } = req.body;
+    let icon = req.file ? req.file.filename : undefined; // Handle uploaded file
+    console.log(name, icon);
+
+    // Find the existing category
+    const existingCategory = await ServiceCategory.findById(req.params.categoryId);
+    if (!existingCategory) {
       return res.status(404).json({
         success: false,
-        message: "Service category not found"
+        message: "Service category not found",
       });
     }
+
+    // Prepare update object (only update fields that are provided)
+    const updateData = {};
+    if (name) updateData.name = name; // Update only if name is provided
+    if (icon) updateData.icon = path.basename(icon); // Update only if icon is uploaded
+
+    // Perform the update
+    const category = await ServiceCategory.findByIdAndUpdate(
+      req.params.categoryId,
+      { $set: updateData },
+      { new: true }
+    );
+
+    console.log(category, "category");
 
     res.json({
       success: true,
       data: category
     });
   } catch (error) {
+    console.log(error, "error");
     res.status(500).json({
       success: false,
       message: "Error updating service category"
