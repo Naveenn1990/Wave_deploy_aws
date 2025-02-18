@@ -11,6 +11,10 @@ const subCategorySchema = new mongoose.Schema({
         ref: 'ServiceCategory',
         required: true 
     },
+    image: {
+        type: String, // URL or path to the image
+        required: true
+    },
     services: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Service' }],
     subservices: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SubService' }],
     isActive: {
