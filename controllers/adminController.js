@@ -921,3 +921,21 @@ exports.addSubCategory = async (req, res) => {
     });
   }
 };
+
+// Update User Status
+exports.updateUserStatus = async (req, res) => {
+  const { userId, status } = req.body;
+  if (!userId || (status !== 'active' && status !== 'inactive')) {
+    console.log(userId , status)
+      return res.status(400).json({ message: 'Invalid user ID or status' });
+  }
+  try {
+      const user = await User.findByIdAndUpdate(userId, { status }, { new: true });
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
+      return res.status(200).json({ message: 'User status updated', user });
+  } catch (error) {
+      return res.status(500).json({ message: 'Server error', error });
+  }
+};

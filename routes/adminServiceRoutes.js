@@ -5,7 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const adminBookingController = require('../controllers/adminBookingController');
-const adminController = require('../controllers/adminController');  // adjust path as needed
+const adminController = require('../controllers/adminController'); 
 const { getAllSubServices } = require('../controllers/adminServiceController');
 
 /**
@@ -307,5 +307,8 @@ router.get('/sub-services', getAllSubServices);
 router.get('/bookings', adminBookingController.getAllBookings);
 // router.get('/bookings/:bookingId', adminBookingController.getBookingDetails);
 // router.put('/bookings/:bookingId/status', adminBookingController.updateBookingStatus);
+
+// const adminController = require('../controllers/adminController'); 
+router.put('/user-status', adminController.updateUserStatus);
 
 module.exports = router;
