@@ -7,6 +7,7 @@ const adminSettingsController = require("../controllers/adminSettingsController"
 const adminReportController = require("../controllers/adminReportController");
 const bannerController = require("../controllers/bannerController");
 const { upload, processFilePath } = require("../middleware/upload");
+const SubCategory = require("../models/SubCategory");
 
 // Auth routes
 router.post("/login", adminController.loginAdmin);
@@ -36,7 +37,8 @@ router.put("/service-category/:categoryId", adminAuth, upload.single('icon'), pr
 router.delete("/service-category/:categoryId", adminAuth, adminServiceController.deleteServiceCategory);
 
 // Sub-Category Management
-router.post("/sub-category", adminAuth, adminController.addSubCategory);
+router.post("/sub-category", adminAuth, upload.single('image'), processFilePath, adminController.addSubCategory);
+
 
 // Service Management
 router.post("/service", adminAuth, upload.single('icon'), processFilePath, adminServiceController.createService);

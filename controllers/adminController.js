@@ -892,34 +892,24 @@ exports.getAllReviews = async (req, res) => {
 
 // Add Sub Category
 exports.addSubCategory = async (req, res) => {
-  try {
-    console.log("Request Body:", req.body);
+  console.log("Request Body:", req.body); // Log the request body
+  console.log("Uploaded File:", req.file); // Log the uploaded file
 
-    if (!req.body.name || !req.body.category) {
+  const { name, category } = req.body; // Extracting name and category from the form data
+
+  // Check if name and category are provided
+  if (!name || !category) {
       return res.status(400).json({ message: "Name and category are required." });
-    }
-
-    const { name, category } = req.body;
-
-    const subCategory = new SubCategory({
-      name,
-      category
-    });
-
-    await subCategory.save();
-
-    res.status(201).json({
-      success: true,
-      message: 'Sub-Category created successfully',
-      data: subCategory
-    });
-  } catch (error) {
-    console.error('Error creating sub-category:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error creating sub-category'
-    });
   }
+
+  const subCategory = new SubCategory({
+      name,
+      category,
+      image: req.file?.filename // Assuming the image is uploaded similarly
+  });
+
+  await subCategory.save();
+  return res.status(201).json({ message: "Subcategory created successfully", subCategory });
 };
 
 // Update User Status
