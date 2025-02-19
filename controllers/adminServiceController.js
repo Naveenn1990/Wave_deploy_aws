@@ -228,33 +228,39 @@ exports.addSubService = async (req, res) => {
 // Update service category
 exports.updateServiceCategory = async (req, res) => {
   try {
-    const { name, description, icon, status ,subtitle} = req.body;
-    const category = await ServiceCategory.findByIdAndUpdate(
-      req.params.categoryId,
-      {
-        $set: {
-          name,
-          description,
-          icon: path.basename(icon),
-          status,
-          subtitle
-        }
-      },
-      { new: true }
-    );
-    
-    if (!category) {
+    const { name } = req.body;
+    let icon = req.file ? req.file.filename : undefined; // Handle uploaded file
+    // console.log(name, icon);
+
+    // Find the existing category
+    const existingCategory = await ServiceCategory.findById(req.params.categoryId);
+    if (!existingCategory) {
       return res.status(404).json({
         success: false,
-        message: "Service category not found"
+        message: "Service category not found",
       });
     }
+
+    // Prepare update object (only update fields that are provided)
+    const updateData = {};
+    if (name) updateData.name = name; // Update only if name is provided
+    if (icon) updateData.icon = path.basename(icon); // Update only if icon is uploaded
+
+    // Perform the update
+    const category = await ServiceCategory.findByIdAndUpdate(
+      req.params.categoryId,
+      { $set: updateData },
+      { new: true }
+    );
+
+    // console.log(category, "category");
 
     res.json({
       success: true,
       data: category
     });
   } catch (error) {
+    console.log(error, "error");
     res.status(500).json({
       success: false,
       message: "Error updating service category"
@@ -439,26 +445,26 @@ exports.getAllCategories = async (req, res) => {
 exports.getAllSubServices = async (req, res) => {
     try {
         // Debug: Check if SubService model exists
-        console.log('SubService Model:', !!SubService);
+        // console.log('SubService Model:', !!SubService);
 
         // First get all sub-services without population to check raw data
         const rawSubServices = await SubService.find().populate();
-        console.log('Raw data count:', rawSubServices.length);
-        console.log('First raw item:', rawSubServices[0]);
+        // console.log('Raw data count:', rawSubServices.length);
+        // console.log('First raw item:', rawSubServices[0]);
 
         // Now try to populate
         const subServices = await SubService.find()
             .populate('service');
 
-        console.log('After populate count:', subServices.length);
-        console.log('First populated item:', JSON.stringify(subServices[0], null, 2));
+        // console.log('After populate count:', subServices.length);
+        // console.log('First populated item:', JSON.stringify(subServices[0], null, 2));
 
         // Safe mapping with extensive null checking
         const formattedSubServices = subServices
             .filter(item => item !== null && item !== undefined)
             .map(subService => {
                 // Debug log for each item
-                console.log('Processing subService:', subService?._id);
+                // console.log('Processing subService:', subService?._id);
 
                 return {
                     _id: subService?._id?.toString() || 'No ID',

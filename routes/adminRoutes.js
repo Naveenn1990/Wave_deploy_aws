@@ -39,7 +39,9 @@ router.delete("/service-category/:categoryId", adminAuth, adminServiceController
 
 // Sub-Category Management
 router.post("/sub-category", adminAuth, upload.single('image'), processFilePath, adminController.addSubCategory);
-// router.get("/sub-categories", adminAuth, adminController.getAllSubCategories);
+router.put("/sub-category/:subcategoryId", adminAuth, upload.single('image'), processFilePath, adminController.updateSubCategory);
+router.delete("/sub-category/:subcategoryId", adminAuth, adminController.deleteSubCategory);
+
 
 // Service Management
 router.post("/service", adminAuth, upload.single('icon'), processFilePath, adminServiceController.createService);
