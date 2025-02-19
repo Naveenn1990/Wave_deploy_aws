@@ -1,6 +1,6 @@
 const Booking = require("../models/booking");
-const Service = require("../models/Service");
-const ServiceCategory = require("../models/ServiceCategory");
+// const Service = require("../models/Service");
+// const ServiceCategory = require("../models/ServiceCategory");
 const User = require("../models/User"); 
 const Review = require("../models/Review"); 
 const mongoose = require('mongoose');
@@ -84,8 +84,8 @@ exports.getAllBookings = async (req, res) => {
     try {
         // Get all bookings with populated service and category details
         const bookings = await Booking.find({ user: req.user._id })
-            .populate('service', 'name description basePrice duration')
-            .populate('category', 'name description')
+            .populate('subService', 'name description basePrice duration')
+            .populate('subService', 'name description price')
             .sort({ createdAt: -1 });
 
         res.status(200).json({
@@ -194,7 +194,7 @@ exports.getUserBookings = async (req, res) => {
         // Get bookings with pagination
         const bookings = await Booking.find(query)
             .populate({
-                path: 'service',
+                path: 'subService',
                 populate: {
                     path: 'category',
                     select: 'name'
@@ -236,8 +236,9 @@ exports.getBookingDetails = async (req, res) => {
         const booking = await Booking.findOne({
             _id: bookingId,
             user: req.user._id,
-        }).populate({
-            path: 'service',
+        })
+        .populate({
+            path: 'subService',
             populate: {
                 path: 'category',
                 select: 'name'
@@ -316,7 +317,7 @@ exports.updateBooking = async (req, res) => {
 
         await booking.save();
         await booking.populate({
-            path: 'service',
+            path: 'subService',
             populate: {
                 path: 'category',
                 select: 'name'
@@ -376,7 +377,7 @@ exports.cancelBooking = async (req, res) => {
 
         await booking.save();
         await booking.populate({
-            path: 'service',
+            path: 'subService',
             populate: {
                 path: 'category',
                 select: 'name'
@@ -436,49 +437,31 @@ exports.addReview = async (req, res) => {
     }
 };
 
-// Get all bookings for a user with pagination
-exports.getUserBookings = async (req, res) => {
+// Get all bookings for a user
+exports.getAllUserBookings = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const status = req.query.status; // Optional status filter
-        const skip = (page - 1) * limit;
-
-        // Build query
-        const query = { user: req.user._id };
-        if (status) {
-            query.status = status;
-        }
-
-        // Get total count for pagination
-        const total = await Booking.countDocuments(query);
-
-        // Get bookings with populated service and category details
-        const bookings = await Booking.find(query)
-            .populate('service', 'name description basePrice duration')
-            .populate('category', 'name description')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+        console.log('Request Parameters:', req.params);
+        console.log('User ID:', req.user._id);
+        const bookings = await Booking.find({ user: req.user._id })
+            .populate({
+                path: 'subService',
+                populate: {
+                    path: 'category',
+                    select: 'name'
+                }
+            })
+            .sort({ createdAt: -1 });
 
         res.status(200).json({
             success: true,
-            data: {
-                bookings,
-                pagination: {
-                    currentPage: page,
-                    totalPages: Math.ceil(total / limit),
-                    totalItems: total,
-                    itemsPerPage: limit
-                }
-            }
+            data: bookings,
         });
     } catch (error) {
-        console.error("Error in getUserBookings:", error);
+        console.error('Error fetching all user bookings:', error);
         res.status(500).json({
             success: false,
-            message: "Error fetching bookings",
-            error: error.message
+            message: 'Error fetching bookings',
+            error: error.message,
         });
     }
 };

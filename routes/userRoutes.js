@@ -21,6 +21,7 @@ const authController = require("../controllers/authController");
 const userServiceController = require("../controllers/userServiceController");
 const bannerController = require("../controllers/bannerController");
 const userController = require("../controllers/userController");
+const bookingController = require("../controllers/bookingController");
 
 /**
  * @swagger
@@ -747,5 +748,46 @@ router.get("/services/popular", userServiceController.getPopularServices);
  *         description: Server error
  */
 router.get("/banners", bannerController.getActiveBanners);
+
+// Booking routes
+router.get('/api/user/bookings/all', auth, bookingController.getAllUserBookings);
+
+/**
+ * @swagger
+ * /api/user/bookings:
+ *   get:
+ *     summary: Get all bookings for a user
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Bookings retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: Booking ID
+ *                   serviceId:
+ *                     type: integer
+ *                     description: Service ID
+ *                   userId:
+ *                     type: integer
+ *                     description: User ID
+ *                   bookingDate:
+ *                     type: string
+ *                     format: date
+ *                     description: Booking date
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.get('/api/user/bookings', auth, bookingController.getAllUserBookings);
 
 module.exports = router;

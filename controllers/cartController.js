@@ -1,74 +1,6 @@
 const Cart = require("../models/cart");
 const ServiceCategory = require("../models/ServiceCategory");
-
-// Add item to cart
-exports.addToCart = async (req, res) => {
-  try {
-    const {
-      serviceId,
-      scheduledDate,
-      scheduledTime,
-      location,
-    } = req.body;
-
-    // Find the category containing this service
-    const category = await ServiceCategory.findOne({
-      "services._id": serviceId
-    });
-
-    if (!category) {
-      return res.status(404).json({ message: "Service not found" });
-    }
-
-    // Get the specific service from the category
-    const service = category.services.find(
-      service => service._id.toString() === serviceId
-    );
-
-    if (!service) {
-      return res.status(404).json({ message: "Service not found" });
-    }
-
-    // Find or create user's cart
-    let cart = await Cart.findOne({ user: req.user._id });
-    if (!cart) {
-      cart = new Cart({ user: req.user._id, items: [] });
-    }
-
-    // Check if service already exists in cart
-    const existingItemIndex = cart.items.findIndex(
-      item => item.service.toString() === serviceId
-    );
-
-    const cartItem = {
-      service: serviceId,
-      scheduledDate,
-      scheduledTime,
-      location,
-    };
-
-    if (existingItemIndex > -1) {
-      // Update existing item
-      cart.items[existingItemIndex] = cartItem;
-    } else {
-      // Add new item
-      cart.items.push(cartItem);
-    }
-
-    // Calculate total amount
-    cart.totalAmount = service.basePrice || 0;
-
-    await cart.save();
-
-    res.json({
-      message: "Item added to cart successfully",
-      cart,
-    });
-  } catch (error) {
-    console.error("Error in addToCart:", error);
-    res.status(500).json({ message: "Error adding item to cart" });
-  }
-};
+const SubService = require("../models/SubService");
 
 // Get cart
 exports.getCart = async (req, res) => {
@@ -207,3 +139,223 @@ exports.clearCart = async (req, res) => {
     res.status(500).json({ message: "Error clearing cart" });
   }
 };
+
+// Add subservice directly to cart
+exports.addSubServiceToCart = async (req, res) => {
+  try {
+    console.log("Request Body:", req.body);
+    const { subserviceId, quantity, scheduledTime, scheduledDate } = req.body;
+
+    // Fetch the subservice directly from the SubService collection
+    const subservice = await SubService.findById(subserviceId);
+
+    if (!subservice) {
+      console.error("Subservice not found for ID:", subserviceId);
+      return res.status(404).json({ message: "Subservice not found" });
+    }
+
+    console.log("Fetched Subservice:", subservice);
+
+    if (!subservice.price) {
+      console.error("Subservice price is undefined for ID:", subserviceId);
+      return res.status(400).json({ message: "Invalid subservice price" });
+    }
+
+    // Calculate total amount based on subservice price and quantity
+    const totalAmount = subservice.price * quantity;
+    // console.log(totalAmount , "totalAmount")
+    // Find or create user's cart
+    let cart = await Cart.findOne({ user: req.user._id });
+    // if (!cart) {
+    // }
+    cart = new Cart({ user: req.user._id, items: [], totalAmount: 0 });
+
+    // Create new cart item
+    const cartItem = {
+      subservice: subserviceId,
+      quantity,
+      scheduledTime,
+      scheduledDate,
+      service: subserviceId, // Ensure this is correctly referenced
+      price: subservice.price,
+    };
+
+    console.log(`Cart Item:`, cartItem);
+
+    // Add new item to the cart
+    cart.items.push(cartItem);
+
+    // Recalculate total amount
+    console.log("start",cart , "cart")
+    // cart.totalAmount = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    cart.totalAmount = cart.items.reduce((sum, item) => {
+      const price = item.price || 0; // Ensure price is a valid number
+      const quantity = item.quantity || 1; // Default quantity to 1 if missing
+      return sum + (price * quantity);
+    }, 0);
+    
+    await cart.save();
+
+    console.log("end" , "cart")
+    res.json({
+      message: "Subservice added to cart successfully",
+      cart,
+    });
+  } catch (error) {
+    console.error("Error in addSubServiceToCart:", error);
+    res.status(500).json({ message: "Error adding subservice to cart" });
+  }
+};
+
+// exports.addSubServiceToCart = async (req, res) => {
+//   try {
+//     console.log("Request Body:", req.body);
+//     const { subserviceId, quantity, scheduledTime, scheduledDate } = req.body;
+
+//     // Fetch the subservice directly from the SubService collection
+//     const subservice = await SubService.findById(subserviceId);
+
+//     if (!subservice) {
+//       console.error("Subservice not found for ID:", subserviceId);
+//       return res.status(404).json({ message: "Subservice not found" });
+//     }
+
+//     console.log("Fetched Subservice:", subservice);
+
+//     if (!subservice.price || isNaN(subservice.price)) {
+//       console.error("Subservice price is invalid for ID:", subserviceId);
+//       return res.status(400).json({ message: "Invalid subservice price" });
+//     }
+
+//     // Find or create user's cart
+//     let cart = await Cart.findOne({ user: req.user._id });
+
+//     if (!cart) {
+//       cart = new Cart({ user: req.user._id, items: [], totalAmount: 0 });
+//     }
+
+//     // Ensure `items` is always an array (prevents `undefined` issues)
+//     if (!Array.isArray(cart.items)) {
+//       cart.items = [];
+//     }
+
+//     // Convert subserviceId to string to prevent mismatches
+//     const subserviceIdStr = subserviceId.toString();
+
+//     // Check if the subservice is already in the cart
+//     const existingItemIndex = cart.items.findIndex(item => item.subservice?.toString() === subserviceIdStr);
+
+//     if (existingItemIndex > -1) {
+//       // If the subservice already exists, update its quantity and scheduled details
+//       cart.items[existingItemIndex].quantity += quantity;
+//       cart.items[existingItemIndex].scheduledTime = scheduledTime;
+//       cart.items[existingItemIndex].scheduledDate = scheduledDate;
+//     } else {
+//       // Add new subservice to the cart
+//       const cartItem = {
+//         subservice: subservice._id, // Ensure ObjectId consistency
+//         quantity,
+//         scheduledTime,
+//         scheduledDate,
+//         service: subservice.service, // Correct reference to service
+//         price: subservice.price,
+//       };
+
+//       console.log("New Cart Item:", cartItem);
+//       cart.items.push(cartItem);
+//     }
+
+//     // Recalculate total amount
+//     cart.totalAmount = cart.items.reduce((sum, item) => {
+//       const price = item.price || 0; // Ensure price is a valid number
+//       const quantity = item.quantity || 1; // Default quantity to 1 if missing
+//       return sum + price * quantity;
+//     }, 0);
+
+//     await cart.save();
+
+//     console.log("Cart after update:", cart);
+//     res.json({
+//       message: "Subservice added to cart successfully",
+//       cart,
+//     });
+//   } catch (error) {
+//     console.error("Error in addSubServiceToCart:", error);
+//     res.status(500).json({ message: "Error adding subservice to cart" });
+//   }
+// };
+
+
+
+
+// New function for adding sub-services directly to the cart
+exports.addSubServiceToCartNew = async (req, res) => {
+  try {
+    console.log("Request Body:", req.body);
+    const { subserviceId, quantity } = req.body;
+
+    // Validate request data
+    if (!subserviceId || !quantity || isNaN(quantity) || quantity <= 0) {
+      return res.status(400).json({ message: "Invalid request data" });
+    }
+
+    // Fetch the subservice from the database
+    const subservice = await SubService.findById(subserviceId);
+    if (!subservice) {
+      return res.status(404).json({ message: "Subservice not found" });
+    }
+
+    console.log("Fetched Subservice:", subservice);
+
+    // Find or create user's cart
+    let cart = await Cart.findOne({ user: req.user._id });
+
+    if (!cart) {
+      cart = new Cart({ user: req.user._id, items: [], totalAmount: 0 });
+    }
+
+    // Ensure `cart.items` is an array
+    if (!Array.isArray(cart.items)) {
+      cart.items = [];
+    }
+
+    console.log("Current Cart:", cart);
+
+    // Convert `subserviceId` to string for proper comparison
+    const subserviceIdStr = subserviceId.toString();
+
+    // Find if subservice already exists in the cart
+    const existingItemIndex = cart.items.findIndex(
+      (item) => item.subservice?.toString() === subserviceIdStr
+    );
+
+    if (existingItemIndex > -1) {
+      // If item exists, update quantity
+      cart.items[existingItemIndex].quantity += quantity;
+    } else {
+      // Add new subservice to the cart
+      cart.items.push({
+        subservice: subservice._id,
+        quantity,
+        price: subservice.price || 0, // Store price to avoid re-fetching later
+      });
+    }
+
+    // Recalculate total amount
+    cart.totalAmount = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    // Save the updated cart
+    await cart.save();
+
+    console.log("Updated Cart:", cart);
+
+    res.json({
+      message: "Subservice added to cart successfully",
+      cart,
+    });
+  } catch (error) {
+    console.error("Error in addSubServiceToCartNew:", error);
+    res.status(500).json({ message: "Error adding subservice to cart" });
+  }
+};
+

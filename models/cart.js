@@ -8,9 +8,13 @@ const cartSchema = new mongoose.Schema(
       required: true,
     },
     items: [{
-      service: {
+      subservice: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "ServiceCategory.services",
+        ref: "SubService", 
+        required: true,
+      },
+      quantity: {
+        type: Number,
         required: true,
       },
       scheduledDate: {

@@ -17,6 +17,7 @@ const {
   removeFromCart,
   updateCartItem,
   clearCart,
+  addSubServiceToCart
 } = require("../controllers/cartController");
 
 /**
@@ -297,7 +298,7 @@ router.get('/subcategory-hierarchy', userServiceController.getSubCategoryHierarc
  *       500:
  *         description: Server error
  */
-router.post("/cart", auth, addToCart);
+router.post("/cart/subservice", auth, addSubServiceToCart);
 
 /**
  * @swagger
@@ -402,6 +403,9 @@ router.delete("/cart/:itemId", auth, removeFromCart);
  *         description: Server error
  */
 router.delete("/cart", auth, clearCart);
+
+// Add subservice to cart
+router.post('/cart/subservice', auth, addSubServiceToCart);
 
 // User Booking routes
 router.post("/bookings", auth, createBooking);
