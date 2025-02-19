@@ -524,8 +524,8 @@ exports.createServiceCategory = async (req, res) => {
 // Create Service
 exports.createService = async (req, res) => {
   try {
-    console.log('Request body:', req.body);
-    console.log('File:', req.file);
+    // console.log('Request body:', req.body);
+    // console.log('File:', req.file);
 
     const { name, description, category, basePrice, duration } = req.body;
 
@@ -892,13 +892,15 @@ exports.getAllReviews = async (req, res) => {
 
 // Add Sub Category
 exports.addSubCategory = async (req, res) => {
-  console.log("Request Body:", req.body); // Log the request body
-  console.log("Uploaded File:", req.file); // Log the uploaded file
+  // console.log("testing" , req.body , req.file)
+  // console.log("Request Body:", req.body); // Log the request body
+  // console.log("Uploaded File:", req.file); // Log the uploaded file
 
   const { name, category } = req.body; // Extracting name and category from the form data
 
   // Check if name and category are provided
   if (!name || !category) {
+    console.log(name , category , "test")
       return res.status(400).json({ message: "Name and category are required." });
   }
 
@@ -910,6 +912,87 @@ exports.addSubCategory = async (req, res) => {
 
   await subCategory.save();
   return res.status(201).json({ message: "Subcategory created successfully", subCategory });
+};
+
+// Update service category
+exports.updateSubCategory = async (req, res) => {
+  try {
+    const { name } = req.body;
+    let image = req.file ? req.file.filename : undefined; // Handle uploaded file
+    console.log(name, image);
+
+    // Find the existing category
+    const existingSubCategory = await SubCategory.findById(req.params.subcategoryId);
+    if (!existingSubCategory) {
+      return res.status(404).json({
+        success: false,
+        message: "Service category not found",
+      });
+    }
+
+    // Prepare update object (only update fields that are provided)
+    const updateData = {};
+    if (name) updateData.name = name; // Update only if name is provided
+    if (image) updateData.image = path.basename(image); // Update only if icon is uploaded
+
+    // Perform the update
+    const subCategory = await SubCategory.findByIdAndUpdate(
+      req.params.subcategoryId,
+      { $set: updateData },
+      { new: true }
+    );
+
+    // console.log(category, "category");
+
+    res.json({
+      success: true,
+      data: subCategory
+    });
+  } catch (error) {
+    console.log(error, "error");
+    res.status(500).json({
+      success: false,
+      message: "Error updating service category"
+    });
+  }
+};
+
+// Delete service category
+exports.deleteSubCategory = async (req, res) => {
+  try {
+    const category = await SubCategory.findById(req.params.subcategoryId);
+    
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Service category not found"
+      });
+    }
+
+    // Check if category has any active services
+    // const activeServices = await Service.find({ category: req.params.categoryId, status: 'active' });
+    // if (activeServices.length > 0) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Cannot delete category with active services"
+    //   });
+    // }
+
+    // Use findByIdAndDelete instead of remove()
+    await SubCategory.findByIdAndDelete(req.params.subcategoryId);
+    
+    res.json({
+      success: true,
+      message: "Sub Category deleted successfully"
+    });
+  } catch (error) {
+    console.error("Delete SubCategory Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error deleting SubCategory",
+      error: error.message
+    });
+  }
 };
 
 // Update User Status

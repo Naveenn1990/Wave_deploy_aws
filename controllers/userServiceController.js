@@ -415,7 +415,7 @@ const getAllSubCategories = async (req, res) => {
               path: 'subservices',   // <-- Add this to fetch subservices
               model: 'SubService'
           });
-          console.log('Fetched Subcategories:', subcategories);
+          // console.log('Fetched Subcategories:', subcategories);
 
       res.status(200).json({
           success: true,
