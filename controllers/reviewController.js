@@ -1,6 +1,6 @@
 const Review = require('../models/Review');
 const User = require('../models/User');
-const Booking = require('../models/Booking');
+const Booking = require('../models/booking');
 
 // Submit a new review
 exports.submitReview = async (req, res) => {
