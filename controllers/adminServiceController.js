@@ -228,7 +228,7 @@ exports.addSubService = async (req, res) => {
 // Update service category
 exports.updateServiceCategory = async (req, res) => {
   try {
-    const { name, description, icon, status } = req.body;
+    const { name, description, icon, status ,subtitle} = req.body;
     const category = await ServiceCategory.findByIdAndUpdate(
       req.params.categoryId,
       {
@@ -236,7 +236,8 @@ exports.updateServiceCategory = async (req, res) => {
           name,
           description,
           icon: path.basename(icon),
-          status
+          status,
+          subtitle
         }
       },
       { new: true }
@@ -361,7 +362,8 @@ exports.createCategory = async (req, res) => {
             name: req.body.name.trim(),
             description: req.body.description.trim(),
             icon: req.file.filename, // Store only the filename
-            status: 'active'
+            status: 'active',
+            subtitle: req.body.subtitle.trim()
         });
 
         const savedCategory = await category.save();
@@ -374,7 +376,8 @@ exports.createCategory = async (req, res) => {
             icon: savedCategory.icon, // This will be just the filename
             status: savedCategory.status,
             createdAt: savedCategory.createdAt,
-            updatedAt: savedCategory.updatedAt
+            updatedAt: savedCategory.updatedAt,
+            subtitle: savedCategory.subtitle
         };
 
         res.status(201).json({
@@ -494,51 +497,63 @@ exports.getAllSubServices = async (req, res) => {
 
 // Create sub-service
 exports.createSubService = async (req, res) => {
-    try {
-        const { name, description, service, price } = req.body;
+  try {
+      const { name, description, service, price,includes,excludes } = req.body;
 
-        // Validate required fields
-        if (!name || !description || !service || !price) {
-            return res.status(400).json({
-                success: false,
-                message: 'Name, description, service, and price are required'
-            });
-        }
+      console.log('Received Data:', req.body);
+      console.log('Uploaded File:', req.file);
 
-        // Check if the service exists
-        const existingService = await Service.findById(service);
-        if (!existingService) {
-            return res.status(404).json({
-                success: false,
-                message: 'Service not found'
-            });
-        }
+      if (!name || !description || !service || !price || !includes || !excludes) {
+          return res.status(400).json({ success: false, message: 'All fields are required' });
+      }
 
-        // Create the sub-service
-        const subService = new SubService({
-            name,
-            description,
-            service,
-            price,
-            images : req.file.filename,
-            isActive: true
-        });
+      if (isNaN(price) || price <= 0) {
+          return res.status(400).json({ success: false, message: 'Price must be a positive number' });
+      }
 
-        const savedSubService = await subService.save();
+      // Validate Service ID
+      if (!mongoose.Types.ObjectId.isValid(service)) {
+          return res.status(400).json({ success: false, message: 'Invalid service ID' });
+      }
 
-        res.status(201).json({
-            success: true,
-            message: 'Sub-Service created successfully',
-            subService: savedSubService
-        });
-    } catch (error) {
-        console.error('Create Sub-Service Error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error creating sub-service'
-        });
-    }
+      const existingService = await Service.findById(service);
+      if (!existingService) {
+          return res.status(404).json({ success: false, message: 'Service not found' });
+      }
+
+      if (!req.file || !req.file.filename) {
+          return res.status(400).json({ success: false, message: 'Icon image is required' });
+      }
+
+      const subService = new SubService({
+          name,
+          description,
+          service,
+          price,
+          icon: [req.file.filename], // Fix: Store in an array
+          isActive: true,
+          includes,
+          excludes
+      });
+
+      const savedSubService = await subService.save();
+
+      res.status(201).json({
+          success: true,
+          message: 'Sub-Service created successfully',
+          subService: savedSubService
+      });
+
+  } catch (error) {
+      console.error('Error:', error);
+      res.status(500).json({
+          success: false,
+          message: 'Error creating sub-service',
+          error: error.message // Temporary for debugging
+      });
+  }
 };
+
 
 // Update service
 exports.updateService = async (req, res) => {
@@ -561,12 +576,14 @@ exports.updateService = async (req, res) => {
     service.basePrice = basePrice || service.basePrice;
     service.duration = duration || service.duration;
 
+
     // Update icon if provided
     if (req.file) {
       service.icon = path.basename(req.file.path);
     }
 
     await service.save();
+    
 
     res.json({
       success: true,

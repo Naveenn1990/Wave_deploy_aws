@@ -2,6 +2,8 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const { sendOTP } = require("../utils/sendOTP");
 const path = require("path");
+const Booking = require("../models/Booking"); // Ensure the correct model is imported
+const SubService = require("../models/SubService");
 
 // Register new user
 exports.register = async (req, res) => {
@@ -626,3 +628,4 @@ exports.getUserDetails = async (req, res) => {
     });
   }
 };
+

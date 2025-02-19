@@ -20,7 +20,7 @@ const {
 const authController = require("../controllers/authController");
 const userServiceController = require("../controllers/userServiceController");
 const bannerController = require("../controllers/bannerController");
-const { addReview } = require('../controllers/bookingController');
+const userController = require("../controllers/userController");
 
 /**
  * @swagger
@@ -747,11 +747,5 @@ router.get("/services/popular", userServiceController.getPopularServices);
  *         description: Server error
  */
 router.get("/banners", bannerController.getActiveBanners);
-
-// Route for submitting app reviews
-router.post('/reviews', auth, addReview);
-
-// New route for submitting app reviews
-router.post('/reviews/new', auth, addReview);
 
 module.exports = router;

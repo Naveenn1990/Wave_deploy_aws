@@ -75,6 +75,12 @@ const handleFileUpload = (req, res, next) => {
             });
         }
 
+        console.log('Uploaded File Details:', req.file);
+        console.log('File Name:', req.file.originalname);
+        console.log('File Type:', req.file.mimetype);
+        console.log('File Size:', req.file.size);
+        console.log('File Path:', req.file.path);
+
         next();
     });
 };

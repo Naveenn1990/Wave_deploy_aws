@@ -6,6 +6,7 @@ const adminServiceController = require("../controllers/adminServiceController");
 const adminSettingsController = require("../controllers/adminSettingsController");
 const adminReportController = require("../controllers/adminReportController");
 const bannerController = require("../controllers/bannerController");
+const userServiceController = require("../controllers/userServiceController");
 const { upload, processFilePath } = require("../middleware/upload");
 const SubCategory = require("../models/SubCategory");
 
@@ -38,7 +39,7 @@ router.delete("/service-category/:categoryId", adminAuth, adminServiceController
 
 // Sub-Category Management
 router.post("/sub-category", adminAuth, upload.single('image'), processFilePath, adminController.addSubCategory);
-
+// router.get("/sub-categories", adminAuth, adminController.getAllSubCategories);
 
 // Service Management
 router.post("/service", adminAuth, upload.single('icon'), processFilePath, adminServiceController.createService);
@@ -60,6 +61,7 @@ router.get("/services/:categoryId/analytics", adminAuth, adminServiceController.
 // Booking Management
 router.get("/users/:userId/bookings", adminAuth, adminController.getUserBookings);
 router.put("/bookings/:bookingId/complete", adminAuth, adminController.completeBooking);
+// router.post("/book-subservice", adminAuth, userServiceController.bookSubService);
 
 // Banner Management
 router.post("/banners", adminAuth, upload.single('image'), processFilePath, bannerController.uploadBanner);

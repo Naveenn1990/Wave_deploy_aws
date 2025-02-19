@@ -19,9 +19,17 @@ const subServiceSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    images: [{
+    icon: [{
         type: String // Array of URLs or paths to images
     }],
+    includes: {
+        type: [String], // Array of strings to list included features
+        default: [],
+    },
+    excludes: {
+        type: [String], // Array of strings to list excluded features
+        default: [],
+    },
     isActive: {
         type: Boolean,
         default: true

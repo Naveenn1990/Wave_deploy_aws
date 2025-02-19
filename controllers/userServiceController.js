@@ -3,6 +3,7 @@ const ServiceCategory = require("../models/ServiceCategory");
 const Service = require("../models/Service");
 const SubService = require("../models/SubService");
 const SubCategory = require("../models/SubCategory");
+const Booking = require("../models/booking"); // Assuming you have a Booking model
 // Helper function to get clean image filename
 function getCleanImageName(imagePath) {
     if (!imagePath) return null;
@@ -542,6 +543,27 @@ const getUserSubCategoryHierarchy = async (req, res) => {
         console.error('Error fetching subcategory hierarchy for user:', error);
         res.status(500).json({ success: false, message: error.message });
     }
+};
+
+// Book subservice
+exports.bookSubService = async (req, res) => {
+    const { subServiceId, userId } = req.body; // Assuming these are passed in the request
+
+    // Logic to find the subservice and create a booking
+    const subService = await SubService.findById(subServiceId);
+    if (!subService) {
+        return res.status(404).json({ message: "Subservice not found." });
+    }
+
+    // Logic to create a booking
+    const booking = new Booking({
+        user: userId,
+        subService: subServiceId,
+        // other relevant booking details
+    });
+
+    await booking.save();
+    return res.status(201).json({ message: "Booking created successfully", booking });
 };
 
 module.exports = {

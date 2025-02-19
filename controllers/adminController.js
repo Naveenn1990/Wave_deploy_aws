@@ -621,6 +621,8 @@ exports.addSubService = async (req, res) => {
   try {
     const { serviceId } = req.params;
     const { name, description, basePrice, duration } = req.body;
+
+    
     
     if (!req.file) {
       return res.status(400).json({ message: "Icon is required" });

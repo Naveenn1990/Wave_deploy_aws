@@ -22,14 +22,9 @@ const bookingSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    service: {
+    subService: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Service",
-      required: true,
-    },
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "ServiceCategory",
+      ref: "SubService",
       required: true,
     },
     scheduledDate: {
@@ -98,7 +93,7 @@ bookingSchema.on('index', function(err) {
 
 // Only create basic indexes, no geospatial indexes
 bookingSchema.index({ user: 1, status: 1 });
-bookingSchema.index({ service: 1 });
+bookingSchema.index({ subService: 1 });
 bookingSchema.index({ scheduledDate: 1 });
 bookingSchema.index({ status: 1 });
 
