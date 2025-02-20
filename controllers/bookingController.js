@@ -390,9 +390,18 @@ exports.cancelBooking = async (req, res) => {
         await booking.save();
         await booking.populate({
             path: 'subService',
-            populate: {
-                path: 'category',
-                select: 'name'
+                populate: {
+                path: 'subService',
+                populate: {
+                    path: 'service', // SubService -> Service
+                    populate: {
+                        path: 'subCategory', // Service -> SubCategory
+                        populate: {
+                            path: 'category', // SubCategory -> ServiceCategory
+                            select: 'name'
+                        }
+                    }
+                }
             }
         });
 

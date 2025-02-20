@@ -61,7 +61,7 @@ exports.getCart = async (req, res) => {
           serviceId: service?._id,
           serviceName: service?.name,
           serviceDescription: service?.description,
-          serviceBasePrice: service?.basePrice,
+          // serviceBasePrice: service?.basePrice,
           serviceDuration: service?.duration,
           subserviceId: subservice?._id, // Add this line for subservice ID
           subserviceName: subservice?.name,
@@ -185,16 +185,21 @@ exports.clearCart = async (req, res) => {
     res.status(500).json({ message: "Error clearing cart" });
   }
 };
-
 // Add subservice directly to cart
 exports.addSubServiceToCart = async (req, res) => {
   try {
     console.log("Request Body:", req.body);
-    const { subserviceId, quantity, scheduledTime, scheduledDate } = req.body;
+    const { subserviceId, scheduledDate, scheduledTime, location } = req.body;
 
-    // Fetch the subservice directly from the SubService collection
+    if (!subserviceId) {
+      console.error("subserviceId is missing in request body");
+      return res.status(400).json({ message: "subserviceId is required" });
+    }
+
+    console.log("Subservice ID from request body:", subserviceId);
+
+    // Fetch subservice details
     const subservice = await SubService.findById(subserviceId);
-
     if (!subservice) {
       console.error("Subservice not found for ID:", subserviceId);
       return res.status(404).json({ message: "Subservice not found" });
@@ -202,56 +207,118 @@ exports.addSubServiceToCart = async (req, res) => {
 
     console.log("Fetched Subservice:", subservice);
 
-    if (!subservice.price) {
-      console.error("Subservice price is undefined for ID:", subserviceId);
+    if (typeof subservice.price !== "number") {
+      console.error("Invalid subservice price for ID:", subserviceId);
       return res.status(400).json({ message: "Invalid subservice price" });
     }
 
-    // Calculate total amount based on subservice price and quantity
-    const totalAmount = subservice.price * quantity;
-    // console.log(totalAmount , "totalAmount")
-    // Find or create user's cart
+    // Find user's cart; if not found, create a new one
     let cart = await Cart.findOne({ user: req.user._id });
-    // if (!cart) {
-    // }
-    cart = new Cart({ user: req.user._id, items: [], totalAmount: 0 });
+    if (!cart) {
+      cart = new Cart({ user: req.user._id, items: [], totalAmount: 0 });
+    }
 
-    // Create new cart item
-    const cartItem = {
-      subservice: subserviceId,
-      quantity,
-      scheduledTime,
-      scheduledDate,
-      service: subserviceId, // Ensure this is correctly referenced
-      price: subservice.price,
-    };
+    console.log("Cart before update:", JSON.stringify(cart, null, 2));
 
-    console.log(`Cart Item:`, cartItem);
+    // Check if the subservice is already in the cart
+    const existingItemIndex = cart.items.findIndex(
+      (item) => item.subservice?.toString() === subserviceId
+    );
 
-    // Add new item to the cart
-    cart.items.push(cartItem);
+    if (existingItemIndex !== -1) {
+      console.log("Subservice already in cart, removing it...");
+      // Remove the item if it already exists (toggle behavior)
+      cart.items.splice(existingItemIndex, 1);
+    } else {
+      console.log("Adding new subservice to cart...");
+      // Add the subservice item to the cart
+      cart.items.push({
+        subservice: subserviceId,
+        price: subservice.price
+      });
+    }
 
-    // Recalculate total amount
-    console.log("start",cart , "cart")
-    // cart.totalAmount = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    cart.totalAmount = cart.items.reduce((sum, item) => {
-      const price = item.price || 0; // Ensure price is a valid number
-      const quantity = item.quantity || 1; // Default quantity to 1 if missing
-      return sum + (price * quantity);
-    }, 0);
-    
+    // Recalculate totalAmount
+    cart.totalAmount = cart.items.reduce((sum, item) => sum + (item.price || 0), 0);
+
     await cart.save();
 
-    console.log("end" , "cart")
+    console.log("Updated Cart:", JSON.stringify(cart, null, 2));
     res.json({
-      message: "Subservice added to cart successfully",
+      message: "Cart updated successfully",
       cart,
     });
   } catch (error) {
-    console.error("Error in addSubServiceToCart:", error);
-    res.status(500).json({ message: "Error adding subservice to cart" });
+    console.error("Error updating cart:", error);
+    res.status(500).json({ message: "Error updating cart", error: error.message });
   }
 };
+
+
+
+// Get user's cart
+exports.getUserCart = async (req, res) => {
+  try {
+    const cart = await Cart.findOne({ user: req.user._id }).populate("items.subservice");
+
+    if (!cart) {
+      return res.status(404).json({ message: "Cart not found" });
+    }
+
+    res.json(cart);
+  } catch (error) {
+    console.error("Error fetching cart:", error);
+    res.status(500).json({ message: "Error fetching cart" });
+  }
+};
+
+// Remove an item from the cart
+exports.removeItemFromCart = async (req, res) => {
+  try {
+    const { subserviceId } = req.body;
+
+    if (!subserviceId) {
+      return res.status(400).json({ message: "subserviceId is required" });
+    }
+
+    let cart = await Cart.findOne({ user: req.user._id });
+
+    if (!cart) {
+      return res.status(404).json({ message: "Cart not found" });
+    }
+
+    cart.items = cart.items.filter(item => item.subservice.toString() !== subserviceId);
+
+    // Recalculate totalAmount
+    cart.totalAmount = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    await cart.save();
+
+    res.json({ message: "Item removed from cart", cart });
+  } catch (error) {
+    console.error("Error removing item from cart:", error);
+    res.status(500).json({ message: "Error removing item from cart" });
+  }
+};
+
+// Clear the cart
+exports.clearCart = async (req, res) => {
+  try {
+    await Cart.findOneAndUpdate(
+      { user: req.user._id },
+      { items: [], totalAmount: 0 },
+      { new: true }
+    );
+
+    res.json({ message: "Cart cleared successfully" });
+  } catch (error) {
+    console.error("Error clearing cart:", error);
+    res.status(500).json({ message: "Error clearing cart" });
+  }
+};
+
+
+
 
 // exports.addSubServiceToCart = async (req, res) => {
 //   try {

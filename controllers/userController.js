@@ -190,16 +190,16 @@ exports.verifyLoginOTP = async (req, res) => {
   try {
     const { phone, otp } = req.body;
 
-    console.log(`Verifying OTP for ${phone}: ${otp}`); // For debugging
+    console.log(`Verifying OTP for ${phone}: ${otp}`); // Debugging
 
     const user = await User.findOne({
       phone,
       tempOTP: otp,
       tempOTPExpiry: { $gt: new Date() },
-    }).select("+tempOTP +tempOTPExpiry +name +email +isVerified");
+    }).select("+name +email +isVerified"); // Explicitly selecting fields
 
     if (!user) {
-      console.log("User not found or OTP mismatch"); // For debugging
+      console.log("User not found or OTP mismatch"); // Debugging
       return res.status(400).json({
         success: false,
         message: "Invalid or expired OTP",
@@ -218,6 +218,7 @@ exports.verifyLoginOTP = async (req, res) => {
     // Update last login
     user.lastLogin = new Date();
     await user.save();
+    console.log("User verified and logged in:", user);
 
     // Generate token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
@@ -226,14 +227,15 @@ exports.verifyLoginOTP = async (req, res) => {
 
     res.json({
       success: true,
-      user: {
-        token,
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        isVerified: user.isVerified,
-      },
+      user: user
+      // {
+      //   token,
+      //   _id: user._id,
+      //   name: user.name,
+      //   email: user.email,
+      //   phone: user.phone,
+      //   isVerified: user.isVerified,
+      // },
     });
   } catch (error) {
     console.error("OTP Verification Error:", error);
@@ -243,6 +245,8 @@ exports.verifyLoginOTP = async (req, res) => {
     });
   }
 };
+
+
 
 // Send OTP for forgot password
 exports.sendForgotPasswordOTP = async (req, res) => {
