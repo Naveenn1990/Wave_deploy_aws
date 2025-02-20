@@ -8,77 +8,123 @@ exports.getCart = async (req, res) => {
     const cart = await Cart.findOne({ user: req.user._id });
 
     if (!cart) {
-      return res.json({ items: [], totalAmount: 0 });
+      return res.json({ 
+        _id: null,
+        user: null,
+        totalAmount: 0,
+        createdAt: null,
+        updatedAt: null,
+        items: [] 
+      });
     }
 
-    // Populate service details for each cart item
+    // Populate service and subservice details for each cart item
     const populatedCart = {
-      ...cart.toObject(),
+      _id: cart._id,
+      user: cart.user,
+      totalAmount: cart.totalAmount,
+      createdAt: cart.createdAt,
+      updatedAt: cart.updatedAt,
       items: await Promise.all(cart.items.map(async (item) => {
-        const category = await ServiceCategory.findOne({
-          "services._id": item.service
-        });
+        console.log("Processing item:", item);
+
+        // Find the category that contains this service
+        const category = await ServiceCategory.findOne({ "services._id": item.service });
+
+        if (!category) {
+          console.log(`Category not found for service ID: ${item.service}`);
+        }
+
+        // Extract service details
         const service = category?.services?.find(
           s => s._id.toString() === item.service.toString()
         );
+
+        if (!service) {
+          console.log(`Service not found in category for service ID: ${item.service}`);
+        }
+
+        // Extract subservice details if applicable
+        let subservice = null;
+        if (service && item.subservice) {
+          subservice = service.subservices?.find(
+            sub => sub._id.toString() === item.subservice.toString()
+          );
+
+          if (!subservice) {
+            console.log(`Subservice not found for subservice ID: ${item.subservice}`);
+          }
+        }
+
         return {
-          ...item,
-          service: service ? {
-            _id: service._id,
-            name: service.name,
-            description: service.description,
-            basePrice: service.basePrice,
-            duration: service.duration
-          } : null
+          _id: item._id,
+          serviceId: service?._id,
+          serviceName: service?.name,
+          serviceDescription: service?.description,
+          serviceBasePrice: service?.basePrice,
+          serviceDuration: service?.duration,
+          subserviceId: subservice?._id, // Add this line for subservice ID
+          subserviceName: subservice?.name,
+          subservicePrice: subservice?.price,
+          subserviceDescription: subservice?.description,
+          quantity: item.quantity, // This already exists
+          scheduledDate: item.scheduledDate,
+          scheduledTime: item.scheduledTime,
+          location: item.location
         };
       }))
     };
 
     res.json(populatedCart);
   } catch (error) {
-    console.error("Error in getCart:", error);
+    console.error("🔥 Error in getCart:", error);
     res.status(500).json({ message: "Error fetching cart" });
   }
 };
 
+
+
 // Remove item from cart
 exports.removeFromCart = async (req, res) => {
   try {
-    const { itemId } = req.params;
+    const { itemId } = req.params; // The item ID from request
 
+    // Fetch the cart for the logged-in user
     const cart = await Cart.findOne({ user: req.user._id });
+
     if (!cart) {
       return res.status(404).json({ message: "Cart not found" });
     }
 
-    cart.items = cart.items.filter(
-      item => item._id.toString() !== itemId
-    );
+    // 🔍 DEBUG: Print the items in the cart
+    console.log("🛒 Cart Items Before Removal:", cart.items.map(item => ({
+      id: item._id.toString(),
+      subservice: item.subservice ? item.subservice.toString() : "MISSING"
+    })));
 
-    // Recalculate total amount
-    if (cart.items.length === 0) {
-      cart.totalAmount = 0;
-    } else {
-      const category = await ServiceCategory.findOne({
-        "services._id": cart.items[0].service
-      });
-      const service = category?.services?.find(
-        s => s._id.toString() === cart.items[0].service.toString()
-      );
-      cart.totalAmount = service?.basePrice || 0;
+    console.log("🔍 Requested itemId:", itemId);
+
+    // Find the item to remove
+    const itemToRemove = cart.items.find(item => item._id.toString() === itemId);
+
+    if (!itemToRemove) {
+      console.log("❌ Item not found in cart");
+      return res.status(404).json({ message: "Item not found in cart" });
     }
+
+    // Remove the item
+    cart.items = cart.items.filter(item => item._id.toString() !== itemId);
 
     await cart.save();
 
-    res.json({
-      message: "Item removed from cart successfully",
-      cart,
-    });
+    res.json({ message: "Item removed from cart successfully", cart });
   } catch (error) {
-    console.error("Error in removeFromCart:", error);
+    console.error("🔥 Error in removeFromCart:", error);
     res.status(500).json({ message: "Error removing item from cart" });
   }
 };
+
+
 
 // Update cart item
 exports.updateCartItem = async (req, res) => {
@@ -358,4 +404,3 @@ exports.addSubServiceToCartNew = async (req, res) => {
     res.status(500).json({ message: "Error adding subservice to cart" });
   }
 };
-

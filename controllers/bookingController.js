@@ -180,31 +180,44 @@ exports.getAllBookingsWithFilters = async (req, res) => {
 };
 
 // Get user's bookings
+// Get user's bookings
+// Get user's bookings
 exports.getUserBookings = async (req, res) => {
     try {
         const { status, page = 1, limit = 10 } = req.query;
-        const skip = (page - 1) * limit;
 
-        // Build query
+        // Ensure page and limit are valid numbers
+        const pageNumber = parseInt(page, 10) || 1;
+        const pageSize = parseInt(limit, 10) || 10;
+        const skip = (pageNumber - 1) * pageSize;
+
+        // Build query for user bookings
         const query = { user: req.user._id };
         if (status) {
             query.status = status;
         }
 
-        // Get bookings with pagination
+        // Fetch bookings with correct population hierarchy
         const bookings = await Booking.find(query)
             .populate({
                 path: 'subService',
                 populate: {
-                    path: 'category',
-                    select: 'name'
+                    path: 'service', // SubService -> Service
+                    populate: {
+                        path: 'subCategory', // Service -> SubCategory
+                        populate: {
+                            path: 'category', // SubCategory -> ServiceCategory
+                            select: 'name'
+                        }
+                    }
                 }
             })
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(parseInt(limit));
+            .limit(pageSize)
+            .lean(); // Convert to plain JS objects for better performance
 
-        // Get total count
+        // Get total booking count
         const total = await Booking.countDocuments(query);
 
         res.status(200).json({
@@ -213,8 +226,8 @@ exports.getUserBookings = async (req, res) => {
                 bookings,
                 pagination: {
                     total,
-                    page: parseInt(page),
-                    pages: Math.ceil(total / limit),
+                    page: pageNumber,
+                    pages: Math.ceil(total / pageSize),
                 },
             },
         });
@@ -227,6 +240,7 @@ exports.getUserBookings = async (req, res) => {
         });
     }
 };
+
 
 // Get booking details
 exports.getBookingDetails = async (req, res) => {
