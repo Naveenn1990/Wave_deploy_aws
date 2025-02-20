@@ -7,7 +7,8 @@ const fs = require('fs');
 const adminBookingController = require('../controllers/adminBookingController');
 const adminController = require('../controllers/adminController'); 
 const { getAllSubServices } = require('../controllers/adminServiceController');
-
+const { createOffer, editOffer, deleteOffer, getAllOffers } = require('../controllers/offerController');
+const { upload, processFilePath } = require("../middleware/upload");
 /**
  * @swagger
  * tags:
@@ -15,19 +16,30 @@ const { getAllSubServices } = require('../controllers/adminServiceController');
  *   description: Service management endpoints for admin
  */
 
+// const storage = multer.diskStorage({
+//     destination: (req, file, cb) => {
+//         cb(null, 'uploads/'); // Directory where images will be stored
+//     },
+//     filename: (req, file, cb) => {
+//         cb(null, Date.now() + path.extname(file.originalname)); // Append timestamp to filename
+//     }
+// });
+// const upload = multer({ storage: storage }); // Initialize multer
+
+
 // Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+// const uploadDir = path.join(__dirname, '..', 'uploads');
+// if (!fs.existsSync(uploadDir)) {
+//     fs.mkdirSync(uploadDir, { recursive: true });
+// }
 
 // Basic multer setup
-const upload = multer({
-    dest: uploadDir,
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB
-    }
-}).single('icon');
+// const upload = multer({
+//     dest: uploadDir,
+//     limits: {
+//         fileSize: 5 * 1024 * 1024 // 5MB
+//     }
+// }).single('icon');
 
 // Import controllers
 const {
@@ -317,4 +329,21 @@ router.get('/bookings', adminBookingController.getAllBookings);
 // const adminController = require('../controllers/adminController'); 
 router.put('/user-status', adminController.updateUserStatus);
 
+
+// Create Offer with image upload
+router.post('/offers', upload.single('promotionalImage'), processFilePath,createOffer);
+
+
+// Edit Offer
+router.put('/offers/:id', upload.single('promotionalImage'), processFilePath,  editOffer);
+
+// Delete Offer
+router.delete('/offers/:id', deleteOffer);
+
+
+// Fetch All Offers
+router.get('/offers', getAllOffers); // New route to fetch all offers
+
 module.exports = router;
+
+

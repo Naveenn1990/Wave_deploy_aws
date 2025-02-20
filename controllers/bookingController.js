@@ -180,8 +180,6 @@ exports.getAllBookingsWithFilters = async (req, res) => {
 };
 
 // Get user's bookings
-// Get user's bookings
-// Get user's bookings
 exports.getUserBookings = async (req, res) => {
     try {
         const { status, page = 1, limit = 10 } = req.query;
