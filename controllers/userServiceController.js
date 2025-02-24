@@ -401,6 +401,7 @@ const getAllServicesForUser = async (req, res) => {
 // };
 
 const getAllSubCategories = async (req, res) => {
+  // console.log("testttt")
   try {
       const subcategories = await SubCategory.find({ isActive: true })
           .populate('category')
@@ -417,7 +418,18 @@ const getAllSubCategories = async (req, res) => {
               model: 'SubService'
           });
           // console.log('Fetched Subcategories:', subcategories);
-
+          // .populate({
+          //   path: 'subservices',
+          //   populate: {
+          //       path: 'services', // SubService -> Service
+          //       populate: {
+          //           path: 'subCategory', // Service -> SubCategory
+          //           populate: {
+          //               path: 'category', // SubCategory -> ServiceCategory
+          //            }
+          //       }
+          //   }
+          // })
       res.status(200).json({
           success: true,
           data: subcategories
@@ -432,6 +444,7 @@ const getAllSubCategories = async (req, res) => {
 
 
 const getAllSubCategoriesForUser = async (req, res) => {
+  console.log("subcategory")
     try {
         const subcategories = await SubCategory.find({ isActive: true }); // Fetch active subcategories
 
@@ -448,7 +461,7 @@ const getAllSubCategoriesForUser = async (req, res) => {
 const getAllSubServices = async (req, res) => {
     try {
         const subservices = await SubService.find({ isActive: true }).populate('service');; // Fetch active subservices
-        console.log('Fetched Subservices:', subservices);
+        // console.log('Fetched Subservices:', subservices);
         res.status(200).json({
             success: true,
             data: subservices
@@ -460,6 +473,7 @@ const getAllSubServices = async (req, res) => {
 };
 
 const getAllSubServicesForUser = async (req, res) => {
+  console.log("hi")
     try {
         const subservices = await SubService.find({ isActive: true }); // Fetch active subservices
 

@@ -32,11 +32,11 @@ exports.getAllServices = async (req, res) => {
 // Create service
 exports.createService = async (req, res) => {
   try {
-    // console.log('Create Service Request:', {
-    //   body: req.body,
-    //   file: req.file,
-    //   headers: req.headers['content-type']
-    // });
+    console.log('Create Service Request:', {
+      body: req.body,
+      file: req.file,
+      headers: req.headers['content-type']
+    });
 
     // Validate required fields
     if (!req.body.name || !req.body.description || !req.body.subCategory) {
@@ -537,7 +537,7 @@ exports.createSubService = async (req, res) => {
           service,
           price,
           icon: [req.file.filename], // Fix: Store in an array
-          isActive: true,
+          isActive: true, 
           includes,
           excludes
       });
@@ -565,7 +565,7 @@ exports.createSubService = async (req, res) => {
 exports.updateService = async (req, res) => {
   try {
     const { serviceId } = req.params;
-    const { name, description, basePrice, duration } = req.body;
+    const { name, description } = req.body;
 
     // Find service
     const service = await Service.findById(serviceId);
@@ -578,9 +578,7 @@ exports.updateService = async (req, res) => {
 
     // Update fields
     service.name = name || service.name;
-    service.description = description || service.description;
-    service.basePrice = basePrice || service.basePrice;
-    service.duration = duration || service.duration;
+    service.description = description || service.description;  
 
 
     // Update icon if provided
@@ -642,7 +640,7 @@ exports.deleteService = async (req, res) => {
 exports.updateSubService = async (req, res) => {
   try {
     const { serviceId, subServiceId } = req.params;
-    const { name, description, basePrice, duration } = req.body;
+    const { name, description, basePrice, duration , includes , excludes} = req.body;
 
     // Find service and sub-service
     const service = await Service.findById(serviceId);
@@ -665,6 +663,8 @@ exports.updateSubService = async (req, res) => {
     subService.name = name || subService.name;
     subService.description = description || subService.description;
     subService.basePrice = basePrice || subService.basePrice;
+    subService.includes = includes || subService.includes;
+    subService.excludes = excludes || subService.excludes;
     subService.duration = duration || subService.duration;
 
     // Update icon if provided
