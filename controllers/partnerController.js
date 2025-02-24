@@ -2,6 +2,7 @@ const Partner = require("../models/Partner");
 const jwt = require("jsonwebtoken");
 const { sendOTP } = require("../utils/sendOTP");
 const path = require('path');
+const Booking = require('../models/booking');
 
 const sendLoginOTP = async (req, res) => {
   try {
@@ -267,6 +268,24 @@ const uploadKYCDocuments = async (req, res) => {
 };
 const getKYCStatus = async (req, res) => { /* ... */ };
 
+const completeBooking = async (req, res) => {
+  const bookingId = req.params.id;
+  const photos = req.files;
+
+  try {
+    // Update the booking status to completed
+    const booking = await Booking.findByIdAndUpdate(bookingId, { status: 'completed', photos: photos.map(file => file.path) }, { new: true });
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    res.status(200).json({ message: 'Booking marked as completed', booking });
+  } catch (error) {
+    res.status(500).json({ message: 'Error marking booking as completed', error });
+  }
+};
+
 // Single export statement at the end
 module.exports = {
   sendLoginOTP,
@@ -277,4 +296,6 @@ module.exports = {
   getDashboardStats,
   uploadKYCDocuments,
   getKYCStatus,
+  completeBooking,
+  
 };

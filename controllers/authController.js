@@ -76,6 +76,7 @@ exports.verifyOTP = async (req, res) => {
     // Clear OTP
     user.tempOTP = undefined;
     user.tempOTPExpiry = undefined;
+    user.isVerified = true;  // ✅ Mark user as verified
     await user.save();
 
     // Generate token

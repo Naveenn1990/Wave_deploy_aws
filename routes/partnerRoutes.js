@@ -11,11 +11,13 @@ const partnerServiceController = require('../controllers/partnerServiceControlle
 const uploadDir = path.join(__dirname, '..', 'uploads');
 const profilesDir = path.join(uploadDir, 'profiles');
 const kycDir = path.join(uploadDir, 'kyc');
+const bookingPhotosDir = path.join(uploadDir, 'booking-photos');
 
 // Create directories with recursive option
 fs.mkdirSync(uploadDir, { recursive: true });
 fs.mkdirSync(profilesDir, { recursive: true });
 fs.mkdirSync(kycDir, { recursive: true });
+fs.mkdirSync(bookingPhotosDir, { recursive: true });
 
 // Import controllers
 const {
@@ -35,8 +37,14 @@ const {
   getProfile,
   updateProfile,
   completeProfile,
-  completeKYC
+  completeKYC,
 } = require("../controllers/partnerAuthController");
+
+
+
+const {
+    completeBooking
+  } = require("../controllers/partnerServiceController");
 
 const { getAllCategories } = require("../controllers/partnerDropdownController");
 
@@ -45,8 +53,10 @@ const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         if (file.fieldname === 'profilePicture') {
             cb(null, profilesDir);
-        } else {
+        } else if (file.fieldname === 'panCard' || file.fieldname === 'aadhaar' || file.fieldname === 'chequeImage') {
             cb(null, kycDir);
+        } else {
+            cb(null, bookingPhotosDir);
         }
     },
     filename: function (req, file, cb) {
@@ -147,6 +157,9 @@ router.get("/services/history", auth, getServiceHistory);
 router.put("/services/status", auth, updateServiceStatus);
 router.get("/bookings/matching", auth, getMatchingBookings);
 router.put("/bookings/:bookingId/accept", auth, partnerServiceController.acceptBooking);
+
+// New route to mark an accepted booking as completed and handle photo uploads
+router.post('/booking/:id/complete', upload.array('photos', 10), partnerServiceController.completeBooking);
 
 // Dropdown data route
 router.get("/dropdown/categories", getAllCategories);

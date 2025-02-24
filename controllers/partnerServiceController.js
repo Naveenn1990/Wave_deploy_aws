@@ -438,3 +438,26 @@ exports.acceptBooking = async (req, res) => {
     });
   }
 };
+
+// Complete booking
+exports.completeBooking = async (req, res) => {
+  const bookingId = req.params.id;
+  const photos = req.files;
+
+  try {
+    // Update the booking status to completed and change payment status
+    const booking = await Booking.findByIdAndUpdate(bookingId, { 
+      status: 'completed', 
+      paymentStatus: 'completed', 
+      photos: photos.map(file => file.path) 
+    }, { new: true });
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    res.status(200).json({ message: 'Booking marked as completed', booking });
+  } catch (error) {
+    res.status(500).json({ message: 'Error marking booking as completed', error });
+  }
+};

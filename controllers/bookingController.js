@@ -286,8 +286,9 @@ exports.updateBooking = async (req, res) => {
 
         const booking = await Booking.findOne({
             _id: bookingId,
-            user: req.user._id,
+            // user: req.user._id,
         });
+        console.log("Booking found in DB:", booking);
 
         if (!booking) {
             return res.status(404).json({
@@ -296,7 +297,7 @@ exports.updateBooking = async (req, res) => {
             });
         }
 
-        if (!["pending", "confirmed"].includes(booking.status)) {
+        if (!["pending", "accepted"].includes(booking.status)) {
             return res.status(400).json({
                 success: false,
                 message: "Cannot update booking that is in progress, completed, or cancelled",
@@ -328,12 +329,20 @@ exports.updateBooking = async (req, res) => {
         }
 
         await booking.save();
+
+        // Correct population according to the hierarchy
         await booking.populate({
             path: 'subService',
             populate: {
-                path: 'category',
-                select: 'name'
-            }
+                path: 'service',
+                populate: {
+                    path: 'subCategory',
+                    populate: {
+                        path: 'category',
+                        select: 'name',
+                    },
+                },
+            },
         });
 
         res.status(200).json({
@@ -350,6 +359,7 @@ exports.updateBooking = async (req, res) => {
         });
     }
 };
+
 
 // Cancel booking
 exports.cancelBooking = async (req, res) => {
@@ -388,18 +398,17 @@ exports.cancelBooking = async (req, res) => {
         booking.cancellationTime = new Date();
 
         await booking.save();
+
+        // Correcting the population hierarchy
         await booking.populate({
             path: 'subService',
+            populate: {
+                path: 'service', // SubService -> Service
                 populate: {
-                path: 'subService',
-                populate: {
-                    path: 'service', // SubService -> Service
+                    path: 'subCategory', // Service -> SubCategory
                     populate: {
-                        path: 'subCategory', // Service -> SubCategory
-                        populate: {
-                            path: 'category', // SubCategory -> ServiceCategory
-                            select: 'name'
-                        }
+                        path: 'category', // SubCategory -> Category
+                        select: 'name'
                     }
                 }
             }
@@ -574,3 +583,13 @@ exports.getBookingsByStatus = async (req, res) => {
 };
 
 // Removed getCategories function as it has been moved to userServiceController.js
+
+// Get all reviews
+exports.getAllReviews = async (req, res) => {
+    try {
+        const reviews = await Review.find().populate('user', 'name'); // Fetch all reviews with user names
+        res.status(200).json(reviews);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching reviews', error });
+    }
+};

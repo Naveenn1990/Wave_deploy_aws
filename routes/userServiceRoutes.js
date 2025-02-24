@@ -9,7 +9,8 @@ const {
   updateBooking,
   cancelBooking,
   addReview,
-  getAllBookings
+  getAllBookings,
+  getAllReviews
 } = require("../controllers/bookingController");
 const {
   addToCart,
@@ -416,5 +417,8 @@ router.put("/bookings/:bookingId/cancel", auth, cancelBooking);
 router.post("/bookings/:bookingId/review", auth, addReview);
 
 router.get('/categories', userServiceController.getAllCategories);
+
+// Fetch all reviews made by all users
+router.get('/reviews', auth, getAllReviews);
 
 module.exports = router;

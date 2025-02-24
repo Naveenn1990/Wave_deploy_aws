@@ -27,34 +27,36 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Check if phone number already exists
-    const phoneExists = await User.findOne({ phone });
-    if (phoneExists) {
+    // Find the user by phone number
+    let user = await User.findOne({ phone });
+
+    // If user exists but is not verified, prevent registration
+    if (user && !user.isVerified) {
       return res.status(400).json({
         success: false,
-        message: "Phone number already registered",
+        message: "Phone number is not verified",
       });
     }
 
-    // Check if email already exists
-    const emailExists = await User.findOne({ email });
-    if (emailExists) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already in use",
+    if (user) {
+      // If user exists and is verified, update their details
+      user.name = name;
+      user.email = email;
+      user.password = password; // Ensure password hashing if required
+
+      await user.save();
+    } else {
+      // If user does not exist (edge case), create a new user
+      user = new User({
+        name,
+        email,
+        phone,
+        password,
+        isVerified: true,
       });
+
+      await user.save();
     }
-
-    // Create new user
-    const user = new User({
-      name,
-      email,
-      phone,
-      password,
-      isVerified: true,
-    });
-
-    await user.save();
 
     // Generate token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
@@ -83,6 +85,7 @@ exports.register = async (req, res) => {
     });
   }
 };
+
 
 // Login with password
 exports.loginWithPassword = async (req, res) => {
