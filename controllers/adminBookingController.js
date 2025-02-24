@@ -7,7 +7,10 @@ exports.getAllBookings = async (req, res) => {
         // Fetch all bookings with correct population hierarchy, including the partner
         const bookings = await Booking.find()
             .populate('user', 'name email phone') // Populate user details
-            .populate('partner', 'name _id') // Populate partner who accepted the booking
+            .populate({
+                path: 'partner',
+                select: 'name _id email phone address' // Include full partner details
+            })
             .populate({
                 path: 'subService',
                 populate: {
@@ -35,8 +38,12 @@ exports.getAllBookings = async (req, res) => {
             serviceName: booking.subService?.service?.name || 'N/A',
             categoryName: booking.subService?.service?.subCategory?.category?.name || 'N/A',
             partnerId: booking.partner?._id || 'N/A',
-            partnerName: booking.partner?.name || 'N/A',
+            partnerName: booking.partner?.name || (booking.partner ? 'Still not assigned' : 'N/A'), // Handle unassigned partners
+            partnerEmail: booking.partner?.email || 'N/A',
+            partnerPhone: booking.partner?.phone || 'N/A',
+            partnerAddress: booking.partner?.address || 'N/A',
             amount: booking.amount || 0,
+            paymentMode: booking.paymentMode || 'N/A', // Include payment mode
             status: booking.status || 'N/A',
             scheduledDate: booking.scheduledDate,
             scheduledTime: booking.scheduledTime,

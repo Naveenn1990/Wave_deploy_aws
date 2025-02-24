@@ -33,23 +33,39 @@ exports.createOffer = async (req, res) => {
 
 // Edit Offer
 exports.editOffer = async (req, res) => {
+    const { id } = req.params;
+    console.log("req Body", req.body )
+    // Collecting update fields dynamically
+    const updateFields = {};
+
+    if (req.body.couponCode) updateFields.couponCode = req.body.couponCode;
+    if (req.body.discount) updateFields.discount = req.body.discount;
+    if (req.body.startDate) updateFields.startDate = req.body.startDate;
+    if (req.body.endDate) updateFields.endDate = req.body.endDate;
+    if (req.body.offerTitle) updateFields.offerTitle = req.body.offerTitle;
+
+    // Handling the image separately (if provided)
+    if (req.file && req.file.path) {
+        updateFields.promotionalImage = req.file.path;
+    }
+    console.log('Update fields:', updateFields);
+
+
     try {
-        const { id } = req.params;
-        const updateData = req.body; // Get the update data from the request body
+        // Find the offer and update it with new fields
+        const updatedOffer = await Offer.findByIdAndUpdate(id, updateFields, {
+            new: true, // Return the updated document
+            runValidators: true // Ensure model validations are applied
+        });
 
-        // Check if a new promotional image has been uploaded
-        if (req.file) {
-            updateData.promotionalImage = req.file.path; // Update the promotionalImage with the new file path
-        }
-
-        const updatedOffer = await Offer.findByIdAndUpdate(id, updateData, { new: true });
         if (!updatedOffer) {
-            return res.status(404).json({ success: false, message: "Offer not found" });
+            return res.status(404).json({ message: 'Offer not found' });
         }
-        res.status(200).json({ success: true, data: updatedOffer });
+
+        res.status(200).json(updatedOffer);
     } catch (error) {
-        console.error("🔥 Error editing offer:", error);
-        res.status(500).json({ success: false, message: error.message });
+        console.error('Error updating offer:', error);
+        res.status(500).json({ message: 'Internal server error', error });
     }
 };
 
@@ -80,3 +96,4 @@ exports.getAllOffers = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
