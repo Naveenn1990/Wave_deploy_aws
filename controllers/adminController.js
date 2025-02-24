@@ -314,7 +314,7 @@ exports.verifyPartnerKYC = async (req, res) => {
 // Get all partners
 exports.getAllPartners = async (req, res) => {
   try {
-    const { status, page = 1, limit = 10 } = req.query;
+    const { status, page = 1, limit = 100 } = req.query;
 
     const query = {};
     if (status) {

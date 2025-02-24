@@ -15,6 +15,10 @@ const subServiceSchema = new mongoose.Schema({
         ref: 'Service',
         required: true
     },
+    subCategory: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'SubCategory', 
+    },
     price: {
         type: Number,
         required: true

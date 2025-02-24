@@ -32,6 +32,83 @@ exports.createOffer = async (req, res) => {
 };
 
 // Edit Offer
+// exports.editOffer = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const updateData = req.body; // Get the update data from the request body
+
+//         // Check if a new promotional image has been uploaded
+//         if (req.file) {
+//             updateData.promotionalImage = req.file.path; // Update the promotionalImage with the new file path
+//         }
+
+//         const updatedOffer = await Offer.findByIdAndUpdate(id, updateData, { new: true });
+//         if (!updatedOffer) {
+//             return res.status(404).json({ success: false, message: "Offer not found" });
+//         }
+//         res.status(200).json({ success: true, data: updatedOffer });
+//     } catch (error) {
+//         console.log("🔥 Error editing offer:", error);
+//         res.status(500).json({ success: false, message: error.message });
+//     }
+// };
+ 
+// Edit Offer (Partial Update)
+// exports.editOffer = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const { offerTitle , couponCode , discount , startDate , endDate} = req.body;
+//         // console.log("updateData" , updateData)
+//         // Find the existing offer
+//         const offer = await Offer.findById(id);
+//         if (!offer) {
+//             return res.status(404).json({ success: false, message: "Offer not found" });
+//         }
+//         console.log(offer , "offer")
+//         // Update only provided fields
+//         offer.couponCode = couponCode || offer.couponCode;
+//         offer.discount = discount || offer.discount;
+//         offer.startDate = startDate || offer.startDate;
+//         offer.endDate = endDate || offer.endDate;
+//         offer.offerTitle = offerTitle || offer.offerTitle;
+
+//         // Check if a new promotional image has been uploaded
+//         if (req.file) {
+//             offer.promotionalImage = req.file.path;
+//         }
+
+//         // Save the updated offer
+//         await offer.save();
+
+//         res.status(200).json({ success: true, message: "Offer updated successfully", data: offer });
+//     } catch (error) {
+//         console.log("🔥 Error editing offer:", error);
+//         res.status(500).json({ success: false, message: error.message });
+//     }
+// };
+
+// exports.editOffer = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const updateData = req.body;
+
+//         // Check if a new promotional image has been uploaded
+//         if (req.file) {
+//             updateData.promotionalImage = req.file.path;
+//         }
+
+//         const updatedOffer = await Offer.findByIdAndUpdate(id, updateData, { new: true });
+//         if (!updatedOffer) {
+//             return res.status(404).json({ success: false, message: "Offer not found" });
+//         }
+
+//         res.status(200).json({ success: true, message: "Offer updated successfully", data: updatedOffer });
+//     } catch (error) {
+//         console.log("🔥 Error editing offer:", error);
+//         res.status(500).json({ success: false, message: error.message });
+//     }
+// };
+
 exports.editOffer = async (req, res) => {
     const { id } = req.params;
     console.log("req Body", req.body )
@@ -68,6 +145,42 @@ exports.editOffer = async (req, res) => {
         res.status(500).json({ message: 'Internal server error', error });
     }
 };
+
+
+// exports.editOffer = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const updateData = req.body;
+
+//         // Check if a new promotional image has been uploaded
+//         if (req.file) {
+//             updateData.promotionalImage = req.file.path;
+//         }
+
+//         // Fetch existing offer to perform a partial update
+//         const existingOffer = await Offer.findById(id);
+//         if (!existingOffer) {
+//             return res.status(404).json({ success: false, message: "Offer not found" });
+//         }
+
+//         // Update only the fields that exist in `req.body`
+//         Object.keys(updateData).forEach((key) => {
+//             if (updateData[key] !== undefined) {
+//                 existingOffer[key] = updateData[key];
+//             }
+//         });
+
+//         // Save the updated offer (avoids required field validation issues)
+//         const updatedOffer = await existingOffer.save();
+
+//         res.status(200).json({ success: true, data: updatedOffer });
+//     } catch (error) {
+//         console.log("🔥 Error editing offer:", error);
+//         res.status(500).json({ success: false, message: error.message });
+//     }
+// };
+
+
 
 // Delete Offer
 exports.deleteOffer = async (req, res) => {
