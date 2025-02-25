@@ -9,6 +9,8 @@ const adminController = require('../controllers/adminController');
 const { getAllSubServices } = require('../controllers/adminServiceController');
 const { createOffer, editOffer, deleteOffer, getAllOffers } = require('../controllers/offerController');
 const { upload, processFilePath } = require("../middleware/upload");
+const reviewController = require('../controllers/reviewController');
+
 /**
  * @swagger
  * tags:
@@ -50,7 +52,8 @@ const {
     createSubService,
     getServicesByCategory
 } = require('../controllers/adminServiceController');
-
+const {getAllPartnerKYC } = require('../controllers/partnerController');
+const { getAllReviews, getAllReviewsForAdmin} = require('../controllers/reviewController');
 // Middleware to handle file uploads
 const handleFileUpload = (req, res, next) => {
     upload(req, res, function(err) {
@@ -344,6 +347,16 @@ router.delete('/offers/:id', deleteOffer);
 // Fetch All Offers
 router.get('/offers', getAllOffers); // New route to fetch all offers
 
+// // Fetch All Reviews
+// router.get('/reviews', reviewController.getAllReviews);
+
+// Fetch All Reviews for Admin
+// router.get('/admin/reviews', reviewController.getAllReviewsForAdmin);
+
+// Fetch All Partner KYC details for Admin
+router.get('/admin/partner-kyc', getAllPartnerKYC);
+
+// // New API endpoint to fetch all reviews
+// router.get('/reviews', reviewController.getAllReviews);
+
 module.exports = router;
-
-

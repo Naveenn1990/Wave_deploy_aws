@@ -6,7 +6,10 @@ const { sendOTP } = require("../utils/sendOTP");
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
 const path = require("path");
-
+const ServiceCategory = require("../models/ServiceCategory"); 
+const SubCategory = require("../models/SubCategory"); 
+const Service = require("../models/Service");
+const mongoose = require('mongoose');
 // Send OTP for partner login/registration
 exports.sendLoginOTP = async (req, res) => {
   try {
@@ -201,160 +204,65 @@ exports.resendOTP = async (req, res) => {
 // Complete partner profile
 exports.completeProfile = async (req, res) => {
   try {
-    console.log("Received request body:", JSON.stringify(req.body, null, 2));
+    console.log("Received request body:", req.body);
+    console.log("Received files:", req.file);
 
     const {
       name,
       email,
       whatsappNumber,
-      contactNumber,
       qualification,
       experience,
       category,
       service,
       modeOfService,
+      contactNumber,
+      subcategory,
     } = req.body;
 
-    // Get the profile picture filename and extension
-    const profilePicture = req.file
-      ? `${req.file.filename}${path.extname(req.file.originalname)}`
-      : null;
-    console.log("Profile Picture Filename with extension:", profilePicture);
-
-    // Check each required field individually
-    const missingFields = [];
-    if (!name) missingFields.push("name");
-    if (!qualification) missingFields.push("qualification");
-    if (!experience) missingFields.push("experience");
-    if (!category) missingFields.push("category");
-    if (!service) missingFields.push("service");
-    if (!modeOfService) missingFields.push("modeOfService");
-
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Missing required fields: ${missingFields.join(", ")}`,
-      });
+    if (!name || !email || !service || !subcategory) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // Convert experience to a number
-    const experienceNumber = parseFloat(experience);
-    if (isNaN(experienceNumber)) {
-      return res.status(400).json({
-        success: false,
-        message: "Experience must be a valid number",
-      });
-    }
-
-    // Validate modeOfService
-    if (!["online", "offline", "both"].includes(modeOfService)) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Invalid mode of service. Must be one of: online, offline, both",
-      });
-    }
-
-    // Validate category ID
-    const ServiceCategory = require("../models/ServiceCategory");
-    const validCategory = await ServiceCategory.findById(category);
-    if (!validCategory) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid category ID",
-      });
-    }
-
-    // Validate service ID and check if it belongs to the selected category
-    const Service = require("../models/Service");
-    const validService = await Service.findOne({
-      _id: service,
-      category: category,
-    });
+    // Validate service ID and ensure it belongs to the correct subcategory
+    const validService = await Service.findOne({ _id: new mongoose.Types.ObjectId(service), subcategory: new mongoose.Types.ObjectId(subcategory) });
+    console.log("Service Query Result:", validService);
     if (!validService) {
       return res.status(400).json({
         success: false,
-        message:
-          "Invalid service ID or service does not belong to the selected category",
+        message: "Invalid service ID or service does not belong to the selected subcategory",
       });
     }
 
-    // Create or update profile
-    let profile = await PartnerProfile.findOne({ partner: req.partner._id });
-    if (!profile) {
-      profile = new PartnerProfile({
-        partner: req.partner._id,
-        phone: req.partner.phone,
-      });
+    // Handle file upload
+    let profilePicturePath = "";
+    if (req.file) {
+      profilePicturePath = req.file.path;
     }
 
-    // Update profile fields
-    profile.name = name;
-    profile.email = email;
-    profile.whatsappNumber = whatsappNumber;
-    profile.contactNumber = contactNumber;
-    profile.qualification = qualification;
-    profile.experience = experienceNumber;
-    profile.category = category;
-    profile.service = service;
-    profile.modeOfService = modeOfService;
-    if (profilePicture) profile.profilePicture = profilePicture;
-
-    await profile.save();
-
-    // Set profileCompleted flag in Partner model
-    await Partner.findByIdAndUpdate(req.partner._id, {
-      $set: {
-        profileCompleted: true,
-      },
+    const newPartner = new Partner ({
+      name,
+      email,
+      whatsappNumber,
+      qualification,
+      experience,
+      category,
+      service,
+      modeOfService,
+      contactNumber,
+      subcategory,
+      profilePicture: profilePicturePath,
     });
 
-    // Create wallet if not exists
-    let wallet = await PartnerWallet.findOne({ partner: req.partner._id });
-    if (!wallet) {
-      wallet = new PartnerWallet({ partner: req.partner._id });
-      await wallet.save();
-    }
-
-    // Populate category and service details for response
-    await profile.populate([
-      { path: "category", select: "name description icon" },
-      { path: "service", select: "name description icon basePrice duration" },
-    ]);
-
-    res.json({
-      success: true,
-      message: "Profile completed successfully",
-      profile: {
-        _id: profile._id,
-        partnerId: profile.partner,
-        phone: profile.phone,
-        verificationStatus: profile.verificationStatus,
-        status: profile.status,
-        dutyStatus: profile.dutyStatus,
-        serviceCategories: profile.serviceCategories,
-        name: profile.name,
-        email: profile.email,
-        whatsappNumber: profile.whatsappNumber,
-        contactNumber: profile.contactNumber,
-        qualification: profile.qualification,
-        experience: profile.experience,
-        category: profile.category,
-        service: profile.service,
-        modeOfService: profile.modeOfService,
-        profilePicture: profile.profilePicture,
-        createdAt: profile.createdAt,
-        updatedAt: profile.updatedAt,
-      },
-    });
+    await newPartner.save();
+    return res.status(201).json({ success: true, message: "Profile completed successfully", data: newPartner });
   } catch (error) {
-    console.error("Complete Profile Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error updating profile",
-    });
+    console.error("Complete Profile Error:", error.message);
+    return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
   }
 };
+
+
 
 // Update KYC details
 exports.updateKYC = async (req, res) => {

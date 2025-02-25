@@ -1,4 +1,5 @@
 const Partner = require("../models/Partner");
+const PartnerProfile = require("../models/PartnerProfile");
 const jwt = require("jsonwebtoken");
 const { sendOTP } = require("../utils/sendOTP");
 const path = require('path');
@@ -286,6 +287,37 @@ const completeBooking = async (req, res) => {
   }
 };
 
+// Get all partner KYC details
+const getAllPartnerKYC = async (req, res) => {
+  try {
+      const partners = await Partner.find({ 'kycDetails.isVerified': false }) // Fetch only unverified partners
+          .select('name email phone kycDetails') // Select the fields you want
+          .lean(); // Convert to plain JS objects for better performance
+
+      return res.status(200).json({
+          success: true,
+          count: partners.length,
+          data: partners.map(partner => ({
+              id: partner._id,
+              name: partner.name,
+              email: partner.email,
+              phone: partner.phone,
+              kycDetails: {
+                  isVerified: partner.kycDetails.isVerified,
+                  panImage: partner.kycDetails.panImage || 'No PAN image available',
+                  aadharImage: partner.kycDetails.aadharImage || 'No Aadhar image available',
+              },
+          }))
+      });
+  } catch (error) {
+      console.error('Error fetching partner KYC details:', error);
+      return res.status(500).json({
+          success: false,
+          message: 'Error fetching partner KYC details',
+          error: error.message
+      });
+  }
+};
 // Single export statement at the end
 module.exports = {
   sendLoginOTP,
@@ -297,5 +329,5 @@ module.exports = {
   uploadKYCDocuments,
   getKYCStatus,
   completeBooking,
-  
+  getAllPartnerKYC
 };

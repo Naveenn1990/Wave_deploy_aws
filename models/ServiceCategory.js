@@ -10,6 +10,10 @@ const serviceCategorySchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    subtitle: {
+        type: String,
+        required: true
+    },
     icon: {
         type: String, // URL or path to the icon
         required: true

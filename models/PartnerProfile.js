@@ -42,6 +42,11 @@ const partnerProfileSchema = new mongoose.Schema({
     ref: 'ServiceCategory',
     required: true
   },
+  subcategory: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SubCategory',
+    required: true
+  },
   service: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Service',

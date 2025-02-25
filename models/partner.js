@@ -34,6 +34,21 @@ const bankAccountSchema = new mongoose.Schema({
 
 const partnerSchema = new mongoose.Schema(
   {
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ServiceCategory',
+      required: true
+    },
+    subcategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SubCategory',
+      required: true
+    },
+    service: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Service',
+      required: true
+    },
     status: {
       type: String,
       enum: ["pending", "under_review", "approved", "rejected", "blocked"],
@@ -53,15 +68,17 @@ const partnerSchema = new mongoose.Schema(
     otpExpiry: Date,
     profileCompleted: {
       type: Boolean,
-      default: false,
+      default: false, // Initially false, becomes true after completing profile & KYC
     },
     profile: {
       name: {
         type: String,
+        required: true,
         trim: true,
       },
       email: {
         type: String,
+        required: true,
         trim: true,
         lowercase: true,
       },
@@ -80,14 +97,19 @@ const partnerSchema = new mongoose.Schema(
       profilePicture: String,
     },
     kycDetails: {
-      panCard: String,
-      aadhaarCard: String,
-      cancelledCheque: String,
-      bankDetails: {
-        accountNumber: String,
-        ifscCode: String,
-        accountHolderName: String,
+      panCard: {
+        type: String,
+        required: function() {
+          return this.profileCompleted; // Required only when profile is completed
+        }
       },
+      aadhaarCard: {
+        type: String,
+        required: function() {
+          return this.profileCompleted;
+        }
+      },
+      cancelledCheque: String,
       isVerified: {
         type: Boolean,
         default: false,
@@ -127,7 +149,7 @@ const partnerSchema = new mongoose.Schema(
   }
 );
 
-// Create wallet for new partner
+// Auto-create a wallet for new partners
 partnerSchema.post("save", async function (doc) {
   if (!doc.walletId) {
     const PartnerWallet = mongoose.model("PartnerWallet");

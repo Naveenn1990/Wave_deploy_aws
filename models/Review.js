@@ -6,11 +6,21 @@ const reviewSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    booking: {
+    // booking: {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'Booking', // Reference to the Booking model
+    //     required: true
+    // },
+    subService: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Booking', // Reference to the Booking model
+        ref: 'SubService',
         required: true
     },
+    // partner: {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'Partner',
+    //     required: true
+    // },
     rating: {
         type: Number,
         required: true,
@@ -20,7 +30,8 @@ const reviewSchema = new mongoose.Schema({
     comment: {
         type: String,
         required: true,
-        trim: true
+        minlength: 5,
+        maxlength: 500
     },
     createdAt: {
         type: Date,

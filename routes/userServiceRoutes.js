@@ -20,6 +20,7 @@ const {
   clearCart,
   addSubServiceToCart
 } = require("../controllers/cartController");
+const ReviewController = require('../controllers/reviewController');
 
 /**
  * @swagger
@@ -420,5 +421,11 @@ router.get('/categories', userServiceController.getAllCategories);
 
 // Fetch all reviews made by all users
 router.get('/reviews', auth, getAllReviews);
+
+// Route to submit a review
+router.post('/reviews', ReviewController.submitReview);
+
+// Route to fetch reviews for a specific subservice
+router.get('/subservices/:subServiceId/reviews', ReviewController.getReviews);
 
 module.exports = router;

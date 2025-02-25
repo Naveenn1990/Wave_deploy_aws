@@ -48,6 +48,7 @@ exports.sendOTP = async (req, res) => {
 };
 
 // Verify OTP
+// Verify OTP
 exports.verifyOTP = async (req, res) => {
   try {
     const { phone, otp } = req.body;
@@ -59,33 +60,39 @@ exports.verifyOTP = async (req, res) => {
       });
     }
 
-    // Find user and verify OTP
+    // Find user with matching OTP & valid expiry
     const user = await User.findOne({
       phone,
       tempOTP: otp,
       tempOTPExpiry: { $gt: new Date() },
     });
 
+    console.log("User found for OTP verification:", user); // Debugging
+
     if (!user) {
+      // If OTP is incorrect/expired, remove it to prevent conflicts
+      await User.updateOne({ phone }, { $unset: { tempOTP: 1, tempOTPExpiry: 1 } });
+
       return res.status(400).json({
         success: false,
-        message: "Invalid OTP or OTP expired",
+        message: "Invalid OTP or OTP expired. Request a new OTP.",
       });
     }
 
-    // Clear OTP
+    // ✅ Mark user as verified
+    user.isVerified = true;
     user.tempOTP = undefined;
     user.tempOTPExpiry = undefined;
-    user.isVerified = true;  // ✅ Mark user as verified
     await user.save();
 
-    // Generate token
+    // Generate token after successful verification
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
     res.status(200).json({
       success: true,
+      message: "OTP verified successfully!",
       user: {
         token,
         userId: user._id,
@@ -94,9 +101,6 @@ exports.verifyOTP = async (req, res) => {
         phone: user.phone,
         isVerified: user.isVerified,
       },
-      message: user.isVerified
-        ? "Login successful"
-        : "Please complete registration",
     });
   } catch (error) {
     console.error("Error in verifyOTP:", error);
@@ -106,6 +110,7 @@ exports.verifyOTP = async (req, res) => {
     });
   }
 };
+
 
 // Resend OTP
 exports.resendOTP = async (req, res) => {
