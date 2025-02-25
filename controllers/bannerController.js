@@ -106,33 +106,96 @@ const bannerController = {
     }
   },
 
-  // Update banner
-  updateBanner: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updateData = { ...req.body };
+  // // Update banner
+  // updateBanner: async (req, res) => {
+  //   try {
+  //     const { id } = req.params;
+  //     const {title} = req.body;
 
+  //     if (req.file) {
+  //       // Get just the filename without any path
+  //       updateData.image = getFilename(req.file.path);
+  //     }
+
+  //     const banner = await Banner.findByIdAndUpdate(
+  //       id,
+  //       title,
+  //       { new: true }
+  //     ).lean();
+
+  //     console.log(title , "banner")
+
+  //     if (!banner) {
+  //       return res.status(404).json({
+  //         success: false,
+  //         message: "Banner not found",
+  //       });
+  //     }
+
+  //     // Clean image path in response
+  //     banner.image = getFilename(banner.image);
+
+  //     res.status(200).json({
+  //       success: true,
+  //       message: "Banner updated successfully",
+  //       banner,
+  //     });
+  //   } catch (error) {
+  //     console.error("Error in updateBanner:", error);
+  //     res.status(500).json({
+  //       success: false,
+  //       message: "Error updating banner",
+  //       error: error.message,
+  //     });
+  //   }
+  // },
+
+ updateBanner : async (req, res) => {
+    try {
+      const { bannerId } = req.params;
+      const { title } = req.body;
+      
+      // Create an object to store the update data
+      let updateData = {};
+  
+      // Update title only if provided
+      if (title) {
+        updateData.title = title;
+      }
+  
+      // Update image only if a new file is uploaded
       if (req.file) {
-        // Get just the filename without any path
         updateData.image = getFilename(req.file.path);
       }
-
+      
+      // Check if there's anything to update
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No valid fields provided for update",
+        });
+      }
+  
+      console.log(updateData , bannerId ,"updateData")
+      // Perform the update operation
       const banner = await Banner.findByIdAndUpdate(
-        id,
-        updateData,
-        { new: true }
-      ).lean();
-
+        bannerId,
+        { $set: updateData }, // Use $set to update only provided fields
+        { new: true, lean: true }
+      );
+  
       if (!banner) {
         return res.status(404).json({
           success: false,
           message: "Banner not found",
         });
       }
-
-      // Clean image path in response
-      banner.image = getFilename(banner.image);
-
+  
+      // Clean the image path in response
+      if (banner.image) {
+        banner.image = getFilename(banner.image);
+      }
+  
       res.status(200).json({
         success: true,
         message: "Banner updated successfully",
@@ -151,8 +214,8 @@ const bannerController = {
   // Delete banner
   deleteBanner: async (req, res) => {
     try {
-      const { id } = req.params;
-      const banner = await Banner.findById(id);
+      const { bannerId } = req.params;
+      const banner = await Banner.findById(bannerId);
 
       if (!banner) {
         return res.status(404).json({
@@ -171,7 +234,7 @@ const bannerController = {
         }
       }
 
-      await Banner.findByIdAndDelete(id);
+      await Banner.findByIdAndDelete(bannerId);
 
       res.status(200).json({
         success: true,

@@ -86,12 +86,12 @@ const partnerProfileSchema = new mongoose.Schema({
   }],
   verificationStatus: {
     type: String,
-    enum: ["pending", "verified", "rejected"],
+    enum: ["pending", "Approved", "Rejected"],
     default: "pending"
   },
   status: {
     type: String,
-    enum: ["active", "inactive", "blocked"],
+    enum: ["pending", "Approved", "Rejected"],
     default: "inactive"
   },
   dutyStatus: {

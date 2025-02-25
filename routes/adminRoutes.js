@@ -23,7 +23,7 @@ router.get("/users", adminAuth, adminController.getAllUsers);
 // Partner management
 router.get("/partners", adminAuth, adminController.getAllPartners);
 router.get("/partners/:partnerId", adminAuth, adminController.getPartnerDetails);
-router.put("/partners/:partnerId/status", adminAuth, adminController.updatePartnerStatus);
+router.put("/partners/:partnerId/status" , adminController.updatePartnerStatus);
 router.get("/partners/kyc/pending", adminAuth, adminController.getPendingKYC);
 router.get("/partners/:partnerId/kyc", adminAuth, adminController.getPartnerKYC);
 router.put("/partners/:partnerId/kyc", adminAuth, adminController.verifyPartnerKYC);

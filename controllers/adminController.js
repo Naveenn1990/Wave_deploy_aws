@@ -9,6 +9,7 @@ const ServiceCategory = require("../models/ServiceCategory");
 const Service = require("../models/Service");
 const path = require('path');
 const SubCategory = require("../models/SubCategory"); // Assuming SubCategory model is defined in a separate file
+const PartnerProfile = require("../models/PartnerProfile");
 
 // Admin login
 exports.loginAdmin = async (req, res) => {
@@ -314,6 +315,11 @@ exports.verifyPartnerKYC = async (req, res) => {
 // Get all partners
 exports.getAllPartners = async (req, res) => {
   try {
+    // const temppartners = await Partner.find()
+    // return res.json({
+    //   temppartners 
+    // });
+
     const { status, page = 1, limit = 100 } = req.query;
 
     const query = {};
@@ -364,13 +370,14 @@ exports.updatePartnerStatus = async (req, res) => {
   try {
     const { partnerId } = req.params;
     let { status, remarks } = req.body;
-
+    console.log(req.body , "req body")
     // Convert status to lowercase and replace spaces with underscores
-    status = status?.toLowerCase().trim().replace(/\s+/g, '_');
+    status = status?.trim().replace(/\s+/g, '_');
 
     // Validate status
-    const validStatuses = ["pending", "under_review", "approved", "rejected", "blocked"];
+    const validStatuses = ["pending", "under_review", "Approved", "Rejected", "blocked"];
     if (!status || !validStatuses.includes(status)) {
+      console.log(status , validStatuses.includes(status))
       return res.status(400).json({
         success: false,
         message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
@@ -378,7 +385,7 @@ exports.updatePartnerStatus = async (req, res) => {
       });
     }
 
-    const partner = await Partner.findById(partnerId);
+    const partner = await PartnerProfile.findById(partnerId);
     if (!partner) {
       return res.status(404).json({ 
         success: false,
@@ -387,52 +394,47 @@ exports.updatePartnerStatus = async (req, res) => {
     }
 
     // Additional validations based on status
-    if (status === "approved") {
-      if (!partner.kycDetails?.isVerified) {
-        return res.status(400).json({
-          success: false,
-          message: "Cannot approve partner without KYC verification"
-        });
-      }
-      if (!partner.profileCompleted) {
-        return res.status(400).json({
-          success: false,
-          message: "Cannot approve partner without completed profile",
-          currentStatus: {
-            profileCompleted: partner.profileCompleted,
-            kycVerified: partner.kycDetails?.isVerified
-          },
-          note: "Please ensure the partner has completed their profile using the profile completion API"
-        });
-      }
-    }
+    // if (status === "Approved") {
+    //   // if (!partner.isVerified === "") {
+    //   //   return res.status(400).json({
+    //   //     success: false,
+    //   //     message: "Cannot approve partner without KYC verification"
+    //   //   });
+    //   // }
+    //   if (!partner.profileCompleted) {
+    //     return res.status(400).json({
+    //       success: false,
+    //       message: "Cannot approve partner without completed profile",
+    //       currentStatus: {
+    //         profileCompleted: partner.profileCompleted,
+    //         kycVerified: partner.kycDetails?.isVerified
+    //       },
+    //       note: "Please ensure the partner has completed their profile using the profile completion API"
+    //     });
+    //   }
+    // }
 
     // Update the partner status
     const updateData = {
       $set: {
         status: status,
-        statusRemarks: remarks || '',
-        statusUpdatedAt: new Date(),
-        statusUpdatedBy: req.admin._id
+        statusRemarks: remarks || ''
       }
     };
 
-    const updatedPartner = await Partner.findByIdAndUpdate(
+    const updatedPartner = await PartnerProfile.findByIdAndUpdate(
       partnerId,
       updateData,
       { new: true, runValidators: true }
-    ).select('status profile kycDetails statusRemarks statusUpdatedAt');
+    ) 
 
     res.json({
       success: true,
       message: `Partner status updated to ${status} successfully`,
       data: {
         partnerId: updatedPartner._id,
-        name: updatedPartner.profile?.name,
-        status: updatedPartner.status,
-        kycVerified: updatedPartner.kycDetails?.isVerified,
-        remarks: updatedPartner.statusRemarks,
-        updatedAt: updatedPartner.statusUpdatedAt
+        name: updatedPartner.name,
+        status: updatedPartner.status
       }
     });
   } catch (error) {

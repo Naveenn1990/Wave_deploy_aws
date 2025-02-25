@@ -210,7 +210,7 @@ exports.completeProfile = async (req, res) => {
       contactNumber,
       qualification,
       experience,
-      category,
+      category, 
       service,
       modeOfService,
     } = req.body;
@@ -617,6 +617,20 @@ exports.getProfile = async (req, res) => {
     });
   }
 };
+
+exports.getAllPartnerProfile = async (req , res) => {
+  try{
+    const allPartners = await PartnerProfile.find() 
+    return res.status(200).json({
+      success: false,
+      message: "Profile not found",
+      data : allPartners
+    });
+  } catch(err){
+    console.log("Error Occured : " , err)
+  }
+}
+
 
 // Update partner profile
 exports.updateProfile = [

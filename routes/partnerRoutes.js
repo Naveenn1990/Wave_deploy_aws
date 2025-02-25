@@ -38,6 +38,7 @@ const {
   updateProfile,
   completeProfile,
   completeKYC,
+  getAllPartnerProfile,
 } = require("../controllers/partnerAuthController");
 
 
@@ -90,6 +91,7 @@ router.post("/auth/verify-otp", verifyLoginOTP);
 
 // Partner Profile Routes (Protected)
 router.get("/profile", auth, getProfile);
+router.get("/partnersprofile", getAllPartnerProfile);
 
 router.put("/profile/update", auth, (req, res, next) => {
     upload.single('profilePicture')(req, res, (err) => {
