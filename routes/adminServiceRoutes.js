@@ -332,7 +332,7 @@ router.get('/bookings', adminBookingController.getAllBookings);
 // const adminController = require('../controllers/adminController'); 
 router.put('/user-status', adminController.updateUserStatus);
 
-
+ 
 // Create Offer with image upload
 router.post('/offers', upload.single('promotionalImage'), processFilePath,createOffer);
 

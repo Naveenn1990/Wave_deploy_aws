@@ -62,7 +62,7 @@ const bookingSchema = new mongoose.Schema(
     cancellationTime: Date,
     review: {
       rating: {
-        type: Number,
+        type: Number, 
         min: 1,
         max: 5
       },
