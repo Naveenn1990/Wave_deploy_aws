@@ -420,7 +420,7 @@ router.post("/bookings/:bookingId/review", auth, addReview);
 router.get('/categories', userServiceController.getAllCategories);
 
 // Fetch all reviews made by all users
-router.get('/reviews', auth, getAllReviews);
+router.get('/reviews', getAllReviews);
 
 // Route to submit a review
 router.post('/reviews', ReviewController.submitReview);

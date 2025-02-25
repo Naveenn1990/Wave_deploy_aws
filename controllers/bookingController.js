@@ -587,9 +587,12 @@ exports.getBookingsByStatus = async (req, res) => {
 // Get all reviews
 exports.getAllReviews = async (req, res) => {
     try {
-        const reviews = await Review.find().populate('user', 'name'); // Fetch all reviews with user names
+        const reviews = await Review.find()
+            .populate('user') // Fetch all user details
+            .populate('subService'); // Fetch all subService details
+        
         res.status(200).json(reviews);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching reviews', error });
     }
-};
+}; 
