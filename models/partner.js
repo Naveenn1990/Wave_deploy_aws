@@ -72,6 +72,24 @@ const partnerSchema = new mongoose.Schema(
         trim: true,
         lowercase: true,
       },
+      address: {
+        type: String,
+        required: function () {
+          return this.profileCompleted;
+        }
+      },
+      landmark: {
+        type: String,
+        required: function () {
+          return this.profileCompleted;
+        }
+      },
+      pincode: {
+        type: String,
+        required: function () {
+          return this.profileCompleted;
+        }
+      },
     },
     profilePicture: String,
 

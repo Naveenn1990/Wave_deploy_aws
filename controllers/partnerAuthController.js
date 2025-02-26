@@ -27,7 +27,7 @@ exports.sendLoginOTP = async (req, res) => {
     if (!partner) {
       // If partner does not exist, create a new partner record.
       partner = new Partner({ phone });
-      await  Partner.save();
+      await partner.save();
       console.log("New partner created for phone:", phone);
     }
 
@@ -191,7 +191,7 @@ exports.completeProfile = async (req, res) => {
     console.log("Received request body:", req.body);
     console.log("Received file:", req.file);
 
-    const { name, email, whatsappNumber, qualification, experience, contactNumber } = req.body;
+    const { name, email, whatsappNumber, qualification, experience, contactNumber, address, landmark, pincode } = req.body;
 
     if (!name || !email) {
       return res.status(400).json({ success: false, message: "Name and Email are required" });
@@ -215,7 +215,7 @@ exports.completeProfile = async (req, res) => {
       {
         $set: {
           profileCompleted: false, // Will be updated in another API
-          profile: { name, email },
+          profile: { name, email,address,landmark,pincode },
           whatsappNumber,
           qualification,
           experience,
