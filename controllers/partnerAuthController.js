@@ -110,17 +110,33 @@ exports.verifyLoginOTP = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign({ id: partner._id }, process.env.JWT_SECRET, { expiresIn: "30d" });
 
+    // Ensure all required fields are included in the response
     res.json({
       success: true,
       message: "Login successful",
       partner: {
         _id: partner._id,
+        partnerId: partner.partnerId, // Ensure this field exists in the database
         phone: partner.phone,
+        name: partner.name,
+        email: partner.email,
+        whatsappNumber: partner.whatsappNumber,
+        qualification: partner.qualification,
+        experience: partner.experience,
+        contactNumber: partner.contactNumber,
+        address: partner.address,
+        landmark: partner.landmark,
+        pincode: partner.pincode,
+        category: partner.category, // Ensure this field exists
+        subcategory: partner.subcategory, // Ensure this field exists
+        service: partner.service, // Ensure this field exists
+        modeOfService: partner.modeOfService, // Ensure this field exists
         status: partner.status,
         kycStatus: partner.kycStatus,
         profileCompleted: partner.profileCompleted,
         profile: partner.profile,
         token,
+        profilePicture: partner.profilePicture,
       },
     });
   } catch (error) {

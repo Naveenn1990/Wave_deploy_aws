@@ -1,7 +1,14 @@
 const mongoose = require("mongoose");
 
+
 const partnerSchema = new mongoose.Schema(
   {
+    Booking : [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Booking",
+    }],
+
+
     kyc : {
       panCard : String,
       aadhaar : String,
