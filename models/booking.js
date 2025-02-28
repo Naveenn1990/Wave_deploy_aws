@@ -25,22 +25,19 @@ const bookingSchema = new mongoose.Schema(
     subService: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SubService",
-      required: true,
+      required: true
     },
     service: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Service",
-      required: true,
+      ref: "Service"
     },
-    service: {
+    subCategory: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "SubCategory",
-      required: true,
+      ref: "SubCategory"
     },
-    service: {
+    category: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ServiceCategory",
-      required: true,
+      ref: "ServiceCategory"
     },
     scheduledDate: {
       type: Date,
@@ -86,8 +83,7 @@ const bookingSchema = new mongoose.Schema(
     },
     partner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Partner", // ✅ Partner will be assigned when they accept the booking
-      required: true
+      ref: "Partner" // ✅ Partner will be assigned when they accept the booking
     },
   },
   { 

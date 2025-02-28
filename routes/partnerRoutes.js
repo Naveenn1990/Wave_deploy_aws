@@ -160,7 +160,7 @@ router.get("/services/current", auth, getCurrentService);
 router.get("/services/history", auth, getServiceHistory);
 router.put("/services/status", auth, updateServiceStatus);
 router.get("/bookings/matching", auth, getMatchingBookings);
-router.put("/bookings/:bookingId/accept", auth, partnerServiceController.acceptBooking);
+router.put("/bookings/:bookingId/accept",  partnerServiceController.acceptBooking);
 
 // New route to mark an accepted booking as completed and handle photo uploads
 router.post('/booking/:id/complete', upload.array('photos', 10), partnerServiceController.completeBooking);

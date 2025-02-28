@@ -345,27 +345,39 @@ exports.getMatchingBookings = async (req, res) => {
       status: { $in: ["pending"] },
     })
     .populate({
-      path: 'service',
-      populate: {
-          path: 'subCategory',
-          populate: {
-              path: 'category', // This refers to the ServiceCategory
-              model: 'ServiceCategory'
-          }
-      }
-  }) 
-    // .populate([
-    //   { path: 'user',  },
-    //   { path: 'subService',  },
-    //   { path: 'service',  },
-    //   // { path: 'category', select: 'name' },
-    //   { path: 'subCategory', model: 'SubCategory',  },
-    //   { path: 'serviceCategory', model: 'ServiceCategory', }
-    // ])
+        path: 'service',
+        populate: {
+            path: 'subCategory',
+            model: 'SubCategory',
+            populate: {
+                path: 'category',
+                model: 'ServiceCategory',
+                select: 'name' // Ensure the category name is fetched
+            }
+        }
+    })
+    .populate({
+        path: 'user',
+        select: 'name phone email' // Ensure user details are fetched
+    })
+    .populate({
+        path: 'subService',
+        select: 'name price duration description' // Ensure sub-service details are fetched
+    })
+    .populate({
+        path: 'service',
+        select: 'name' // Ensure service name is fetched
+    })
+    .populate({
+        path: 'subCategory',
+        model: 'SubCategory',
+        select: 'name' // Ensure subcategory name is fetched
+    })
     .select('-__v')
     .sort({ scheduledDate: 1, scheduledTime: 1 });
 
-    console.log("Found Bookings Count:", bookings.length);
+console.log("Found Bookings Count:", bookings.length);
+
 
     // Format the response
     const formattedBookings = bookings.map(booking => ({
