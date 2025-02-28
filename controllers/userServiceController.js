@@ -458,19 +458,44 @@ const getAllSubCategoriesForUser = async (req, res) => {
     }
 };
 
+// const getAllSubServices = async (req, res) => {
+//     try {
+//         const subservices = await SubService.find({ isActive: true }).populate('service');; // Fetch active subservices
+//         console.log('Fetched Subservices:');
+//         res.status(200).json({
+//             success: true,
+//             data: subservices
+//         });
+//     } catch (error) {
+//         console.error('Error fetching subservices:', error);
+//         res.status(500).json({ success: false, message: error.message });
+//     }
+// };
+
 const getAllSubServices = async (req, res) => {
-    try {
-        const subservices = await SubService.find({ isActive: true }).populate('service');; // Fetch active subservices
-        // console.log('Fetched Subservices:', subservices);
-        res.status(200).json({
-            success: true,
-            data: subservices
-        });
-    } catch (error) {
-        console.error('Error fetching subservices:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
+  try {
+      const subservices = await SubService.find({ isActive: true })
+          .populate({
+              path: 'service',
+              populate: {
+                  path: 'subCategory',
+                  populate: {
+                      path: 'category', // This refers to the ServiceCategory
+                      model: 'ServiceCategory'
+                  }
+              }
+          });
+
+      res.status(200).json({
+          success: true,
+          data: subservices
+      });
+  } catch (error) {
+      console.error('Error fetching subservices:', error);
+      res.status(500).json({ success: false, message: error.message });
+  }
 };
+
 
 const getAllSubServicesForUser = async (req, res) => {
   console.log("hi")

@@ -11,7 +11,7 @@ const locationSchema = new mongoose.Schema({
   },
   pincode: {
     type: String,
-    required: true,
+    required: false,
   }
 }, { _id: false }); // Prevent MongoDB from creating _id for subdocument
 

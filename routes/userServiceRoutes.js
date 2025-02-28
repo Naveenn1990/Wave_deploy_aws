@@ -428,4 +428,7 @@ router.post('/reviews', ReviewController.submitReview);
 // Route to fetch reviews for a specific subservice
 router.get('/subservices/:subServiceId/reviews', ReviewController.getReviews);
 
-module.exports = router;
+router.get('/wallet/topup:userId', ReviewController.topUpWallet);
+router.post('/wallet/transactions', ReviewController.transactionsWallet);
+
+module.exports = router; 

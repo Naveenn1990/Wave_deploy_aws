@@ -361,7 +361,7 @@ exports.resetPassword = async (req, res) => {
     });
   }
 };
-
+ 
 // Get user profile
 exports.getProfile = async (req, res, next) => {
   try {
@@ -390,18 +390,19 @@ exports.getProfile = async (req, res, next) => {
 
     res.json({
       success: true,
-      user: {
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        address: user.address,
-        landmark: user.landmark,
-        addressType: user.addressType,
-        isVerified: user.isVerified,
-        status: user.status,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
+      user
+      // : {
+      //   name: user.name,
+      //   email: user.email,
+      //   phone: user.phone,
+      //   address: user.address,
+      //   landmark: user.landmark,
+      //   addressType: user.addressType,
+      //   isVerified: user.isVerified,
+      //   status: user.status,
+      //   createdAt: user.createdAt,
+      //   updatedAt: user.updatedAt,
+      // },
     });
   } catch (error) {
     console.error("Get Profile Error:", {
@@ -420,7 +421,7 @@ exports.updateProfile = async (req, res) => {
   try {
     const { name, email } = req.body;
     const updates = { name, email };
-
+    console.log("Req BOdy" , req.body )
     // Handle profile picture if uploaded
     if (req.file) {
       updates.profilePicture = path.basename(req.file.path);
@@ -446,6 +447,52 @@ exports.updateProfile = async (req, res) => {
 };
 
 // Add address
+// exports.addAddress = async (req, res) => {
+//   try {
+//     const { address, landmark, addressType } = req.body;
+
+//     if (!address) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Address is required",
+//       });
+//     }
+
+//     const user = await User.findById(req.user._id);
+//     if (!user) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "User not found",
+//       });
+//     }
+
+//     // Update user's address fields
+//     user.address = address;
+//     user.landmark = landmark || "";
+//     user.addressType = addressType || "home";
+
+//     await user.save();
+
+//     res.json({
+//       success: true,
+//       address: {
+//         address: user.address,
+//         landmark: user.landmark,
+//         addressType: user.addressType,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Add Address Error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error adding address",
+//       details:
+//         process.env.NODE_ENV === "development" ? error.message : undefined,
+//     });
+//   }
+// };
+
+// Add address
 exports.addAddress = async (req, res) => {
   try {
     const { address, landmark, addressType } = req.body;
@@ -465,28 +512,26 @@ exports.addAddress = async (req, res) => {
       });
     }
 
-    // Update user's address fields
-    user.address = address;
-    user.landmark = landmark || "";
-    user.addressType = addressType || "home";
+    // Add new address to the addresses array
+    user.addresses.push({
+      address,
+      landmark: landmark || "",
+      addressType: addressType || "home",
+    });
 
     await user.save();
 
     res.json({
       success: true,
-      address: {
-        address: user.address,
-        landmark: user.landmark,
-        addressType: user.addressType,
-      },
+      message: "Address added successfully",
+      addresses: user.addresses, // Return updated addresses array
     });
   } catch (error) {
     console.error("Add Address Error:", error);
     res.status(500).json({
       success: false,
       message: "Error adding address",
-      details:
-        process.env.NODE_ENV === "development" ? error.message : undefined,
+      details: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };

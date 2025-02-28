@@ -54,7 +54,7 @@ exports.createBooking = async (req, res) => {
       location: {
         address: location.address,
         landmark: location.landmark || "",
-        pincode: location.pincode
+        pincode: location.pincode || ""
       },
       amount: amount || subService.price,
       status: 'pending',

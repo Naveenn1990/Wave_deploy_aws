@@ -8,6 +8,9 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
+  profilePicture:{
+    type: String,
+  },
   name: {
     type: String,
     trim: true,
@@ -33,9 +36,8 @@ const userSchema = new mongoose.Schema({
       trim: true
     },
     addressType: {
-      type: String,
-      enum: ['home', 'work', 'other'],
-      default: 'home'
+      type: String, 
+      trim: true
     }
   }],
   tempOTP: String,

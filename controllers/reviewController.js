@@ -2,11 +2,14 @@
 const User = require('../models/User');
 const Booking = require('../models/booking');
 const SubService = require('../models/SubService');
+const Wallet = require("../models/Wallet");
+const { v4: uuidv4 } = require("uuid");
 
 // Submit a new review
 exports.submitReview = async (req, res) => {
     const { user, subService, rating, comment } = req.body;
-    console.log(user, subService, rating, comment);
+    console.log(user, subService, rating, comment , "testing")
+    // console.log(user, subService, rating, comment);
     try {
         const review = new Review({ user, subService, rating, comment });
         await review.save();
@@ -27,6 +30,58 @@ exports.getReviews = async (req, res) => {
         res.status(400).json({ message: 'Error retrieving reviews', error: error.message });
     }
 };
+
+exports.topUpWallet = async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const wallet = await Wallet.findOne({ userId });
+  
+      if (!wallet) {
+        return res.status(404).json({ message: "Wallet not found" });
+      }
+  
+      res.json({ balance: wallet.balance, transactions: wallet.transactions });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+
+exports.transactionsWallet = async (req, res) => {
+  try {
+    const { userId, amount, type } = req.body;
+
+    if (!userId || !amount || !type) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    let wallet = await Wallet.findOne({ userId });
+
+    if (!wallet) {
+      wallet = new Wallet({ userId, balance: 0, transactions: [] });
+    }
+
+    if (type === "Debit" && wallet.balance < amount) {
+      return res.status(400).json({ message: "Insufficient balance" });
+    }
+
+    const newTransaction = {
+      transactionId: uuidv4(),
+      amount,
+      type,
+    };
+
+    wallet.transactions.push(newTransaction);
+    wallet.balance += type === "Credit" ? amount : -amount;
+
+    await wallet.save();
+
+    res.status(201).json({ message: "Transaction successful", wallet });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+
 
 // // Function to get all reviews
 // exports.getAllReviews = async (req, res) => {
