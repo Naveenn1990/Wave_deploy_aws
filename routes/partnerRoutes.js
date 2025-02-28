@@ -6,6 +6,8 @@ const path = require("path");
 const fs = require('fs');
 const crypto = require('crypto');
 const partnerServiceController = require('../controllers/partnerServiceController');
+const partnerAuthController = require('../controllers/partnerAuthController');
+
 
 // Create upload directories if they don't exist
 const uploadDir = path.join(__dirname, '..', 'uploads');
@@ -158,12 +160,23 @@ router.get("/services/current", auth, getCurrentService);
 router.get("/services/history", auth, getServiceHistory);
 router.put("/services/status", auth, updateServiceStatus);
 router.get("/bookings/matching", auth, getMatchingBookings);
-router.put("/bookings/:bookingId/accept", auth, partnerServiceController.acceptBooking);
+router.put("/bookings/:bookingId/accept",  partnerServiceController.acceptBooking);
 
 // New route to mark an accepted booking as completed and handle photo uploads
 router.post('/booking/:id/complete', upload.array('photos', 10), partnerServiceController.completeBooking);
 
 // Dropdown data route
 router.get("/dropdown/categories", getAllCategories);
+
+
+// Route to get all completed bookings for a partner
+router.get('/bookings/completed', auth, partnerServiceController.getCompletedBookings);
+
+// Route to get all pending bookings for a partner
+router.get('/bookings/pending', auth, partnerServiceController.getPendingBookings);
+
+// Route to select a service and category
+router.post('/select-category-and-service', auth, partnerAuthController.selectCategoryAndServices);
+
 
 module.exports = router;

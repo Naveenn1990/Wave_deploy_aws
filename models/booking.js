@@ -7,7 +7,7 @@ const locationSchema = new mongoose.Schema({
   },
   landmark: {
     type: String,
-    default: ""
+    default: "",
   },
   pincode: {
     type: String,
@@ -25,7 +25,19 @@ const bookingSchema = new mongoose.Schema(
     subService: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SubService",
-      required: true,
+      required: true
+    },
+    service: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Service"
+    },
+    subCategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubCategory"
+    },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ServiceCategory"
     },
     scheduledDate: {
       type: Date,
@@ -37,7 +49,7 @@ const bookingSchema = new mongoose.Schema(
     },
     location: {
       type: locationSchema,
-      required: true
+      required: true,
     },
     amount: {
       type: Number,
@@ -45,12 +57,12 @@ const bookingSchema = new mongoose.Schema(
     },
     paymentMode: {
       type: String,
-      enum: ['credit card', 'cash', 'paypal', 'bank transfer'], 
+      enum: ["credit card", "cash", "paypal", "bank transfer"], 
       required: true,
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "in_progress", "completed", "cancelled", "accepted"],
+      enum: ["pending", "confirmed", "in_progress", "completed", "cancelled", "accepted"], // ✅ Ensure 'accepted' is here
       default: "pending",
     },
     paymentStatus: {
@@ -64,38 +76,38 @@ const bookingSchema = new mongoose.Schema(
       rating: {
         type: Number, 
         min: 1,
-        max: 5
+        max: 5,
       },
       comment: String,
-      createdAt: Date
+      createdAt: Date,
     },
     partner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Partner', // Reference to the Partner model
-      required: false
+      ref: "Partner" // ✅ Partner will be assigned when they accept the booking
     },
   },
   { 
     timestamps: true,
     toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+    toObject: { virtuals: true },
   }
 );
 
 // Remove any existing indexes
-bookingSchema.on('index', function(err) {
+bookingSchema.on("index", function(err) {
   if (err) {
-    console.error('Booking index error: %s', err);
+    console.error("Booking index error: %s", err);
   } else {
-    console.info('Booking indexing complete');
+    console.info("Booking indexing complete");
   }
 });
 
-// Only create basic indexes, no geospatial indexes
+// Indexes for performance optimization
 bookingSchema.index({ user: 1, status: 1 });
 bookingSchema.index({ subService: 1 });
 bookingSchema.index({ scheduledDate: 1 });
 bookingSchema.index({ status: 1 });
+bookingSchema.index({ partner: 1 }); // ✅ Index added to efficiently fetch partner's bookings
 
 // Check if model already exists before defining
 const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSchema);

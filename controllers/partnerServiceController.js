@@ -3,6 +3,8 @@ const ServiceCategory = require("../models/ServiceCategory");
 const Partner = require("../models/Partner");
 const Booking = require("../models/booking");
 const PartnerProfile = require("../models/PartnerProfile");
+const jwt = require('jsonwebtoken');
+const SubService = require('../models/SubService');
 
 // Get all available services for partners
 exports.getAvailableServices = async (req, res) => {
@@ -295,11 +297,13 @@ exports.updateServiceStatus = async (req, res) => {
   }
 };
 
+
 // Get matching bookings for partner
 exports.getMatchingBookings = async (req, res) => {
   try {
     // Get partner's profile
-    const profile = await PartnerProfile.findOne({ partner: req.partner._id });
+    const profile = await Partner.findOne({ _id: req.partner._id }); 
+    console.log("Profile:", profile);
 
     if (!profile) {
       return res.status(400).json({
@@ -308,48 +312,72 @@ exports.getMatchingBookings = async (req, res) => {
       });
     }
 
-    // Get partner's category and service
-    const partnerCategory = profile.category;
-    const partnerService = profile.service;
+    // Get partner's selected category, sub-category, and services
+    const { category, subcategory, service } = profile;
 
-    if (!partnerCategory || !partnerService) {
+    if (!category || !subcategory || !service || service.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Partner category and service not set"
+        message: "Partner category, sub-category, or services not set"
       });
     }
 
-    console.log("Partner Category:", partnerCategory);
-    console.log("Partner Service:", partnerService);
+    console.log("Partner Category:", category);
+    console.log("Partner Sub-Category:", subcategory);
+    console.log("Partner Services:", service);
 
-    // Find bookings that match partner's category and service
+    // Find sub-services that belong to the partner's selected services
+    const subServices = await SubService.find({ service: { $in: service } }).select('_id');
+
+    if (!subServices || subServices.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No sub-services found for the selected services"
+      });
+    }
+
+    const subServiceIds = subServices.map(subService => subService._id);
+    console.log("Eligible Sub-Services:", subServiceIds);
+
+    // Find bookings where sub-service matches the partner's selected service
     const bookings = await Booking.find({
-      category: partnerCategory,
-      service: partnerService,
-      status: { $in: ["pending", "confirmed"] }, // Include both pending and confirmed bookings
+      subService: { $in: subServiceIds }, // Only fetch relevant sub-services
+      status: { $in: ["pending"] },
     })
-    .populate([
-      {
-        path: 'user',
-        select: 'name phone email'
-      },
-      {
+    .populate({
         path: 'service',
-        select: 'name description basePrice duration'
-      },
-      {
-        path: 'category',
-        select: 'name description'
-      }
-    ])
+        populate: {
+            path: 'subCategory',
+            model: 'SubCategory',
+            populate: {
+                path: 'category',
+                model: 'ServiceCategory',
+                select: 'name' // Ensure the category name is fetched
+            }
+        }
+    })
+    .populate({
+        path: 'user',
+        select: 'name phone email' // Ensure user details are fetched
+    })
+    .populate({
+        path: 'subService',
+        select: 'name price duration description' // Ensure sub-service details are fetched
+    })
+    .populate({
+        path: 'service',
+        select: 'name' // Ensure service name is fetched
+    })
+    .populate({
+        path: 'subCategory',
+        model: 'SubCategory',
+        select: 'name' // Ensure subcategory name is fetched
+    })
     .select('-__v')
     .sort({ scheduledDate: 1, scheduledTime: 1 });
 
-    console.log("Found Bookings Count:", bookings.length);
-    
-    // Debug: Log all bookings in the system
-    const allBookings = await Booking.find({}).select('category service status paymentStatus');
-    console.log("All Bookings in System:", JSON.stringify(allBookings, null, 2));
+console.log("Found Bookings Count:", bookings.length);
+
 
     // Format the response
     const formattedBookings = bookings.map(booking => ({
@@ -361,19 +389,24 @@ exports.getMatchingBookings = async (req, res) => {
       paymentStatus: booking.paymentStatus,
       location: booking.location,
       user: {
-        name: booking.user ? booking.user.name : 'N/A',
-        phone: booking.user ? booking.user.phone : 'N/A',
-        email: booking.user ? booking.user.email : 'N/A'
+        name: booking.user?.name || 'N/A',
+        phone: booking.user?.phone || 'N/A',
+        email: booking.user?.email || 'N/A'
+      },
+      subService: {
+        name: booking.subService?.name || 'N/A',
+        price: booking.subService?.price || 0,
+        duration: booking.subService?.duration || 'N/A',
+        description: booking.subService?.description || 'N/A'
       },
       service: {
-        name: booking.service ? booking.service.name : 'N/A',
-        basePrice: booking.service ? booking.service.basePrice : 0,
-        duration: booking.service ? booking.service.duration : 'N/A',
-        description: booking.service ? booking.service.description : 'N/A'
+        name: booking.service?.name || 'N/A'
       },
       category: {
-        name: booking.category ? booking.category.name : 'N/A',
-        description: booking.category ? booking.category.description : 'N/A'
+        name: booking.category?.name || 'N/A'
+      },
+      subCategory: {
+        name: booking.subCategory?.name || 'N/A'
       }
     }));
 
@@ -381,8 +414,9 @@ exports.getMatchingBookings = async (req, res) => {
       success: true,
       count: formattedBookings.length,
       partnerDetails: {
-        category: partnerCategory,
-        service: partnerService
+        category,
+        subcategory,
+        service
       },
       bookings: formattedBookings
     });
@@ -397,37 +431,62 @@ exports.getMatchingBookings = async (req, res) => {
   }
 };
 
-// Accept booking
+
+//accept booking
 exports.acceptBooking = async (req, res) => {
   try {
     const { bookingId } = req.params;
+    const { partnerId } = req.body;
 
-    // Find the booking by ID
-    const booking = await Booking.findById(bookingId);
-
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: "Booking not found",
-      });
-    }
-
-    // Check if the booking is already accepted or canceled
-    if (booking.status === "accepted" || booking.status === "canceled") {
+    if (!bookingId || !partnerId) {
       return res.status(400).json({
         success: false,
-        message: "Cannot accept this booking",
+        message: "Booking ID and Partner ID are required",
       });
     }
 
-    // Update booking status to accepted
-    booking.status = "accepted";
-    await booking.save();
+    console.log("Partner ID:", partnerId);
+    console.log("Booking ID:", bookingId);
+
+    // Validate partner existence
+    const partner = await Partner.findById(partnerId);
+    if (!partner) {
+      return res.status(404).json({ success: false, message: "Partner not found" });
+    }
+
+    // Validate booking existence
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    console.log("Current Booking Status:", booking.status);
+
+    // Check if booking is already accepted or canceled
+    if (["accepted", "cancelled"].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: "Cannot accept this booking" });
+    }
+
+    // ✅ Update Booking: Assign partner and change status to 'accepted'
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { partner: partnerId, status: "accepted" },
+      { new: true }
+    );
+
+    // ✅ Update Partner: Add booking to `bookings` array
+    const updatedPartner = await Partner.findByIdAndUpdate(
+      partnerId,
+      { $addToSet: { bookings: bookingId } }, // Ensures no duplicates
+      { new: true }
+    );
+
+    console.log("Updated Partner Bookings:", updatedPartner.bookings); // Debugging output
 
     res.status(200).json({
       success: true,
       message: "Booking accepted successfully",
-      data: booking,
+      data: updatedBooking,
     });
   } catch (error) {
     console.error("Error accepting booking:", error);
@@ -438,6 +497,11 @@ exports.acceptBooking = async (req, res) => {
     });
   }
 };
+
+
+
+
+
 
 // Complete booking
 exports.completeBooking = async (req, res) => {
@@ -459,5 +523,56 @@ exports.completeBooking = async (req, res) => {
     res.status(200).json({ message: 'Booking marked as completed', booking });
   } catch (error) {
     res.status(500).json({ message: 'Error marking booking as completed', error });
+  }
+};
+
+// Get completed bookings
+exports.getCompletedBookings = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(' ')[1]; // Get the token from the header
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Decode the token
+    const partnerId = decoded._id; // Extract partner ID from the decoded token
+
+    const completedBookings = await Booking.find({
+      partnerId: partnerId,
+      status: 'completed'
+    });
+
+    if (!completedBookings.length) {
+      return res.status(404).json({ message: 'No completed bookings found' });
+    }
+
+    res.status(200).json({ message: 'Completed bookings fetched successfully', bookings: completedBookings });
+  } catch (error) {
+    console.error('Error fetching completed bookings:', error);
+    res.status(500).json({
+      message: 'Error fetching completed bookings',
+      error: error.message || 'Unknown error'
+    });
+  }
+};
+
+exports.getPendingBookings = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(' ')[1]; // Get the token from the header
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Decode the token
+    const partnerId = decoded._id; // Extract partner ID from the decoded token
+
+    const pendingBookings = await Booking.find({
+      partnerId: partnerId,
+      status: 'pending'
+    });
+
+    if (!pendingBookings.length) {
+      return res.status(404).json({ message: 'No pending bookings found' });
+    }
+
+    res.status(200).json({ message: 'Pending bookings fetched successfully', bookings: pendingBookings });
+  } catch (error) {
+    console.error('Error fetching pending bookings:', error);
+    res.status(500).json({
+      message: 'Error fetching pending bookings',
+      error: error.message || 'Unknown error'
+    });
   }
 };

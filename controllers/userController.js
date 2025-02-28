@@ -90,24 +90,30 @@ exports.register = async (req, res) => {
 // Login with password
 exports.loginWithPassword = async (req, res) => {
   try {
+    console.log("Request Body:", req.body)
     const { email, password } = req.body;
 
-    // Find user
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({
+    if (!email || !password) {
+      return res.status(400).json({
         success: false,
-        message: "Invalid credentials",
+        message: "Email and password are required",
       });
     }
 
+    // Find user
+    const user = await User.findOne({ email }).select("+password"); // Ensure password is selected
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+
     // Verify password
+    if (!user.password) {
+      return res.status(500).json({ success: false, message: "User does not have a password set" });
+    }
+
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials",
-      });
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
 
     // Update last login
@@ -115,14 +121,11 @@ exports.loginWithPassword = async (req, res) => {
     await user.save();
 
     // Generate token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     res.status(200).json({
       success: true,
       message: "Login successful",
-      // token,
       user: {
         token,
         userId: user._id,
@@ -130,6 +133,7 @@ exports.loginWithPassword = async (req, res) => {
         email: user.email,
         phone: user.phone,
         isVerified: user.isVerified,
+        profilePicture: user.profilePicture || "",
       },
     });
   } catch (error) {
@@ -137,9 +141,11 @@ exports.loginWithPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Login failed",
+      error: error.message, // Send actual error message
     });
   }
 };
+
 
 // Send OTP for login
 exports.sendLoginOTP = async (req, res) => {
