@@ -498,33 +498,75 @@ exports.acceptBooking = async (req, res) => {
   }
 };
 
+//get accepted bookings
+exports.getPartnerBookings = async (req, res) => {
+  try {
+    const { partnerId } = req.params;
+
+    if (!partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: "Partner ID is required",
+      });
+    }
+
+    // Validate partner existence
+    const partner = await Partner.findById(partnerId);
+    if (!partner) {
+      return res.status(404).json({ success: false, message: "Partner not found" });
+    }
+
+    // Fetch all accepted bookings for this partner
+    const bookings = await Booking.find({ partner: partnerId, status: "accepted" });
+
+    res.status(200).json({
+      success: true,
+      message: "Accepted bookings retrieved successfully",
+      data: bookings,
+    });
+  } catch (error) {
+    console.error("Error fetching partner bookings:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching partner bookings",
+      error: error.message,
+    });
+  }
+};
 
 
-
-
-
-// Complete booking
+// Complete booking - Partner uploads photos before marking the job as completed
 exports.completeBooking = async (req, res) => {
   const bookingId = req.params.id;
   const photos = req.files;
 
   try {
-    // Update the booking status to completed and change payment status
-    const booking = await Booking.findByIdAndUpdate(bookingId, { 
-      status: 'completed', 
-      paymentStatus: 'completed', 
-      photos: photos.map(file => file.path) 
-    }, { new: true });
+    // Find the booking
+    const booking = await Booking.findById(bookingId);
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
+
+    // Check if the partner has uploaded photos
+    if (!photos || photos.length === 0) {
+      return res.status(400).json({ message: 'Please upload photos as proof before completing the booking' });
+    }
+
+    // Update the booking status to completed and store photos
+    booking.status = 'completed';
+    booking.paymentStatus = 'completed';
+    booking.photos = photos.map(file => file.path);
+
+    // Save the updated booking
+    await booking.save();
 
     res.status(200).json({ message: 'Booking marked as completed', booking });
   } catch (error) {
     res.status(500).json({ message: 'Error marking booking as completed', error });
   }
 };
+
 
 // Get completed bookings
 exports.getCompletedBookings = async (req, res) => {

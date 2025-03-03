@@ -179,4 +179,12 @@ router.get('/bookings/pending', auth, partnerServiceController.getPendingBooking
 router.post('/select-category-and-service', auth, partnerAuthController.selectCategoryAndServices);
 
 
+// Route to get all accepted bookings for a partner
+router.get('/bookings/accepted/:partnerId', auth, partnerServiceController.getPartnerBookings);
+
+
+
+
+
+
 module.exports = router;

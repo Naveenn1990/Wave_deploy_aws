@@ -555,9 +555,22 @@ exports.completeKYC = async (req, res) => {
 // Get partner profile
 exports.getProfile = async (req, res) => {
   try {
-    const profile = await PartnerProfile.findOne({ partner: req.partner._id })
+    if (!req.partner || !req.partner._id) {
+      return res.status(400).json({
+        success: false,
+        message: "Partner ID is missing",
+      });
+    }
+
+    console.log("Partner ID:", req.partner._id, "Type:", typeof req.partner._id);
+
+    const partnerId = new mongoose.Types.ObjectId(req.partner._id);
+
+    const profile = await Partner.findOne({ _id: partnerId })
       .populate("category", "name description")
       .populate("service", "name description basePrice duration");
+
+    console.log("Fetched Profile:", profile);
 
     if (!profile) {
       return res.status(404).json({
@@ -570,20 +583,17 @@ exports.getProfile = async (req, res) => {
       success: true,
       profile: {
         id: profile._id,
-        name: profile.name,
-        email: profile.email,
+        name: profile.profile?.name || "N/A",
+        email: profile.profile?.email || "N/A",
         phone: profile.phone,
         whatsappNumber: profile.whatsappNumber,
-        contactNumber: profile.contactNumber,
         qualification: profile.qualification,
         experience: profile.experience,
         category: profile.category,
         service: profile.service,
         modeOfService: profile.modeOfService,
         profilePicture: profile.profilePicture,
-        verificationStatus: profile.verificationStatus,
-        status: profile.status,
-        dutyStatus: profile.dutyStatus,
+        status: profile.profileCompleted ? "Completed" : "Incomplete",
       },
     });
   } catch (error) {
@@ -594,6 +604,7 @@ exports.getProfile = async (req, res) => {
     });
   }
 };
+
 
 exports.getAllPartnerProfile = async (req , res) => {
   try{
@@ -614,19 +625,18 @@ exports.updateProfile = [
   upload.single("profilePicture"),
   async (req, res) => {
     try {
-      const {
-        name,
-        email,
-        whatsappNumber,
-        contactNumber,
-        qualification,
-        experience,
-        category,
-        service,
-        modeOfService,
-      } = req.body;
+      if (!req.partner || !req.partner._id) {
+        return res.status(400).json({
+          success: false,
+          message: "Partner ID is missing",
+        });
+      }
 
-      let profile = await PartnerProfile.findOne({ partner: req.partner._id });
+      console.log("Partner ID:", req.partner._id, "Type:", typeof req.partner._id);
+
+      const partnerId = new mongoose.Types.ObjectId(req.partner._id);
+
+      let profile = await Partner.findOne({ _id: partnerId });
       if (!profile) {
         return res.status(404).json({
           success: false,
@@ -634,14 +644,25 @@ exports.updateProfile = [
         });
       }
 
+      // Extract data from request body
+      const {
+        name,
+        email,
+        whatsappNumber,
+        qualification,
+        experience,
+        category,
+        service,
+        modeOfService,
+      } = req.body;
+
       // Get the profile picture filename if uploaded
       const profilePicture = req.file ? req.file.filename : undefined;
 
       // Update only provided fields
-      if (name) profile.name = name;
-      if (email) profile.email = email;
+      if (name) profile.profile.name = name;
+      if (email) profile.profile.email = email;
       if (whatsappNumber) profile.whatsappNumber = whatsappNumber;
-      if (contactNumber) profile.contactNumber = contactNumber;
       if (qualification) profile.qualification = qualification;
       if (experience) profile.experience = parseFloat(experience);
       if (category) profile.category = category;
@@ -660,20 +681,17 @@ exports.updateProfile = [
         message: "Profile updated successfully",
         profile: {
           id: profile._id,
-          name: profile.name,
-          email: profile.email,
+          name: profile.profile?.name || "N/A",
+          email: profile.profile?.email || "N/A",
           phone: profile.phone,
           whatsappNumber: profile.whatsappNumber,
-          contactNumber: profile.contactNumber,
           qualification: profile.qualification,
           experience: profile.experience,
           category: profile.category,
           service: profile.service,
           modeOfService: profile.modeOfService,
           profilePicture: profile.profilePicture,
-          verificationStatus: profile.verificationStatus,
-          status: profile.status,
-          dutyStatus: profile.dutyStatus,
+          status: profile.profileCompleted ? "Completed" : "Incomplete",
         },
       });
     } catch (error) {
