@@ -7,6 +7,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const partnerServiceController = require('../controllers/partnerServiceController');
 const partnerAuthController = require('../controllers/partnerAuthController');
+const partnerWalletController = require('../controllers/partnerWalletController');
 
 // Create upload directories if they don't exist
 const uploadDir = path.join(__dirname, '..', 'uploads');
@@ -201,5 +202,9 @@ router.post('/bookings/:bookingId/pause', auth, partnerServiceController.pauseBo
 // Routes for paused bookings
 router.get('/bookings/paused', auth, partnerServiceController.getPausedBookings);
 router.post('/bookings/:bookingId/resume', auth, partnerServiceController.resumeBooking);
+
+//partner wallet routes
+router.post('/wallet/topup/:partnerId', auth, partnerWalletController.topUpWallet);
+router.post('/wallet/transactions', auth, partnerWalletController.transactionsWallet);
 
 module.exports = router;
