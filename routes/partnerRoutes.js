@@ -169,7 +169,7 @@ router.put("/bookings/:bookingId/accept",  partnerServiceController.acceptBookin
 router.put("/bookings/:bookingId/reject",  partnerServiceController.rejectBooking);
 
 // New route to mark an accepted booking as completed and handle photo uploads
-router.post('/booking/:id/complete', upload.array('photos', 10), partnerServiceController.completeBooking);
+router.post('/bookings/:id/complete', auth, upload.array('photos', 10), partnerServiceController.completeBooking);
 
 // Dropdown data route
 router.get("/dropdown/categories", getAllCategories);
@@ -194,5 +194,12 @@ router.post('/select-category-and-service', auth, partnerAuthController.selectCa
 
 // Route to get all accepted bookings for a partner
 router.get('/bookings/accepted/:partnerId', auth, partnerServiceController.getPartnerBookings);
+
+// Route to pause a booking
+router.post('/bookings/:bookingId/pause', auth, partnerServiceController.pauseBooking);
+
+// Routes for paused bookings
+router.get('/bookings/paused', auth, partnerServiceController.getPausedBookings);
+router.post('/bookings/:bookingId/resume', auth, partnerServiceController.resumeBooking);
 
 module.exports = router;
