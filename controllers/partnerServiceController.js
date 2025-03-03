@@ -535,6 +535,64 @@ exports.getPartnerBookings = async (req, res) => {
 };
 
 
+// Reject booking
+exports.rejectBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { partnerId } = req.body;
+
+    if (!bookingId || !partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking ID and Partner ID are required",
+      });
+    }
+
+    console.log("Partner ID:", partnerId);
+    console.log("Booking ID:", bookingId);
+
+    // Validate partner existence
+    const partner = await Partner.findById(partnerId);
+    if (!partner) {
+      return res.status(404).json({ success: false, message: "Partner not found" });
+    }
+
+    // Validate booking existence
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    console.log("Current Booking Status:", booking.status);
+
+    // Check if booking is already accepted, rejected, or canceled
+    if (["accepted", "cancelled", "rejected"].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: "Cannot reject this booking" });
+    }
+
+    // ✅ Update Booking: Change status to 'rejected'
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { status: "rejected" },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Booking rejected successfully",
+      data: updatedBooking,
+    });
+  } catch (error) {
+    console.error("Error rejecting booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error rejecting booking",
+      error: error.message,
+    });
+  }
+};
+
+
 // Complete booking - Partner uploads photos before marking the job as completed
 exports.completeBooking = async (req, res) => {
   const bookingId = req.params.id;
@@ -614,6 +672,32 @@ exports.getPendingBookings = async (req, res) => {
     console.error('Error fetching pending bookings:', error);
     res.status(500).json({
       message: 'Error fetching pending bookings',
+      error: error.message || 'Unknown error'
+    });
+  }
+};
+
+// Get rejected bookings
+exports.getRejectedBookings = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(' ')[1]; // Get the token from the header
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Decode the token
+    const partnerId = decoded._id; // Extract partner ID from the decoded token
+
+    const rejectedBookings = await Booking.find({
+      partnerId: partnerId,
+      status: 'rejected'
+    });
+
+    if (!rejectedBookings.length) {
+      return res.status(404).json({ message: 'No rejected bookings found' });
+    }
+
+    res.status(200).json({ message: 'Rejected bookings fetched successfully', bookings: rejectedBookings });
+  } catch (error) {
+    console.error('Error fetching rejected bookings:', error);
+    res.status(500).json({
+      message: 'Error fetching rejected bookings',
       error: error.message || 'Unknown error'
     });
   }

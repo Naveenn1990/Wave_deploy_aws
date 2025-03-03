@@ -620,87 +620,81 @@ exports.getAllPartnerProfile = async (req , res) => {
 }
 
 
+
 // Update partner profile
-exports.updateProfile = [
-  upload.single("profilePicture"),
-  async (req, res) => {
-    try {
-      if (!req.partner || !req.partner._id) {
-        return res.status(400).json({
-          success: false,
-          message: "Partner ID is missing",
-        });
-      }
+exports.updateProfile = async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      whatsappNumber,
+      contactNumber,
+      qualification,
+      experience,
+      category,
+      service,
+      modeOfService,
+    } = req.body;
 
-      console.log("Partner ID:", req.partner._id, "Type:", typeof req.partner._id);
-
-      const partnerId = new mongoose.Types.ObjectId(req.partner._id);
-
-      let profile = await Partner.findOne({ _id: partnerId });
-      if (!profile) {
-        return res.status(404).json({
-          success: false,
-          message: "Profile not found",
-        });
-      }
-
-      // Extract data from request body
-      const {
-        name,
-        email,
-        whatsappNumber,
-        qualification,
-        experience,
-        category,
-        service,
-        modeOfService,
-      } = req.body;
-
-      // Get the profile picture filename if uploaded
-      const profilePicture = req.file ? req.file.filename : undefined;
-
-      // Update only provided fields
-      if (name) profile.profile.name = name;
-      if (email) profile.profile.email = email;
-      if (whatsappNumber) profile.whatsappNumber = whatsappNumber;
-      if (qualification) profile.qualification = qualification;
-      if (experience) profile.experience = parseFloat(experience);
-      if (category) profile.category = category;
-      if (service) profile.service = service;
-      if (modeOfService) profile.modeOfService = modeOfService;
-      if (profilePicture) profile.profilePicture = profilePicture;
-
-      await profile.save();
-
-      // Populate category and service details
-      await profile.populate("category", "name description");
-      await profile.populate("service", "name description basePrice duration");
-
-      res.json({
-        success: true,
-        message: "Profile updated successfully",
-        profile: {
-          id: profile._id,
-          name: profile.profile?.name || "N/A",
-          email: profile.profile?.email || "N/A",
-          phone: profile.phone,
-          whatsappNumber: profile.whatsappNumber,
-          qualification: profile.qualification,
-          experience: profile.experience,
-          category: profile.category,
-          service: profile.service,
-          modeOfService: profile.modeOfService,
-          profilePicture: profile.profilePicture,
-          status: profile.profileCompleted ? "Completed" : "Incomplete",
-        },
-      });
-    } catch (error) {
-      console.error("Update Profile Error:", error);
-      res.status(500).json({
+    let profile = await Partner.findOne({ _id: req.partner._id });
+    if (!profile) {
+      return res.status(404).json({
         success: false,
-        message: "Error updating profile",
-        error: error.message,
+        message: "Profile not found",
       });
     }
-  },
-];
+
+    // Check if profilePicture is uploaded in form-data
+    const profilePicture = req.file ? req.file.filename : undefined;
+
+    // Update only provided fields (Handle both JSON & form-data)
+    const updatedFields = {};
+    if (name) updatedFields.name = name;
+    if (email) updatedFields.email = email;
+    if (whatsappNumber) updatedFields.whatsappNumber = whatsappNumber;
+    if (contactNumber) updatedFields.contactNumber = contactNumber;
+    if (qualification) updatedFields.qualification = qualification;
+    if (experience) updatedFields.experience = parseFloat(experience);
+    if (category) updatedFields.category = category;
+    if (service) updatedFields.service = service;
+    if (modeOfService) updatedFields.modeOfService = modeOfService;
+    if (profilePicture) updatedFields.profilePicture = profilePicture;
+
+    // Apply updates to the profile
+    Object.assign(profile, updatedFields);
+    await profile.save();
+
+    // Populate category and service details
+    await profile.populate("category", "name description");
+    await profile.populate("service", "name description basePrice duration");
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      profile: {
+        id: profile._id,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        whatsappNumber: profile.whatsappNumber,
+        contactNumber: profile.contactNumber,
+        qualification: profile.qualification,
+        experience: profile.experience,
+        category: profile.category,
+        service: profile.service,
+        modeOfService: profile.modeOfService,
+        profilePicture: profile.profilePicture,
+        verificationStatus: profile.verificationStatus,
+        status: profile.status,
+        dutyStatus: profile.dutyStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Update Profile Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating profile",
+      error: error.message,
+    });
+  }
+};

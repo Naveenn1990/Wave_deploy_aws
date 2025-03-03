@@ -161,6 +161,7 @@ router.get("/services/history", auth, getServiceHistory);
 router.put("/services/status", auth, updateServiceStatus);
 router.get("/bookings/matching", auth, getMatchingBookings);
 router.put("/bookings/:bookingId/accept",  partnerServiceController.acceptBooking);
+router.put("/bookings/:bookingId/reject",  partnerServiceController.rejectBooking);
 
 // New route to mark an accepted booking as completed and handle photo uploads
 router.post('/booking/:id/complete', upload.array('photos', 10), partnerServiceController.completeBooking);
@@ -175,6 +176,8 @@ router.get('/bookings/completed', auth, partnerServiceController.getCompletedBoo
 // Route to get all pending bookings for a partner
 router.get('/bookings/pending', auth, partnerServiceController.getPendingBookings);
 
+// Route to get all rejected bookings for a partner
+router.get('/bookings/rejected', auth, partnerServiceController.getRejectedBookings);
 // Route to select a service and category
 router.post('/select-category-and-service', auth, partnerAuthController.selectCategoryAndServices);
 
