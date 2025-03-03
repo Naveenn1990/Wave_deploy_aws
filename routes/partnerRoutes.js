@@ -8,7 +8,6 @@ const crypto = require('crypto');
 const partnerServiceController = require('../controllers/partnerServiceController');
 const partnerAuthController = require('../controllers/partnerAuthController');
 
-
 // Create upload directories if they don't exist
 const uploadDir = path.join(__dirname, '..', 'uploads');
 const profilesDir = path.join(uploadDir, 'profiles');
@@ -43,11 +42,17 @@ const {
   getAllPartnerProfile,
 } = require("../controllers/partnerAuthController");
 
-
-
 const {
     completeBooking
   } = require("../controllers/partnerServiceController");
+
+const {
+  createProduct,
+  getPartnerProducts,
+  getProduct,
+  updateProduct,
+  deleteProduct
+} = require("../controllers/partnerProductController");
 
 const { getAllCategories } = require("../controllers/partnerDropdownController");
 
@@ -169,6 +174,12 @@ router.post('/booking/:id/complete', upload.array('photos', 10), partnerServiceC
 // Dropdown data route
 router.get("/dropdown/categories", getAllCategories);
 
+// Partner Product Routes
+router.post("/products", auth, createProduct);
+router.get("/products", auth, getPartnerProducts);
+router.get("/products/:id", auth, getProduct);
+router.put("/products/:id", auth, updateProduct);
+router.delete("/products/:id", auth, deleteProduct);
 
 // Route to get all completed bookings for a partner
 router.get('/bookings/completed', auth, partnerServiceController.getCompletedBookings);
@@ -181,13 +192,7 @@ router.get('/bookings/rejected', auth, partnerServiceController.getRejectedBooki
 // Route to select a service and category
 router.post('/select-category-and-service', auth, partnerAuthController.selectCategoryAndServices);
 
-
 // Route to get all accepted bookings for a partner
 router.get('/bookings/accepted/:partnerId', auth, partnerServiceController.getPartnerBookings);
-
-
-
-
-
 
 module.exports = router;

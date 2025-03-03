@@ -677,7 +677,7 @@ exports.getPendingBookings = async (req, res) => {
   }
 };
 
-// Get rejected bookings
+// Get completed bookings
 exports.getRejectedBookings = async (req, res) => {
   try {
     const token = req.headers.authorization.split(' ')[1]; // Get the token from the header
