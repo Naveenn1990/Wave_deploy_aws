@@ -19,6 +19,14 @@ const subServiceSchema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'SubCategory', 
     },
+    // review: {
+    //         type: mongoose.Schema.Types.ObjectId,
+    //         ref: 'Review', 
+    // },
+    reviews: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Review', 
+    }], 
     price: {
         type: Number,
         required: true

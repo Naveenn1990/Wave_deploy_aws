@@ -5,7 +5,7 @@ const WalletSchema = new mongoose.Schema({
   balance: { type: Number, required: true, default: 0 },
   transactions: [
     {
-      transactionId: { type: String, required: true, unique: true },
+      transactionId: { type: String, required: true,},
       amount: { type: Number, required: true },
       type: { type: String, enum: ["Credit", "Debit"], required: true },
       date: { type: Date, default: Date.now },

@@ -36,11 +36,13 @@ exports.sendOTP = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      otp : otp,
       message: "OTP sent successfully",
     });
   } catch (error) {
     console.error("Error in sendOTP:", error);
     res.status(500).json({
+      
       success: false,
       message: "Failed to send OTP",
     });
@@ -258,3 +260,6 @@ exports.verifyPasswordResetOTP = async (req, res) => {
     });
   }
 };
+
+
+

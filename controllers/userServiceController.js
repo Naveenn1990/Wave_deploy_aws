@@ -484,7 +484,15 @@ const getAllSubServices = async (req, res) => {
                       model: 'ServiceCategory'
                   }
               }
-          });
+          })
+          .populate({
+            path: 'reviews',  // Make sure this matches the updated schema
+            model: 'Review'
+            // populate: {
+            //     path: 'user',  // If you want to get user details along with the review
+            //     model: 'User'
+            // }
+        });
 
       res.status(200).json({
           success: true,
