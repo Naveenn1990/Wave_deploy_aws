@@ -6,21 +6,21 @@ const reviewSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    // booking: {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: 'Booking', // Reference to the Booking model
-    //     required: true
-    // },
+    partner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Partner',
+        required: true
+    },
+    booking: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking', 
+        required: true
+    },
     subService: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SubService',
         required: true
     },
-    // partner: {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: 'Partner',
-    //     required: true
-    // },
     rating: {
         type: Number,
         required: true,
