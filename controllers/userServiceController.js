@@ -4,6 +4,8 @@ const Service = require("../models/Service");
 const SubService = require("../models/SubService");
 const SubCategory = require("../models/SubCategory");
 const Booking = require("../models/booking"); // Assuming you have a Booking model
+// const PartnerModel = require('../models/Partner');
+const Partner = require("../models/Partner");
 // Helper function to get clean image filename
 function getCleanImageName(imagePath) {
     if (!imagePath) return null;
@@ -508,7 +510,8 @@ const getAllSubServices = async (req, res) => {
 const getAllSubServicesForUser = async (req, res) => {
   console.log("hi")
     try {
-        const subservices = await SubService.find({ isActive: true }); // Fetch active subservices
+        const subservices = await SubService.find({ isActive: true })
+        .populate({path: 'reviews'})
 
         res.status(200).json({
             success: true,
@@ -546,6 +549,41 @@ const getAllCategories = async (req, res) => {
         console.error('Error fetching categories:', error);
         res.status(500).json({ success: false, message: error.message });
     }
+};
+
+// Get all partners
+const getAllPartners = async (req, res) => {
+  try {
+    // const temppartners = await Partner.find()
+    // return res.json({
+    //   temppartners 
+    // });
+
+    const { status, page = 1, limit = 100 } = req.query;
+
+    const query = {};
+    if (status) {
+      query["kycDetails.isVerified"] = status === "verified";
+    }
+
+    const partners = await Partner.find(query)
+      .select("-tempOTP")
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Partner.countDocuments(query);
+
+    res.json({
+      partners,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total,
+    });
+  } catch (error) {
+    console.error("Get Partners Error:", error);
+    res.status(500).json({ message: "Error fetching partners" });
+  }
 };
 
 const getSubCategoryHierarchy = async (req, res) => {
@@ -629,5 +667,6 @@ module.exports = {
   getAllCategoriesForUser,
   getAllCategories,
   getSubCategoryHierarchy,
-  getUserSubCategoryHierarchy
+  getUserSubCategoryHierarchy,
+  getAllPartners
 };

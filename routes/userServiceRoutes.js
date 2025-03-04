@@ -70,6 +70,7 @@ router.get("/all-services", userServiceController.getAllServices);
  *         description: Server error
  */
 router.get("/categories", userServiceController.getAllCategories);
+router.get("/patners", userServiceController.getAllPartners);
 
 /**
  * @swagger
