@@ -674,21 +674,14 @@ exports.getServicesByCategory = async (req, res) => {
   }
 };
 
-// Get all users with pagination and filters
+// Get all users without pagination limit
 exports.getAllUsers = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      search, 
-      status,
-      sortBy = 'createdAt',
-      sortOrder = 'desc'
-    } = req.query;
+    const { search, status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
     // Build query
     const query = {};
-    
+
     // Add search filter
     if (search) {
       query.$or = [
@@ -703,21 +696,16 @@ exports.getAllUsers = async (req, res) => {
       query.status = status;
     }
 
-    // Calculate skip for pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
     // Build sort object
     const sort = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // Get users with pagination
+    // Get all users without pagination
     const users = await User.find(query)
       .select('name email phone address status createdAt')
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit));
+      .sort(sort);
 
-    // Get total count for pagination
+    // Get total count
     const total = await User.countDocuments(query);
 
     // Get booking counts for each user
@@ -733,9 +721,9 @@ exports.getAllUsers = async (req, res) => {
       bookingCountMap[item._id] = item.count;
     });
 
-    // Format the response with all required fields
+    // Format the response
     const formattedUsers = users.map((user, index) => ({
-      slNo: skip + index + 1,
+      slNo: index + 1,
       _id: user._id,
       customerName: user.name,
       phoneNo: user.phone,
@@ -749,12 +737,7 @@ exports.getAllUsers = async (req, res) => {
     res.json({
       success: true,
       data: formattedUsers,
-      pagination: {
-        total,
-        page: parseInt(page),
-        pages: Math.ceil(total / parseInt(limit)),
-        limit: parseInt(limit)
-      },
+      total,
       message: "Users fetched successfully"
     });
 
@@ -767,6 +750,7 @@ exports.getAllUsers = async (req, res) => {
     });
   }
 };
+
 
 // Get bookings for a specific user
 exports.getUserBookings = async (req, res) => {

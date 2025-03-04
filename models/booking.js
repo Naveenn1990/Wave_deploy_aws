@@ -62,7 +62,7 @@ const bookingSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "in_progress", "completed", "cancelled", "accepted"], // ✅ Ensure 'accepted' is here
+      enum: ["pending", "confirmed", "in_progress", "completed", "cancelled", "accepted", "rejected", "paused"],
       default: "pending",
     },
     paymentStatus: {
@@ -83,8 +83,27 @@ const bookingSchema = new mongoose.Schema(
     },
     partner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Partner" // ✅ Partner will be assigned when they accept the booking
+      ref: "Partner" // Partner will be assigned when they accept the booking
     },
+    // Tracking timestamps
+    acceptedAt: Date,
+    completedAt: Date,
+    // New fields for paused bookings
+    pauseDetails: {
+      nextScheduledDate: Date,
+      nextScheduledTime: String,
+      pauseReason: String,
+      pausedAt: Date
+    },
+    // Add photos and videos fields
+    photos: [{
+      type: String,  // Store the photo URLs/paths
+      required: false
+    }],
+    videos: [{
+      type: String,  // Store the video URLs/paths
+      required: false
+    }]
   },
   { 
     timestamps: true,
@@ -107,7 +126,7 @@ bookingSchema.index({ user: 1, status: 1 });
 bookingSchema.index({ subService: 1 });
 bookingSchema.index({ scheduledDate: 1 });
 bookingSchema.index({ status: 1 });
-bookingSchema.index({ partner: 1 }); // ✅ Index added to efficiently fetch partner's bookings
+bookingSchema.index({ partner: 1 }); // Index added to efficiently fetch partner's bookings
 
 // Check if model already exists before defining
 const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSchema);

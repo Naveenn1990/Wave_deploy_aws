@@ -501,10 +501,13 @@ exports.completeKYC = async (req, res) => {
       });
     }
 
-    // Update KYC details
+    // Update KYC details with status
     profile.kyc = {
       panCard,
       aadhaar,
+      chequeImage,
+      status: 'pending', // Set initial status as pending
+      remarks: null // Clear any previous remarks
     };
 
     profile.bankDetails = {
@@ -515,32 +518,18 @@ exports.completeKYC = async (req, res) => {
       chequeImage,
     };
 
-    // Set verification status to pending
-    profile.isVerified = "pending";
-    profile.verificationStatus = "pending";
-
     await profile.save();
 
-    // Transform the response to include only filenames
-    const transformedProfile = {
-      ...profile.toJSON(),
-      kyc: {
-        panCard: profile.kyc.panCard,
-        aadhaar: profile.kyc.aadhaar,
-      },
-      bankDetails: {
-        accountNumber: profile.bankDetails.accountNumber,
-        ifscCode: profile.bankDetails.ifscCode,
-        accountHolderName: profile.bankDetails.accountHolderName,
-        bankName: profile.bankDetails.bankName,
-        chequeImage: profile.bankDetails.chequeImage,
-      },
-      verificationStatus: profile.verificationStatus,
-    };
     res.json({
       success: true,
-      message: "KYC completed successfully",
-      profile: profile,
+      message: "KYC documents uploaded successfully. Pending admin approval.",
+      profile: {
+        ...profile.toJSON(),
+        kyc: {
+          status: profile.kyc.status,
+          remarks: profile.kyc.remarks
+        }
+      }
     });
   } catch (error) {
     console.error("Complete KYC Error:", error);
@@ -552,12 +541,70 @@ exports.completeKYC = async (req, res) => {
   }
 };
 
+// New endpoint for admin to update KYC status
+exports.updateKYCStatus = async (req, res) => {
+  try {
+    const { partnerId } = req.params;
+    const { status, remarks } = req.body;
+
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be 'pending', 'approved', or 'rejected'"
+      });
+    }
+
+    const partner = await Partner.findById(partnerId);
+    if (!partner) {
+      return res.status(404).json({
+        success: false,
+        message: "Partner not found"
+      });
+    }
+
+    // Update KYC status
+    partner.kyc.status = status;
+    partner.kyc.remarks = remarks || null;
+
+    await partner.save();
+
+    res.json({
+      success: true,
+      message: `KYC ${status} successfully`,
+      kyc: {
+        status: partner.kyc.status,
+        remarks: partner.kyc.remarks
+      }
+    });
+  } catch (error) {
+    console.error("Update KYC Status Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating KYC status",
+      error: error.message
+    });
+  }
+};
+
 // Get partner profile
 exports.getProfile = async (req, res) => {
   try {
-    const profile = await PartnerProfile.findOne({ partner: req.partner._id })
+    if (!req.partner || !req.partner._id) {
+      return res.status(400).json({
+        success: false,
+        message: "Partner ID is missing",
+      });
+    }
+
+    console.log("Partner ID:", req.partner._id, "Type:", typeof req.partner._id);
+
+    const partnerId = new mongoose.Types.ObjectId(req.partner._id);
+
+    const profile = await Partner.findOne({ _id: partnerId })
       .populate("category", "name description")
       .populate("service", "name description basePrice duration");
+
+    console.log("Fetched Profile:", profile);
 
     if (!profile) {
       return res.status(404).json({
@@ -568,6 +615,96 @@ exports.getProfile = async (req, res) => {
 
     res.json({
       success: true,
+      profile: {
+        id: profile._id,
+        name: profile.profile?.name || "N/A",
+        email: profile.profile?.email || "N/A",
+        phone: profile.phone,
+        whatsappNumber: profile.whatsappNumber,
+        qualification: profile.qualification,
+        experience: profile.experience,
+        category: profile.category,
+        service: profile.service,
+        modeOfService: profile.modeOfService,
+        profilePicture: profile.profilePicture,
+        status: profile.profileCompleted ? "Completed" : "Incomplete",
+      },
+    });
+  } catch (error) {
+    console.error("Get Profile Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching profile",
+    });
+  }
+};
+
+
+exports.getAllPartnerProfile = async (req , res) => {
+  try{
+    const allPartners = await PartnerProfile.find() 
+    return res.status(200).json({
+      success: false,
+      message: "Profile not found",
+      data : allPartners
+    });
+  } catch(err){
+    console.log("Error Occured : " , err)
+  }
+}
+
+
+
+// Update partner profile
+exports.updateProfile = async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      whatsappNumber,
+      contactNumber,
+      qualification,
+      experience,
+      category,
+      service,
+      modeOfService,
+    } = req.body;
+
+    let profile = await Partner.findOne({ _id: req.partner._id });
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: "Profile not found",
+      });
+    }
+
+    // Check if profilePicture is uploaded in form-data
+    const profilePicture = req.file ? req.file.filename : undefined;
+
+    // Update only provided fields (Handle both JSON & form-data)
+    const updatedFields = {};
+    if (name) updatedFields.name = name;
+    if (email) updatedFields.email = email;
+    if (whatsappNumber) updatedFields.whatsappNumber = whatsappNumber;
+    if (contactNumber) updatedFields.contactNumber = contactNumber;
+    if (qualification) updatedFields.qualification = qualification;
+    if (experience) updatedFields.experience = parseFloat(experience);
+    if (category) updatedFields.category = category;
+    if (service) updatedFields.service = service;
+    if (modeOfService) updatedFields.modeOfService = modeOfService;
+    if (profilePicture) updatedFields.profilePicture = profilePicture;
+
+    // Apply updates to the profile
+    Object.assign(profile, updatedFields);
+    await profile.save();
+
+    // Populate category and service details
+    await profile.populate("category", "name description");
+    await profile.populate("service", "name description basePrice duration");
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
       profile: {
         id: profile._id,
         name: profile.name,
@@ -587,102 +724,11 @@ exports.getProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get Profile Error:", error);
+    console.error("Update Profile Error:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching profile",
+      message: "Error updating profile",
+      error: error.message,
     });
   }
 };
-
-exports.getAllPartnerProfile = async (req , res) => {
-  try{
-    const allPartners = await PartnerProfile.find() 
-    return res.status(200).json({
-      success: false,
-      message: "Profile not found",
-      data : allPartners
-    });
-  } catch(err){
-    console.log("Error Occured : " , err)
-  }
-}
-
-
-// Update partner profile
-exports.updateProfile = [
-  upload.single("profilePicture"),
-  async (req, res) => {
-    try {
-      const {
-        name,
-        email,
-        whatsappNumber,
-        contactNumber,
-        qualification,
-        experience,
-        category,
-        service,
-        modeOfService,
-      } = req.body;
-
-      let profile = await PartnerProfile.findOne({ partner: req.partner._id });
-      if (!profile) {
-        return res.status(404).json({
-          success: false,
-          message: "Profile not found",
-        });
-      }
-
-      // Get the profile picture filename if uploaded
-      const profilePicture = req.file ? req.file.filename : undefined;
-
-      // Update only provided fields
-      if (name) profile.name = name;
-      if (email) profile.email = email;
-      if (whatsappNumber) profile.whatsappNumber = whatsappNumber;
-      if (contactNumber) profile.contactNumber = contactNumber;
-      if (qualification) profile.qualification = qualification;
-      if (experience) profile.experience = parseFloat(experience);
-      if (category) profile.category = category;
-      if (service) profile.service = service;
-      if (modeOfService) profile.modeOfService = modeOfService;
-      if (profilePicture) profile.profilePicture = profilePicture;
-
-      await profile.save();
-
-      // Populate category and service details
-      await profile.populate("category", "name description");
-      await profile.populate("service", "name description basePrice duration");
-
-      res.json({
-        success: true,
-        message: "Profile updated successfully",
-        profile: {
-          id: profile._id,
-          name: profile.name,
-          email: profile.email,
-          phone: profile.phone,
-          whatsappNumber: profile.whatsappNumber,
-          contactNumber: profile.contactNumber,
-          qualification: profile.qualification,
-          experience: profile.experience,
-          category: profile.category,
-          service: profile.service,
-          modeOfService: profile.modeOfService,
-          profilePicture: profile.profilePicture,
-          verificationStatus: profile.verificationStatus,
-          status: profile.status,
-          dutyStatus: profile.dutyStatus,
-        },
-      });
-    } catch (error) {
-      console.error("Update Profile Error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Error updating profile",
-        error: error.message,
-      });
-    }
-  },
-];

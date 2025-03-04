@@ -1,25 +1,28 @@
 const express = require("express");
 const router = express.Router();
 const { auth } = require("../middleware/partnerauth");
+const { adminAuth } = require("../middleware/adminAuth");
 const multer = require("multer");
 const path = require("path");
 const fs = require('fs');
 const crypto = require('crypto');
 const partnerServiceController = require('../controllers/partnerServiceController');
 const partnerAuthController = require('../controllers/partnerAuthController');
-
+const partnerWalletController = require('../controllers/partnerWalletController');
 
 // Create upload directories if they don't exist
 const uploadDir = path.join(__dirname, '..', 'uploads');
 const profilesDir = path.join(uploadDir, 'profiles');
 const kycDir = path.join(uploadDir, 'kyc');
 const bookingPhotosDir = path.join(uploadDir, 'booking-photos');
+const bookingVideosDir = path.join(uploadDir, 'booking-videos');
 
 // Create directories with recursive option
 fs.mkdirSync(uploadDir, { recursive: true });
 fs.mkdirSync(profilesDir, { recursive: true });
 fs.mkdirSync(kycDir, { recursive: true });
 fs.mkdirSync(bookingPhotosDir, { recursive: true });
+fs.mkdirSync(bookingVideosDir, { recursive: true });
 
 // Import controllers
 const {
@@ -41,13 +44,20 @@ const {
   completeProfile,
   completeKYC,
   getAllPartnerProfile,
+  updateKYCStatus
 } = require("../controllers/partnerAuthController");
-
-
 
 const {
     completeBooking
   } = require("../controllers/partnerServiceController");
+
+const {
+  createProduct,
+  getPartnerProducts,
+  getProduct,
+  updateProduct,
+  deleteProduct
+} = require("../controllers/partnerProductController");
 
 const { getAllCategories } = require("../controllers/partnerDropdownController");
 
@@ -58,8 +68,10 @@ const storage = multer.diskStorage({
             cb(null, profilesDir);
         } else if (file.fieldname === 'panCard' || file.fieldname === 'aadhaar' || file.fieldname === 'chequeImage') {
             cb(null, kycDir);
-        } else {
+        } else if (file.fieldname === 'photos') {
             cb(null, bookingPhotosDir);
+        } else if (file.fieldname === 'videos') {
+            cb(null, bookingVideosDir);
         }
     },
     filename: function (req, file, cb) {
@@ -74,6 +86,14 @@ const fileFilter = (req, file, cb) => {
         if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
             return cb(new Error('Please upload an image file'));
         }
+    } else if (file.fieldname === 'photos') {
+        if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+            return cb(new Error('Please upload an image file'));
+        }
+    } else if (file.fieldname === 'videos') {
+        if (!file.originalname.match(/\.(mp4|mov|avi|mkv)$/)) {
+            return cb(new Error('Please upload a video file'));
+        }
     }
     cb(null, true);
 };
@@ -81,7 +101,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ 
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
+        fileSize: file => file.fieldname === 'videos' ? 100 * 1024 * 1024 : 5 * 1024 * 1024 // 100MB for videos, 5MB for images
     },
     fileFilter: fileFilter
 });
@@ -153,6 +173,9 @@ router.post("/kyc/complete", auth, (req, res, next) => {
     });
 }, completeKYC);
 
+// Admin route to update KYC status (Protected, Admin Only)
+router.put("/kyc/:partnerId/status", adminAuth, updateKYCStatus);
+
 // Partner Service Routes (Protected)
 router.get("/services/available", auth, getAvailableServices);
 router.post("/services/select", auth, selectService);
@@ -161,13 +184,26 @@ router.get("/services/history", auth, getServiceHistory);
 router.put("/services/status", auth, updateServiceStatus);
 router.get("/bookings/matching", auth, getMatchingBookings);
 router.put("/bookings/:bookingId/accept",  partnerServiceController.acceptBooking);
+router.put("/bookings/:bookingId/reject",  partnerServiceController.rejectBooking);
 
-// New route to mark an accepted booking as completed and handle photo uploads
-router.post('/booking/:id/complete', upload.array('photos', 10), partnerServiceController.completeBooking);
+// New route to mark an accepted booking as completed and handle photo/video uploads
+router.post('/bookings/:id/complete', auth, 
+    upload.fields([
+        { name: 'photos', maxCount: 10 },
+        { name: 'videos', maxCount: 5 }
+    ]), 
+    partnerServiceController.completeBooking
+);
 
 // Dropdown data route
 router.get("/dropdown/categories", getAllCategories);
 
+// Partner Product Routes
+router.post("/products", auth, createProduct);
+router.get("/products", auth, getPartnerProducts);
+router.get("/products/:id", auth, getProduct);
+router.put("/products/:id", auth, updateProduct);
+router.delete("/products/:id", auth, deleteProduct);
 
 // Route to get all completed bookings for a partner
 router.get('/bookings/completed', auth, partnerServiceController.getCompletedBookings);
@@ -175,8 +211,24 @@ router.get('/bookings/completed', auth, partnerServiceController.getCompletedBoo
 // Route to get all pending bookings for a partner
 router.get('/bookings/pending', auth, partnerServiceController.getPendingBookings);
 
+// Route to get all rejected bookings for a partner
+router.get('/bookings/rejected', auth, partnerServiceController.getRejectedBookings);
 // Route to select a service and category
 router.post('/select-category-and-service', auth, partnerAuthController.selectCategoryAndServices);
 
+// Route to get all accepted bookings for a partner
+router.get('/bookings/accepted/:partnerId', auth, partnerServiceController.getPartnerBookings);
+
+// Route to pause a booking
+router.post('/bookings/:bookingId/pause', auth, partnerServiceController.pauseBooking);
+
+// Routes for paused bookings
+router.get('/bookings/paused', auth, partnerServiceController.getPausedBookings);
+router.post('/bookings/:bookingId/resume', auth, partnerServiceController.resumeBooking);
+
+// Route to top up wallet
+router.post('/wallet/topup/:partnerId', auth, partnerWalletController.topUpWallet);
+// Route to get wallet transactions
+router.get('/wallet/transactions', auth, partnerWalletController.transactionsWallet);
 
 module.exports = router;

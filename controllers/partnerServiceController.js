@@ -467,85 +467,297 @@ exports.acceptBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: "Cannot accept this booking" });
     }
 
-    // ✅ Update Booking: Assign partner and change status to 'accepted'
+    // Update Booking: Assign partner and change status to 'accepted'
     const updatedBooking = await Booking.findByIdAndUpdate(
       bookingId,
-      { partner: partnerId, status: "accepted" },
+      { 
+        partner: partnerId, 
+        status: "accepted",
+        acceptedAt: new Date()
+      },
       { new: true }
-    );
+    ).populate({
+      path: 'partner',
+      select: 'name email phone profilePicture address experience qualification profile'
+    }).populate({
+      path: 'user',
+      select: 'name email phone profilePhoto address'
+    }).populate({
+      path: 'subService',
+      select: 'name price photo description duration'
+    }).populate({
+      path: 'service',
+      select: 'name description'
+    });
 
-    // ✅ Update Partner: Add booking to `bookings` array
-    const updatedPartner = await Partner.findByIdAndUpdate(
+    // Update Partner: Add booking to bookings array
+    await Partner.findByIdAndUpdate(
       partnerId,
-      { $addToSet: { bookings: bookingId } }, // Ensures no duplicates
+      { $addToSet: { bookings: bookingId } },
       { new: true }
     );
-
-    console.log("Updated Partner Bookings:", updatedPartner.bookings); // Debugging output
 
     res.status(200).json({
       success: true,
       message: "Booking accepted successfully",
-      data: updatedBooking,
+      data: updatedBooking
     });
   } catch (error) {
     console.error("Error accepting booking:", error);
     res.status(500).json({
       success: false,
       message: "Error accepting booking",
+      error: error.message
+    });
+  }
+};
+
+
+// Get completed bookings
+exports.getCompletedBookings = async (req, res) => {
+  try {
+    const completedBookings = await Booking.find({
+      partner: req.partner._id,
+      status: 'completed'
+    })
+    .populate({
+      path: 'user',
+      select: 'name email phone profilePhoto address'
+    })
+    .populate({
+      path: 'subService',
+      select: 'name price photo description duration'
+    })
+    .populate({
+      path: 'service',
+      select: 'name description'
+    })
+    .populate({
+      path: 'partner',
+      select: 'name email phone profilePicture address experience qualification profile'
+    })
+    .sort({ completedAt: -1 });
+
+    if (!completedBookings.length) {
+      return res.status(200).json({
+        success: true,
+        message: 'No completed bookings found',
+        data: []
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Completed bookings fetched successfully',
+      data: completedBookings
+    });
+  } catch (error) {
+    console.error('Error fetching completed bookings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching completed bookings',
+      error: error.message
+    });
+  }
+};
+
+// Get rejected bookings
+exports.getRejectedBookings = async (req, res) => {
+  try {
+    const rejectedBookings = await Booking.find({
+      partner: req.partner._id,
+      status: 'rejected'
+    })
+    .populate({
+      path: 'user',
+      select: 'name email phone profilePhoto address'
+    })
+    .populate({
+      path: 'subService',
+      select: 'name price photo description duration'
+    })
+    .populate({
+      path: 'service',
+      select: 'name description'
+    })
+    .populate({
+      path: 'partner',
+      select: 'name email phone profilePicture address experience qualification profile'
+    })
+    .sort({ updatedAt: -1 });
+
+    if (!rejectedBookings.length) {
+      return res.status(200).json({
+        success: true,
+        message: 'No rejected bookings found',
+        data: []
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Rejected bookings fetched successfully',
+      data: rejectedBookings
+    });
+  } catch (error) {
+    console.error('Error fetching rejected bookings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching rejected bookings',
+      error: error.message
+    });
+  }
+};
+
+// Reject booking
+exports.rejectBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { partnerId } = req.body;
+
+    if (!bookingId || !partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking ID and Partner ID are required",
+      });
+    }
+
+    console.log("Partner ID:", partnerId);
+    console.log("Booking ID:", bookingId);
+
+    // Validate partner existence
+    const partner = await Partner.findById(partnerId);
+    if (!partner) {
+      return res.status(404).json({ success: false, message: "Partner not found" });
+    }
+
+    // Validate booking existence
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    console.log("Current Booking Status:", booking.status);
+
+    // Check if booking is already accepted, rejected, or canceled
+    if (["accepted", "cancelled", "rejected"].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: "Cannot reject this booking" });
+    }
+
+    // Update Booking: Change status to 'rejected'
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { status: "rejected" },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Booking rejected successfully",
+      data: updatedBooking,
+    });
+  } catch (error) {
+    console.error("Error rejecting booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error rejecting booking",
       error: error.message,
     });
   }
 };
 
 
-
-
-
-
-// Complete booking
+// Complete booking - Partner uploads photos and videos before marking the job as completed
 exports.completeBooking = async (req, res) => {
-  const bookingId = req.params.id;
-  const photos = req.files;
-
   try {
-    // Update the booking status to completed and change payment status
-    const booking = await Booking.findByIdAndUpdate(bookingId, { 
-      status: 'completed', 
-      paymentStatus: 'completed', 
-      photos: photos.map(file => file.path) 
-    }, { new: true });
+    const { id } = req.params;
+    const files = req.files;
+
+    // Extract photo and video paths
+    const photos = files.photos ? files.photos.map(file => file.path) : [];
+    const videos = files.videos ? files.videos.map(file => file.path) : [];
+
+    // Find and update the booking
+    const booking = await Booking.findByIdAndUpdate(
+      id,
+      { 
+        status: 'completed',
+        photos,
+        videos,
+        completedAt: new Date()
+      },
+      { new: true }
+    )
+    .populate({
+      path: 'user',
+      select: 'name email phone profilePhoto address'
+    })
+    .populate({
+      path: 'subService',
+      select: 'name price photo description duration'
+    })
+    .populate({
+      path: 'service',
+      select: 'name description'
+    })
+    .populate({
+      path: 'partner',
+      select: 'name email phone profilePicture address experience qualification profile'
+    });
 
     if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
     }
 
-    res.status(200).json({ message: 'Booking marked as completed', booking });
+    res.status(200).json({
+      success: true,
+      message: 'Booking completed successfully',
+      data: booking
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error marking booking as completed', error });
+    console.error('Error completing booking:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error completing booking',
+      error: error.message
+    });
   }
 };
 
 // Get completed bookings
 exports.getCompletedBookings = async (req, res) => {
   try {
-    const token = req.headers.authorization.split(' ')[1]; // Get the token from the header
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Decode the token
-    const partnerId = decoded._id; // Extract partner ID from the decoded token
-
+    // Find completed bookings for the partner
     const completedBookings = await Booking.find({
-      partnerId: partnerId,
+      partner: req.partner._id,  // Using req.partner._id instead of decoded token
       status: 'completed'
-    });
+    })
+    .populate('user', 'name email phone')  // Populate user details
+    .populate('service', 'name')           // Populate service details
+    .populate('subService', 'name')        // Populate subService details
+    .select('-__v')                        // Exclude version key
+    .sort({ completedAt: -1 });           // Sort by completion date, newest first
 
     if (!completedBookings.length) {
-      return res.status(404).json({ message: 'No completed bookings found' });
+      return res.status(200).json({
+        success: true,
+        message: 'No completed bookings found',
+        bookings: []
+      });
     }
 
-    res.status(200).json({ message: 'Completed bookings fetched successfully', bookings: completedBookings });
+    res.status(200).json({
+      success: true,
+      message: 'Completed bookings fetched successfully',
+      bookings: completedBookings
+    });
   } catch (error) {
     console.error('Error fetching completed bookings:', error);
     res.status(500).json({
+      success: false,
       message: 'Error fetching completed bookings',
       error: error.message || 'Unknown error'
     });
@@ -573,6 +785,192 @@ exports.getPendingBookings = async (req, res) => {
     res.status(500).json({
       message: 'Error fetching pending bookings',
       error: error.message || 'Unknown error'
+    });
+  }
+};
+
+// Get completed bookings
+exports.getRejectedBookings = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(' ')[1]; // Get the token from the header
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Decode the token
+    const partnerId = decoded._id; // Extract partner ID from the decoded token
+
+    const rejectedBookings = await Booking.find({
+      partnerId: partnerId,
+      status: 'rejected'
+    });
+
+    if (!rejectedBookings.length) {
+      return res.status(404).json({ message: 'No rejected bookings found' });
+    }
+
+    res.status(200).json({ message: 'Rejected bookings fetched successfully', bookings: rejectedBookings });
+  } catch (error) {
+    console.error('Error fetching rejected bookings:', error);
+    res.status(500).json({
+      message: 'Error fetching rejected bookings',
+      error: error.message || 'Unknown error'
+    });
+  }
+};
+
+// Pause a booking
+exports.pauseBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { nextScheduledDate, nextScheduledTime, pauseReason } = req.body;
+
+    // Find the booking and verify it belongs to this partner
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      partner: req.partner._id,
+      status: { $in: ['accepted', 'in_progress'] }
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found or cannot be paused'
+      });
+    }
+
+    // Update the booking status and pause details
+    booking.status = 'paused';
+    booking.pauseDetails = {
+      nextScheduledDate: new Date(nextScheduledDate),
+      nextScheduledTime,
+      pauseReason,
+      pausedAt: new Date()
+    };
+
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Booking paused successfully',
+      data: booking
+    });
+  } catch (error) {
+    console.error("Error pausing booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error pausing booking",
+      error: error.message
+    });
+  }
+};
+
+// Get all paused bookings for a partner
+exports.getPausedBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find({
+      partner: req.partner._id,
+      status: 'paused'
+    })
+    .populate('user', 'name email phone')
+    .populate('service', 'name')
+    .populate('subService', 'name')
+    .sort({ 'pauseDetails.nextScheduledDate': 1, 'pauseDetails.nextScheduledTime': 1 });
+
+    res.status(200).json({
+      success: true,
+      count: bookings.length,
+      data: bookings
+    });
+  } catch (error) {
+    console.error("Error fetching paused bookings:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching paused bookings",
+      error: error.message
+    });
+  }
+};
+
+// Resume a paused booking
+exports.resumeBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    // Find the booking and verify it belongs to this partner and is paused
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      partner: req.partner._id,
+      status: 'paused'
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Paused booking not found'
+      });
+    }
+
+    // Get the scheduled date and time from pauseDetails
+    const { nextScheduledDate, nextScheduledTime } = booking.pauseDetails;
+
+    // Update the booking
+    booking.status = 'in_progress';
+    booking.scheduledDate = nextScheduledDate;
+    booking.scheduledTime = nextScheduledTime;
+    booking.pauseDetails = undefined; // Clear pause details
+
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Booking resumed successfully',
+      data: booking
+    });
+  } catch (error) {
+    console.error("Error resuming booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error resuming booking",
+      error: error.message
+    });
+  }
+};
+
+// Get accepted bookings for a specific partner
+exports.getPartnerBookings = async (req, res) => {
+  try {
+    const { partnerId } = req.params;
+
+    const bookings = await Booking.find({
+      partner: partnerId,
+      status: 'accepted'
+    })
+    .populate({
+      path: 'user',
+      select: 'name email phone profilePhoto address'
+    })
+    .populate({
+      path: 'subService',
+      select: 'name price photo description duration'
+    })
+    .populate({
+      path: 'service',
+      select: 'name description'
+    })
+    .populate({
+      path: 'partner',
+      select: 'name email phone profilePicture address experience qualification profile'
+    })
+    .sort({ scheduledDate: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: 'Partner bookings retrieved successfully',
+      data: bookings
+    });
+  } catch (error) {
+    console.error('Error getting partner bookings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting partner bookings',
+      error: error.message
     });
   }
 };
