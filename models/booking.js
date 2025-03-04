@@ -85,6 +85,9 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Partner" // Partner will be assigned when they accept the booking
     },
+    // Tracking timestamps
+    acceptedAt: Date,
+    completedAt: Date,
     // New fields for paused bookings
     pauseDetails: {
       nextScheduledDate: Date,
@@ -92,9 +95,13 @@ const bookingSchema = new mongoose.Schema(
       pauseReason: String,
       pausedAt: Date
     },
-    // Add photos field
+    // Add photos and videos fields
     photos: [{
       type: String,  // Store the photo URLs/paths
+      required: false
+    }],
+    videos: [{
+      type: String,  // Store the video URLs/paths
       required: false
     }]
   },

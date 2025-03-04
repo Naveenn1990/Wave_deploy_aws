@@ -501,10 +501,13 @@ exports.completeKYC = async (req, res) => {
       });
     }
 
-    // Update KYC details
+    // Update KYC details with status
     profile.kyc = {
       panCard,
       aadhaar,
+      chequeImage,
+      status: 'pending', // Set initial status as pending
+      remarks: null // Clear any previous remarks
     };
 
     profile.bankDetails = {
@@ -515,32 +518,18 @@ exports.completeKYC = async (req, res) => {
       chequeImage,
     };
 
-    // Set verification status to pending
-    profile.isVerified = "pending";
-    profile.verificationStatus = "pending";
-
     await profile.save();
 
-    // Transform the response to include only filenames
-    const transformedProfile = {
-      ...profile.toJSON(),
-      kyc: {
-        panCard: profile.kyc.panCard,
-        aadhaar: profile.kyc.aadhaar,
-      },
-      bankDetails: {
-        accountNumber: profile.bankDetails.accountNumber,
-        ifscCode: profile.bankDetails.ifscCode,
-        accountHolderName: profile.bankDetails.accountHolderName,
-        bankName: profile.bankDetails.bankName,
-        chequeImage: profile.bankDetails.chequeImage,
-      },
-      verificationStatus: profile.verificationStatus,
-    };
     res.json({
       success: true,
-      message: "KYC completed successfully",
-      profile: profile,
+      message: "KYC documents uploaded successfully. Pending admin approval.",
+      profile: {
+        ...profile.toJSON(),
+        kyc: {
+          status: profile.kyc.status,
+          remarks: profile.kyc.remarks
+        }
+      }
     });
   } catch (error) {
     console.error("Complete KYC Error:", error);
@@ -548,6 +537,51 @@ exports.completeKYC = async (req, res) => {
       success: false,
       message: "Error completing KYC",
       error: error.message,
+    });
+  }
+};
+
+// New endpoint for admin to update KYC status
+exports.updateKYCStatus = async (req, res) => {
+  try {
+    const { partnerId } = req.params;
+    const { status, remarks } = req.body;
+
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be 'pending', 'approved', or 'rejected'"
+      });
+    }
+
+    const partner = await Partner.findById(partnerId);
+    if (!partner) {
+      return res.status(404).json({
+        success: false,
+        message: "Partner not found"
+      });
+    }
+
+    // Update KYC status
+    partner.kyc.status = status;
+    partner.kyc.remarks = remarks || null;
+
+    await partner.save();
+
+    res.json({
+      success: true,
+      message: `KYC ${status} successfully`,
+      kyc: {
+        status: partner.kyc.status,
+        remarks: partner.kyc.remarks
+      }
+    });
+  } catch (error) {
+    console.error("Update KYC Status Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating KYC status",
+      error: error.message
     });
   }
 };

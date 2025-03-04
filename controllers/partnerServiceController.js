@@ -470,109 +470,71 @@ exports.acceptBooking = async (req, res) => {
     // Update Booking: Assign partner and change status to 'accepted'
     const updatedBooking = await Booking.findByIdAndUpdate(
       bookingId,
-      { partner: partnerId, status: "accepted" },
+      { 
+        partner: partnerId, 
+        status: "accepted",
+        acceptedAt: new Date()
+      },
       { new: true }
-    );
+    ).populate({
+      path: 'partner',
+      select: 'name email phone profilePicture address experience qualification profile'
+    }).populate({
+      path: 'user',
+      select: 'name email phone profilePhoto address'
+    }).populate({
+      path: 'subService',
+      select: 'name price photo description duration'
+    }).populate({
+      path: 'service',
+      select: 'name description'
+    });
 
-    // Update Partner: Add booking to `bookings` array
-    const updatedPartner = await Partner.findByIdAndUpdate(
+    // Update Partner: Add booking to bookings array
+    await Partner.findByIdAndUpdate(
       partnerId,
-      { $addToSet: { bookings: bookingId } }, // Ensures no duplicates
+      { $addToSet: { bookings: bookingId } },
       { new: true }
     );
-
-    console.log("Updated Partner Bookings:", updatedPartner.bookings); // Debugging output
 
     res.status(200).json({
       success: true,
       message: "Booking accepted successfully",
-      data: updatedBooking,
+      data: updatedBooking
     });
   } catch (error) {
     console.error("Error accepting booking:", error);
     res.status(500).json({
       success: false,
       message: "Error accepting booking",
-      error: error.message,
+      error: error.message
     });
   }
 };
 
-// Get accepted bookings
-exports.getPartnerBookings = async (req, res) => {
-  try {
-    const { partnerId } = req.params;
-
-    if (!partnerId) {
-      return res.status(400).json({
-        success: false,
-        message: "Partner ID is required",
-      });
-    }
-
-    // Validate partner existence
-    const partner = await Partner.findById(partnerId);
-    if (!partner) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Partner not found" 
-      });
-    }
-
-    // Fetch all accepted bookings for this partner with populated fields
-    const bookings = await Booking.find({ 
-      partner: partnerId, 
-      status: "accepted" 
-    })
-    .populate({
-      path: 'user',
-      select: 'name email profilePhoto phone'
-    })
-    .populate({
-      path: 'subService',
-      select: 'name price photo description'
-    })
-    .populate({
-      path: 'service',
-      select: 'name'
-    })
-    .sort({ scheduledDate: 1, scheduledTime: 1 })
-    .select('-__v');
-
-    res.status(200).json({
-      success: true,
-      message: "Accepted bookings retrieved successfully",
-      data: bookings,
-    });
-  } catch (error) {
-    console.error("Error fetching partner bookings:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error fetching partner bookings",
-      error: error.message,
-    });
-  }
-};
 
 // Get completed bookings
 exports.getCompletedBookings = async (req, res) => {
   try {
-    // Find completed bookings for the partner
     const completedBookings = await Booking.find({
       partner: req.partner._id,
       status: 'completed'
     })
     .populate({
       path: 'user',
-      select: 'name email phone'
+      select: 'name email phone profilePhoto address'
     })
     .populate({
       path: 'subService',
-      select: 'name description price photo duration category'
+      select: 'name price photo description duration'
     })
     .populate({
       path: 'service',
       select: 'name description'
+    })
+    .populate({
+      path: 'partner',
+      select: 'name email phone profilePicture address experience qualification profile'
     })
     .sort({ completedAt: -1 });
 
@@ -594,7 +556,7 @@ exports.getCompletedBookings = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching completed bookings',
-      error: error.message || 'Unknown error'
+      error: error.message
     });
   }
 };
@@ -608,46 +570,41 @@ exports.getRejectedBookings = async (req, res) => {
     })
     .populate({
       path: 'user',
-      model: 'User',
-      select: 'name email phone profilePhoto address -_id'
+      select: 'name email phone profilePhoto address'
     })
     .populate({
       path: 'subService',
-      model: 'SubService',
-      select: 'name description price photo duration category -_id'
+      select: 'name price photo description duration'
     })
     .populate({
       path: 'service',
-      model: 'Service',
-      select: 'name description -_id'
+      select: 'name description'
     })
-    .sort({ updatedAt: -1 })
-    .lean();
+    .populate({
+      path: 'partner',
+      select: 'name email phone profilePicture address experience qualification profile'
+    })
+    .sort({ updatedAt: -1 });
 
     if (!rejectedBookings.length) {
-      return res.status(200).json({ 
+      return res.status(200).json({
         success: true,
         message: 'No rejected bookings found',
-        bookings: []
+        data: []
       });
     }
 
-    res.status(200).json({ 
+    res.status(200).json({
       success: true,
-      message: 'Rejected bookings fetched successfully', 
-      bookings: rejectedBookings.map(booking => ({
-        ...booking,
-        user: booking.user || {},
-        subService: booking.subService || {},
-        service: booking.service || {}
-      }))
+      message: 'Rejected bookings fetched successfully',
+      data: rejectedBookings
     });
   } catch (error) {
     console.error('Error fetching rejected bookings:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching rejected bookings',
-      error: error.message || 'Unknown error'
+      error: error.message
     });
   }
 };
@@ -710,16 +667,42 @@ exports.rejectBooking = async (req, res) => {
 };
 
 
-// Complete booking - Partner uploads photos before marking the job as completed
+// Complete booking - Partner uploads photos and videos before marking the job as completed
 exports.completeBooking = async (req, res) => {
   try {
-    const bookingId = req.params.id;
-    const photos = req.files;
+    const { id } = req.params;
+    const files = req.files;
 
-    // Find the booking and verify it belongs to this partner
-    const booking = await Booking.findOne({
-      _id: bookingId,
-      partner: req.partner._id
+    // Extract photo and video paths
+    const photos = files.photos ? files.photos.map(file => file.path) : [];
+    const videos = files.videos ? files.videos.map(file => file.path) : [];
+
+    // Find and update the booking
+    const booking = await Booking.findByIdAndUpdate(
+      id,
+      { 
+        status: 'completed',
+        photos,
+        videos,
+        completedAt: new Date()
+      },
+      { new: true }
+    )
+    .populate({
+      path: 'user',
+      select: 'name email phone profilePhoto address'
+    })
+    .populate({
+      path: 'subService',
+      select: 'name price photo description duration'
+    })
+    .populate({
+      path: 'service',
+      select: 'name description'
+    })
+    .populate({
+      path: 'partner',
+      select: 'name email phone profilePicture address experience qualification profile'
     });
 
     if (!booking) {
@@ -729,46 +712,20 @@ exports.completeBooking = async (req, res) => {
       });
     }
 
-    // Check if the booking is in a state that can be completed
-    if (!['accepted', 'in_progress'].includes(booking.status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Booking cannot be completed. Current status: ${booking.status}`
-      });
-    }
-
-    // Check if the partner has uploaded photos
-    if (!photos || photos.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please upload photos as proof before completing the booking'
-      });
-    }
-
-    // Update the booking status to completed and store photos
-    booking.status = 'completed';
-    booking.paymentStatus = 'completed';
-    booking.photos = photos.map(file => file.path); // Store photo paths
-    booking.completedAt = new Date();
-
-    // Save the updated booking
-    await booking.save();
-
     res.status(200).json({
       success: true,
-      message: 'Booking marked as completed',
+      message: 'Booking completed successfully',
       data: booking
     });
   } catch (error) {
-    console.error("Error marking booking as completed:", error);
+    console.error('Error completing booking:', error);
     res.status(500).json({
       success: false,
-      message: "Error marking booking as completed",
+      message: 'Error completing booking',
       error: error.message
     });
   }
 };
-
 
 // Get completed bookings
 exports.getCompletedBookings = async (req, res) => {
@@ -971,6 +928,48 @@ exports.resumeBooking = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error resuming booking",
+      error: error.message
+    });
+  }
+};
+
+// Get accepted bookings for a specific partner
+exports.getPartnerBookings = async (req, res) => {
+  try {
+    const { partnerId } = req.params;
+
+    const bookings = await Booking.find({
+      partner: partnerId,
+      status: 'accepted'
+    })
+    .populate({
+      path: 'user',
+      select: 'name email phone profilePhoto address'
+    })
+    .populate({
+      path: 'subService',
+      select: 'name price photo description duration'
+    })
+    .populate({
+      path: 'service',
+      select: 'name description'
+    })
+    .populate({
+      path: 'partner',
+      select: 'name email phone profilePicture address experience qualification profile'
+    })
+    .sort({ scheduledDate: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: 'Partner bookings retrieved successfully',
+      data: bookings
+    });
+  } catch (error) {
+    console.error('Error getting partner bookings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting partner bookings',
       error: error.message
     });
   }

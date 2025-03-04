@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
 
-
+// Partner Model
 const partnerSchema = new mongoose.Schema(
   {
-    Booking : [{
+    bookings: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Booking",
     }],
@@ -13,6 +13,12 @@ const partnerSchema = new mongoose.Schema(
       panCard : String,
       aadhaar : String,
       chequeImage : String,
+      status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+      },
+      remarks: String // For admin to provide feedback if rejected
     },
     bankDetails : {
       accountNumber : String,
@@ -100,7 +106,7 @@ const partnerSchema = new mongoose.Schema(
     },
     profilePicture: String,
 
-    // ✅ Add OTP fields
+    // Add OTP fields
     tempOTP: {
       type: String,
       select: false, // Ensure it is only retrieved when explicitly selected
