@@ -840,26 +840,39 @@ exports.completeBooking = async (req, res) => {
 };
 
 // Get all reviews
+// Get all reviews
 exports.getAllReviews = async (req, res) => {
   try {
     const reviews = await Review.find()
       .populate('user', 'name email') // Populate customer details
+      .populate('subService', 'name description') // Populate subService details
       .populate({
         path: 'booking', // Populate booking
         populate: {
-          path: 'partner', // Now populate partner from the booking
-          select: 'name' // Select the fields you want from the partner
+          path: 'partner', // Populate partner from the booking
+          select: 'name email' // Select fields from partner
         }
       });
 
     // Format the response to include desired fields
     const formattedReviews = reviews.map(review => ({
       customer: {
-        name: review.user.name,
-        email: review.user.email
+        name: review.user?.name || 'Unknown',
+        email: review.user?.email || 'Unknown'
       },
+      subService: review.subService
+        ? {
+            name: review.subService.name,
+            description: review.subService.description
+          }
+        : null,
       date: review.createdAt,
-      partner: review.booking ? review.booking.partner : null, // Check if booking is defined
+      partner: review.booking?.partner
+        ? {
+            name: review.booking.partner.name,
+            email: review.booking.partner.email
+          }
+        : null,
       rating: review.rating,
       comment: review.comment
     }));
@@ -877,6 +890,7 @@ exports.getAllReviews = async (req, res) => {
     });
   }
 };
+
 
 // Add Sub Category
 exports.addSubCategory = async (req, res) => {
