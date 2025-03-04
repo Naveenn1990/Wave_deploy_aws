@@ -5,6 +5,8 @@ const Booking = require("../models/booking");
 const PartnerProfile = require("../models/PartnerProfile");
 const jwt = require('jsonwebtoken');
 const SubService = require('../models/SubService');
+const mongoose = require('mongoose');
+const Product = require('../models/product');
 
 // Get all available services for partners
 exports.getAvailableServices = async (req, res) => {
@@ -972,5 +974,98 @@ exports.getPartnerBookings = async (req, res) => {
       message: 'Error getting partner bookings',
       error: error.message
     });
+  }
+};
+
+
+// ✅ Get all products by category (For partners)
+exports.getProductsByCategory = async (req, res) => {
+  try {
+      const { category } = req.params; // Extract category ID from URL
+
+      console.log("Received categoryId:", category);
+
+      // Validate category ID format
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+          return res.status(400).json({ message: "Invalid category ID" });
+      }
+
+      // Convert category to ObjectId
+      const categoryId = new mongoose.Types.ObjectId(category);
+
+      // Fetch products that match category ID & have stock available
+      const products = await Product.find({ category: categoryId, stock: { $gt: 0 } });
+
+      if (products.length === 0) {
+          return res.status(404).json({ message: "No products found for this category" });
+      }
+
+      res.status(200).json(products);
+  } catch (error) {
+      console.error("Error fetching products by category:", error);
+      res.status(500).json({ message: "Error fetching products", error: error.message });
+  }
+};
+
+
+// ✅ Use a product (decrease stock)
+exports.useProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity } = req.body; // Accept quantity from request body
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+
+    // Validate quantity (default to 1 if not provided)
+    const qty = parseInt(quantity) || 1;
+    if (qty < 1) {
+      return res.status(400).json({ message: "Quantity must be at least 1" });
+    }
+
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    if (product.stock < qty) {
+      return res.status(400).json({ message: `Not enough stock available. Current stock: ${product.stock}` });
+    }
+
+    product.stock -= qty; // Decrease stock by specified quantity
+    await product.save();
+
+    res.status(200).json({ message: `Used ${qty} of ${product.name}`, product });
+  } catch (error) {
+    console.error("Error using product:", error);
+    res.status(500).json({ message: "Error using product", error: error.message });
+  }
+};
+
+
+// ✅ Return a product (increase stock)
+exports.returnProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    product.stock += 1; // You can add a stock limit if required
+    await product.save();
+
+    res.status(200).json({ message: "Product returned successfully", product });
+  } catch (error) {
+    console.error("Error returning product:", error);
+    res.status(500).json({ message: "Error returning product", error: error.message });
   }
 };

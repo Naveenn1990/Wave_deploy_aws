@@ -71,9 +71,6 @@ const subServiceSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SubCategory', 
     },
-<<<<<<< HEAD
-    mrp: {
-=======
     // review: {
     //         type: mongoose.Schema.Types.ObjectId,
     //         ref: 'Review', 
@@ -82,8 +79,7 @@ const subServiceSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Review', 
     }], 
-    price: {
->>>>>>> a00ac6a5b01b14bddcc491b899cbd8f154428918
+    mrp: {
         type: Number,
         required: true
     },
