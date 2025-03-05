@@ -51,9 +51,10 @@ router.put("/service/:serviceId", adminAuth, upload.single('icon'), processFileP
 router.delete("/service/:serviceId", adminAuth, adminServiceController.deleteService);
 
 // Sub-Service Management
-router.post("/sub-service", adminAuth, upload.single('icon'), processFilePath, adminServiceController.createSubService);
-router.post("/service/:serviceId/sub-service", adminAuth, upload.single('icon'), processFilePath, adminServiceController.addSubService);
-router.put("/service/:serviceId/sub-service/:subServiceId", adminAuth, upload.single('icon'), processFilePath, adminServiceController.updateSubService);
+// router.post("/sub-service", adminAuth, upload.any(),  adminServiceController.createSubService);
+router.post("/sub-service", adminAuth, upload.array("images", 4), adminServiceController.createSubService);
+router.post("/service/:serviceId/sub-service", adminAuth,  upload.array("images", 4), adminServiceController.addSubService);
+router.put("/service/:serviceId/sub-service/:subServiceId", adminAuth,   upload.array("images", 4), adminServiceController.updateSubService);
 router.delete("/service/:serviceId/sub-service/:subServiceId", adminAuth, adminServiceController.deleteSubService);
 router.post("/service/:serviceId/sub-service/create", adminAuth, upload.single('icon'), processFilePath, adminServiceController.createSubService);
 

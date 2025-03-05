@@ -21,6 +21,7 @@ const {
   addSubServiceToCart
 } = require("../controllers/cartController");
 const ReviewController = require('../controllers/reviewController');
+const { getAllOffers } = require("../controllers/offerController");
 
 /**
  * @swagger
@@ -431,5 +432,6 @@ router.get('/subservices/:subServiceId/reviews', ReviewController.getReviews);
 
 router.get('/wallet/topup:userId', ReviewController.topUpWallet);
 router.post('/wallet/transactions', ReviewController.transactionsWallet);
+router.get('/offers', getAllOffers);
 
 module.exports = router; 

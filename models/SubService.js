@@ -71,9 +71,6 @@ const subServiceSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SubCategory', 
     },
-<<<<<<< HEAD
-    mrp: {
-=======
     // review: {
     //         type: mongoose.Schema.Types.ObjectId,
     //         ref: 'Review', 
@@ -83,7 +80,6 @@ const subServiceSchema = new mongoose.Schema({
         ref: 'Review', 
     }], 
     price: {
->>>>>>> a00ac6a5b01b14bddcc491b899cbd8f154428918
         type: Number,
         required: true
     },
@@ -98,6 +94,10 @@ const subServiceSchema = new mongoose.Schema({
     gst: {
         type: Number,
         default: 0 // GST percentage
+    },
+    commission: {
+        type: Number,
+        default: 0 // commission percentage
     },
     icon: [{
         type: String // Array of URLs or paths to images (max 10)

@@ -501,43 +501,90 @@ exports.getAllSubServices = async (req, res) => {
     }
 };
 // Create sub-service
+// exports.createSubService = async (req, res) => {
+//   try {
+//       console.log('Received Data:', req.body);
+//       console.log('Uploaded File:', req.file || 'No file uploaded');
+
+//       if (!req.file) {
+//           return res.status(400).json({ success: false, message: 'Icon image is required' });
+//       }
+
+//       const iconPath = req.file.filename; // Store uploaded filename
+
+//       const subService = new SubService({
+//           name: req.body.name,
+//           description: req.body.description,
+//           service: req.body.service,
+//           mrp: req.body.mrp,
+//           discount: req.body.discount,
+//           gst: req.body.gst,
+//           icon: iconPath, // Save file path
+//           includes: req.body.includes.split(','), 
+//           excludes: req.body.excludes.split(',')
+//       });
+
+//       const savedSubService = await subService.save();
+
+//       res.status(201).json({
+//           success: true,
+//           message: 'Sub-Service created successfully',
+//           subService: savedSubService
+//       });
+
+//   } catch (error) {
+//       console.error('Error:', error);
+//       res.status(500).json({ success: false, message: 'Error creating sub-service', error: error.message });
+//   }
+// };
+
+// Create sub-service
 exports.createSubService = async (req, res) => {
   try {
-      console.log('Received Data:', req.body);
-      console.log('Uploaded File:', req.file || 'No file uploaded');
+    console.log("Received Data:", req.body);
+    console.log("Uploaded Files:", req.files || "No files uploaded");
 
-      if (!req.file) {
-          return res.status(400).json({ success: false, message: 'Icon image is required' });
-      }
-
-      const iconPath = req.file.filename; // Store uploaded filename
-
-      const subService = new SubService({
-          name: req.body.name,
-          description: req.body.description,
-          service: req.body.service,
-          mrp: req.body.mrp,
-          discount: req.body.discount,
-          gst: req.body.gst,
-          icon: iconPath, // Save file path
-          includes: req.body.includes.split(','), 
-          excludes: req.body.excludes.split(',')
+    // Ensure at least 4 images are uploaded
+    if (!req.files || req.files.length < 4) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "At least 4 images are required" 
       });
+    }
 
-      const savedSubService = await subService.save();
+    // Extract file paths
+    const imagePaths = req.files.map(file => file.filename); 
 
-      res.status(201).json({
-          success: true,
-          message: 'Sub-Service created successfully',
-          subService: savedSubService
-      });
+    const subService = new SubService({
+      name: req.body.name,
+      description: req.body.description,
+      service: req.body.service,
+      price: req.body.price,
+      discount: req.body.discount,
+      gst: req.body.gst,
+      commission: req.body.commission,
+      icon: imagePaths, // Store array of image filenames
+      includes: req.body.includes ? req.body.includes.split(",") : [],
+      excludes: req.body.excludes ? req.body.excludes.split(",") : []
+    });
+
+    const savedSubService = await subService.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Sub-Service created successfully",
+      subService: savedSubService
+    });
 
   } catch (error) {
-      console.error('Error:', error);
-      res.status(500).json({ success: false, message: 'Error creating sub-service', error: error.message });
+    console.error("Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error creating sub-service",
+      error: error.message
+    });
   }
 };
-
 
 
 
@@ -619,11 +666,30 @@ exports.deleteService = async (req, res) => {
 
 // Update sub-service
 exports.updateSubService = async (req, res) => {
+  console.log("Req BOdy : " , req.body)
+  console.log("Req Files : " , req.files)
   try {
     const { serviceId, subServiceId } = req.params;
-    const { name, description, basePrice, duration , includes , excludes} = req.body;
+    const { name, description, price , includes , excludes} = req.body;
 
     // Find service and sub-service
+    // if (!req.files || req.files.length < 4) {
+    //   return res.status(400).json({ 
+    //     success: false, 
+    //     message: "At least 4 images are required" 
+    //   });
+    // }
+
+    if (req.files.length < 4 && req.files.length >= 1) {
+      console.log("Only 1 image is there")
+      return res.status(400).json({ 
+        success: false, 
+        message: "At least 4 images are required" 
+      });
+    }
+    // Extract file paths
+    const imagePaths = req.files.map(file => file.filename); 
+
     const service = await Service.findById(serviceId);
     if (!service) {
       return res.status(404).json({
@@ -641,17 +707,23 @@ exports.updateSubService = async (req, res) => {
     }
 
     // Update fields
-    subService.name = name || subService.name;
-    subService.description = description || subService.description;
-    subService.basePrice = basePrice || subService.basePrice;
-    subService.includes = includes || subService.includes;
-    subService.excludes = excludes || subService.excludes;
-    subService.duration = duration || subService.duration;
+    subService.name = name || subService.name
+    subService.description = description || subService.description
+    subService.price = price || subService.price
+    subService.includes = includes || subService.includes
+    subService.excludes = excludes || subService.excludes 
+    subService.discount =  req.body.discount || subService.discount
+    subService.gst = req.body.gst || subService.gst
+    subService.commission = req.body.commission || subService.commission
+    subService.icon = imagePaths || subService.icon
+
+    // subService.icon: imagePaths, // Store array of image filenames
+    // subService.duration = duration || subService.duration;
 
     // Update icon if provided
-    if (req.file) {
-      subService.icon = path.basename(req.file.path);
-    }
+    // if (req.file) {
+    //   subService.icon = path.basename(req.file.path);
+    // }
 
     await subService.save();
 
@@ -669,7 +741,105 @@ exports.updateSubService = async (req, res) => {
   }
 };
 
+// Update sub-service
+// exports.updateSubService = async (req, res) => {
+//   try {
+//     console.log("Received Update Data:", req.body , req.params);
+//     console.log("Uploaded Files:", req.files || "No files uploaded");
+
+//     const { subServiceId } = req.params; // Get sub-service ID from URL
+//     const updateData = { ...req.body };
+
+//     // Check if the sub-service exists
+//     const existingSubService = await SubService.findById(subServiceId);
+//     if (!existingSubService) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Sub-service not found"
+//       });
+//     }
+
+//     // Handle image update
+//     if (req.files && req.files.length > 0) {
+//       if (req.files.length !== 4) {
+//         return res.status(400).json({
+//           success: false,
+//           message: "If updating images, exactly 4 images must be provided"
+//         });
+//       }
+//       updateData.icon = req.files.map(file => file.filename); // Store new images
+//       console.log("updateData" , updateData)
+//     }
+
+//     // Update only provided fields (partial update allowed)
+//     const updatedSubService = await SubService.findByIdAndUpdate(
+//       subServiceId,
+//       { $set: updateData },
+//       { new: true, runValidators: true }
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Sub-Service updated successfully",
+//       subService: updatedSubService
+//     });
+
+//   } catch (error) {
+//     console.error("Error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error updating sub-service",
+//       error: error.message
+//     });
+//   }
+// };
+
+// exports.updateSubService = async (req, res) => {
+//   try {
+//     console.log("Received Update Data:", req.body);
+//     console.log("Uploaded Files:", req.files || "No files uploaded");
+
+//     const { subServiceId } = req.params;
+//     const updateData = { ...req.body };
+
+//     // Find the existing sub-service
+//     const existingSubService = await SubService.findById(subServiceId);
+//     if (!existingSubService) {
+//       return res.status(404).json({ success: false, message: "Sub-service not found" });
+//     }
+
+//     // Check if images need to be updated
+//     if (req.files && req.files.length > 0) {
+//       if (req.files.length !== 4) {
+//         return res.status(400).json({ success: false, message: "If updating images, exactly 4 images must be provided" });
+//       }
+//       updateData.icon = req.files.map(file => file.filename); // Store new images
+//     } else {
+//       delete updateData.icon; // Do not update images if no new ones are provided
+//     }
+
+//     // Update only provided fields
+//     const updatedSubService = await SubService.findByIdAndUpdate(subServiceId, { $set: updateData }, { new: true, runValidators: true });
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Sub-Service updated successfully",
+//       subService: updatedSubService
+//     });
+
+//   } catch (error) {
+//     console.error("Error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error updating sub-service",
+//       error: error.message
+//     });
+//   }
+// };
+
+
 // Delete sub-service
+
 exports.deleteSubService = async (req, res) => {
   try {
     const { serviceId, subServiceId } = req.params;

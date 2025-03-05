@@ -9,12 +9,12 @@ const reviewSchema = new mongoose.Schema({
     partner: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Partner',
-        required: true
+        // required: true
     },
     booking: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Booking', 
-        required: true
+        // required: true
     },
     subService: {
         type: mongoose.Schema.Types.ObjectId,
@@ -26,6 +26,10 @@ const reviewSchema = new mongoose.Schema({
         required: true,
         min: 1,
         max: 5
+    },
+    status:{
+        type: String,
+        default: 'pending'
     },
     comment: {
         type: String,

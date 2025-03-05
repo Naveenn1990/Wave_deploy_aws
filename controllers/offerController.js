@@ -201,6 +201,7 @@ exports.deleteOffer = async (req, res) => {
 
 // Fetch All Offers
 exports.getAllOffers = async (req, res) => {
+    console.log("im gettig the offers")
     try {
         const offers = await Offer.find(); // Fetch all offers from the database
         res.status(200).json({ success: true, data: offers });
