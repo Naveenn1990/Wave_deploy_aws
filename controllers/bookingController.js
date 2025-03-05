@@ -180,14 +180,10 @@ exports.getAllBookingsWithFilters = async (req, res) => {
 };
 
 // Get user's bookings
+// Get user's bookings
 exports.getUserBookings = async (req, res) => {
     try {
-        const { status, page = 1, limit = 10 } = req.query;
-
-        // Ensure page and limit are valid numbers
-        const pageNumber = parseInt(page, 10) || 1;
-        const pageSize = parseInt(limit, 10) || 10;
-        const skip = (pageNumber - 1) * pageSize;
+        const { status } = req.query;
 
         // Build query for user bookings
         const query = { user: req.user._id };
@@ -195,7 +191,7 @@ exports.getUserBookings = async (req, res) => {
             query.status = status;
         }
 
-        // Fetch bookings with correct population hierarchy
+        // Fetch all bookings with full population
         const bookings = await Booking.find(query)
             .populate({
                 path: 'subService',
@@ -210,24 +206,13 @@ exports.getUserBookings = async (req, res) => {
                     }
                 }
             })
+            .populate('partner') // Populate partner details
             .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(pageSize)
             .lean(); // Convert to plain JS objects for better performance
-
-        // Get total booking count
-        const total = await Booking.countDocuments(query);
 
         res.status(200).json({
             success: true,
-            data: {
-                bookings,
-                pagination: {
-                    total,
-                    page: pageNumber,
-                    pages: Math.ceil(total / pageSize),
-                },
-            },
+            data: { bookings },
         });
     } catch (error) {
         console.error("Error in getUserBookings:", error);

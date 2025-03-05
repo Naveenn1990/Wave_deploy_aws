@@ -630,6 +630,7 @@ const getUserSubCategoryHierarchy = async (req, res) => {
     }
 };
 
+
 // Book subservice
 exports.bookSubService = async (req, res) => {
     const { subServiceId, userId } = req.body; // Assuming these are passed in the request
@@ -649,6 +650,37 @@ exports.bookSubService = async (req, res) => {
 
     await booking.save();
     return res.status(201).json({ message: "Booking created successfully", booking });
+};
+
+// View cart of partner 
+exports.viewCart = async (req, res) => {
+  try {
+    const { partnerId } = req.params;
+    const partner = await Partner.findById(partnerId).populate("cart.product");
+    if (!partner) {
+      return res.status(404).json({ message: "Partner not found" });
+    }
+    res.status(200).json({ cart: partner.cart });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching cart", error: error.message });
+  }
+};
+
+//Approve cart 
+exports.approveCart = async (req, res) => {
+  try {
+    const { partnerId } = req.body;
+    const partner = await Partner.findById(partnerId);
+    if (!partner) {
+      return res.status(404).json({ message: "Partner not found" });
+    }
+
+    partner.cart.forEach(item => (item.approved = true));
+    await partner.save();
+    res.status(200).json({ message: "Cart approved", cart: partner.cart });
+  } catch (error) {
+    res.status(500).json({ message: "Error approving cart", error: error.message });
+  }
 };
 
 module.exports = {

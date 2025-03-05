@@ -1038,17 +1038,18 @@ exports.getAllCategoriesWithDetails = async (req, res) => {
     }
 };
 
-//add product for partner 
+
+// add product for partner
 exports.addProduct = async (req, res) => {
   try {
       console.log("Request Body:", req.body);
       console.log("Uploaded File:", req.file);
 
-      let { name, category, brand, description, price, stock, specifications, howToUse } = req.body;
+      let { name, category, brand, description, price, stock, specifications, howToUse, hsnCode, gstPercentage, discountPercentage, model } = req.body;
       const image = req.file ? req.file.path : null;
 
       // Validate all required fields
-      if (!name || !category || !brand || !description || !price || !stock || !specifications || !howToUse || !image) {
+      if (!name || !category || !brand || !description || !price || !stock || !specifications || !howToUse || !image || !hsnCode || !gstPercentage || !model) {
           return res.status(400).json({ message: "All fields are required" });
       }
 
@@ -1068,7 +1069,11 @@ exports.addProduct = async (req, res) => {
           stock,
           image,
           specifications,
-          howToUse
+          howToUse,
+          hsnCode,
+          gstPercentage,
+          discountPercentage: discountPercentage || 0, // Default to 0 if not provided
+          model
       });
 
       await newProduct.save();
@@ -1079,6 +1084,7 @@ exports.addProduct = async (req, res) => {
       res.status(500).json({ message: "Error adding product", error: error.message });
   }
 };
+
 // ✅ Get all products (Admin)
 exports.getAllProducts = async (req, res) => {    
   try {
@@ -1106,6 +1112,7 @@ exports.updateProduct = async (req, res) => {
       res.status(500).json({ message: "Error updating product", error });
   }
 };
+
 
 // ✅ Delete product (Admin)
 exports.deleteProduct = async (req, res) => {
