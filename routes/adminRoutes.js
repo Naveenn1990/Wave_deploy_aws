@@ -9,6 +9,7 @@ const bannerController = require("../controllers/bannerController");
 const userServiceController = require("../controllers/userServiceController");
 const { upload, processFilePath } = require("../middleware/upload");
 const SubCategory = require("../models/SubCategory");
+const Product = require("../models/product");
 
 // Auth routes
 router.post("/login", adminController.loginAdmin);
@@ -74,6 +75,8 @@ router.delete("/banners/:bannerId", adminAuth, bannerController.deleteBanner);
 
 // Review Management
 router.get("/reviews", adminAuth, adminController.getAllReviews);
+// Update review status
+router.put("/reviews/:reviewId/status", adminAuth, adminController.updateReviewStatus);
 
 // Settings management
 router.get("/settings", adminAuth, adminSettingsController.getAllSettings);
@@ -91,5 +94,15 @@ router.get("/reports/transactions", adminAuth, adminReportController.getTransact
 
 // Get all categories with sub-categories, services, and sub-services
 router.get("/categories", adminAuth, adminServiceController.getAllCategoriesWithDetails);
+
+
+
+
+// Admin Routes
+router.post('/products', upload.single('image'),adminAuth, adminServiceController.addProduct); // Add product
+router.get('/products',adminAuth, adminServiceController.getAllProducts); // Get all products
+router.put('/products/:id', upload.single('image'),adminAuth,  adminServiceController.updateProduct); // Update product
+router.delete('/products/:id', adminAuth, adminServiceController.deleteProduct); // Delete product
+
 
 module.exports = router;

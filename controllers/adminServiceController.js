@@ -6,6 +6,7 @@ const SubService = require('../models/SubService');
 const path = require('path');
 const { stripUrl } = require('../middleware/upload');
 const SubCategory = require("../models/SubCategory");
+const Product = require("../models/product");
 // Get all services
 exports.getAllServices = async (req, res) => {
   try {
@@ -1035,4 +1036,123 @@ exports.getAllCategoriesWithDetails = async (req, res) => {
             message: error.message
         });
     }
+};
+
+//add product for partner 
+exports.addProduct = async (req, res) => {
+  try {
+      console.log("Request Body:", req.body);
+      console.log("Uploaded File:", req.file);
+
+      let { name, category, brand, description, price, stock, specifications, howToUse } = req.body;
+      const image = req.file ? req.file.path : null;
+
+      // Validate all required fields
+      if (!name || !category || !brand || !description || !price || !stock || !specifications || !howToUse || !image) {
+          return res.status(400).json({ message: "All fields are required" });
+      }
+
+      // Convert category to ObjectId
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+          return res.status(400).json({ message: "Invalid category ID" });
+      }
+      category = new mongoose.Types.ObjectId(category); // Convert to ObjectId
+
+      // Create a new product
+      const newProduct = new Product({
+          name,
+          category, // Store as ObjectId
+          brand,
+          description,
+          price,
+          stock,
+          image,
+          specifications,
+          howToUse
+      });
+
+      await newProduct.save();
+
+      res.status(201).json({ message: "Product added successfully", product: newProduct });
+  } catch (error) {
+      console.error("Error adding product:", error);
+      res.status(500).json({ message: "Error adding product", error: error.message });
+  }
+};
+// ✅ Get all products (Admin)
+exports.getAllProducts = async (req, res) => {    
+  try {
+      const products = await Product.find();
+      res.status(200).json(products);
+  } catch (error) {
+      res.status(500).json({ message: "Error fetching products", error });
+  }
+};
+
+// ✅ Update product (Admin)
+exports.updateProduct = async (req, res) => {
+  try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      if (req.file) updates.image = req.file.path; // Update image if provided
+
+      const updatedProduct = await Product.findByIdAndUpdate(id, updates, { new: true });
+
+      if (!updatedProduct) return res.status(404).json({ message: "Product not found" });
+
+      res.status(200).json({ message: "Product updated successfully", product: updatedProduct });
+  } catch (error) {
+      res.status(500).json({ message: "Error updating product", error });
+  }
+};
+
+// ✅ Delete product (Admin)
+exports.deleteProduct = async (req, res) => {
+  try {
+      const { id } = req.params;
+      const deletedProduct = await Product.findByIdAndDelete(id);
+
+      if (!deletedProduct) return res.status(404).json({ message: "Product not found" });
+
+      res.status(200).json({ message: "Product deleted successfully" });
+  } catch (error) {
+      res.status(500).json({ message: "Error deleting product", error });
+  }
+};
+
+
+
+// ✅ Reduce inventory when a partner selects a product
+exports.useProduct = async (req, res) => {
+  try {
+      const { id } = req.params;
+
+      const product = await Product.findById(id);
+      if (!product || product.stock <= 0) return res.status(400).json({ message: "Product out of stock" });
+
+      product.stock -= 1;
+      await product.save();
+
+      res.status(200).json({ message: "Product used successfully", product });
+  } catch (error) {
+      res.status(500).json({ message: "Error using product", error });
+  }
+};
+
+// ✅ Replenish inventory when a partner removes a product
+exports.returnProduct = async (req, res) => {
+  try {
+      const { id } = req.params;
+
+      const product = await Product.findById(id);
+      if (!product) return res.status(404).json({ message: "Product not found" });
+
+      product.stock += 1;
+      await product.save();
+
+      res.status(200).json({ message: "Product returned successfully", product });
+  } catch (error) {
+      res.status(500).json({ message: "Error returning product", error });
+  }
 };

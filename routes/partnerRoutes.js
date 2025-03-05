@@ -198,12 +198,7 @@ router.post('/bookings/:id/complete', auth,
 // Dropdown data route
 router.get("/dropdown/categories", getAllCategories);
 
-// Partner Product Routes
-router.post("/products", auth, createProduct);
-router.get("/products", auth, getPartnerProducts);
-router.get("/products/:id", auth, getProduct);
-router.put("/products/:id", auth, updateProduct);
-router.delete("/products/:id", auth, deleteProduct);
+
 
 // Route to get all completed bookings for a partner
 router.get('/bookings/completed', auth, partnerServiceController.getCompletedBookings);
@@ -230,5 +225,11 @@ router.post('/bookings/:bookingId/resume', auth, partnerServiceController.resume
 router.post('/wallet/topup/:partnerId', auth, partnerWalletController.topUpWallet);
 // Route to get wallet transactions
 router.get('/wallet/transactions', auth, partnerWalletController.transactionsWallet);
+
+
+router.get('/products/:category',auth,partnerServiceController.getProductsByCategory); // Get products by category
+router.put('/products/use/:id', auth, partnerServiceController.useProduct); // Use product (decrease stock)
+router.put('/products/return/:id', auth, partnerServiceController.returnProduct); // Return product (increase stock)
+
 
 module.exports = router;
