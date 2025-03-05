@@ -228,7 +228,7 @@ router.get('/wallet/transactions', auth, partnerWalletController.transactionsWal
 
 
 router.get('/products/:category',auth,partnerServiceController.getProductsByCategory); // Get products by category
-router.put('/products/use/:id', auth, partnerServiceController.useProduct); // Use product (decrease stock)
+// router.put('/products/use/:id', auth, partnerServiceController.useProduct); // Use product (decrease stock)
 router.put('/products/return/:id', auth, partnerServiceController.returnProduct); // Return product (increase stock)
 
 
