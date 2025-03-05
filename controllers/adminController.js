@@ -874,7 +874,8 @@ exports.getAllReviews = async (req, res) => {
           }
         : null,
       rating: review.rating,
-      comment: review.comment
+      comment: review.comment,
+      status: review.status // ✅ Make sure the status is included
     }));
 
     res.status(200).json({
@@ -888,6 +889,32 @@ exports.getAllReviews = async (req, res) => {
       success: false,
       message: error.message || 'Error fetching reviews'
     });
+  }
+};
+
+// Update review status
+exports.updateReviewStatus = async (req, res) => {
+  const { reviewId } = req.params;
+  const { status } = req.body;
+
+  if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: "Invalid status. Choose 'approved' or 'rejected'." });
+  }
+
+  try {
+      const review = await Review.findByIdAndUpdate(
+          reviewId,
+          { status },
+          { new: true }
+      ).populate('partner', 'name').populate('booking', 'price date services');
+
+      if (!review) {
+          return res.status(404).json({ message: "Review not found." });
+      }
+
+      res.status(200).json({ message: `Review ${status} successfully`, review });
+  } catch (error) {
+      res.status(500).json({ message: "Error updating review status", error: error.message });
   }
 };
 

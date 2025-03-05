@@ -8,13 +8,11 @@ const reviewSchema = new mongoose.Schema({
     },
     partner: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Partner',
-        required: true
+        ref: 'Partner'
     },
     booking: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Booking', 
-        required: true
+        ref: 'Booking'
     },
     subService: {
         type: mongoose.Schema.Types.ObjectId,
@@ -26,6 +24,11 @@ const reviewSchema = new mongoose.Schema({
         required: true,
         min: 1,
         max: 5
+    },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
     },
     comment: {
         type: String,

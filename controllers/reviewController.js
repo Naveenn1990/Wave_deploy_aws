@@ -1,4 +1,4 @@
- const Review = require('../models/Review');
+const Review = require('../models/Review');
 const User = require('../models/User');
 const Booking = require('../models/booking');
 const SubService = require('../models/SubService');
@@ -17,7 +17,7 @@ exports.submitReview = async (req, res) => {
     } catch (error) {
         res.status(400).json({ message: 'Error submitting review', error: error.message });
     }
-};  
+}; 
 
 // Get reviews for a specific subservice
 
@@ -32,61 +32,51 @@ exports.getReviews = async (req, res) => {
 };
 
 exports.topUpWallet = async (req, res) => {
-  console.log("1")
     try {
       const { userId } = req.params;
       const wallet = await Wallet.findOne({ userId });
   
       if (!wallet) {
-        return res.status(404).json({ message: "No Transactions Found!" });
+        return res.status(404).json({ message: "Wallet not found" });
       }
   
       res.json({ balance: wallet.balance, transactions: wallet.transactions });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
-};
+  };
 
 exports.transactionsWallet = async (req, res) => {
-  console.log("2")
   try {
     const { userId, amount, type } = req.body;
-    console.log({ userId, amount, type })
 
     if (!userId || !amount || !type) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // let user = await User.findOne( {_id : userId});
-    // console.log("User : " , user)
     let wallet = await Wallet.findOne({ userId });
-    // if (!user){
-    //   return res.status(400).json({ message: "User Not Found, Please Login" });
-    // }
 
     if (!wallet) {
       wallet = new Wallet({ userId, balance: 0, transactions: [] });
     }
-    
+
     if (type === "Debit" && wallet.balance < amount) {
       return res.status(400).json({ message: "Insufficient balance" });
     }
-    
+
     const newTransaction = {
       transactionId: uuidv4(),
       amount,
       type,
     };
-    
+
     wallet.transactions.push(newTransaction);
     wallet.balance += type === "Credit" ? amount : -amount;
-    console.log("Wallet " , wallet)
-    
+
     await wallet.save();
 
     res.status(201).json({ message: "Transaction successful", wallet });
   } catch (error) {
-    console.log("Error : " , error)
     res.status(500).json({ error: error.message });
   }
 }

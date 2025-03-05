@@ -74,6 +74,8 @@ router.delete("/banners/:bannerId", adminAuth, bannerController.deleteBanner);
 
 // Review Management
 router.get("/reviews", adminAuth, adminController.getAllReviews);
+// Update review status
+router.put("/reviews/:reviewId/status", adminAuth, adminController.updateReviewStatus);
 
 // Settings management
 router.get("/settings", adminAuth, adminSettingsController.getAllSettings);
