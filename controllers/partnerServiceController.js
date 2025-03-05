@@ -846,6 +846,7 @@ exports.pauseBooking = async (req, res) => {
       pausedAt: new Date()
     };
 
+    console.log("booking" , booking)
     await booking.save();
 
     res.status(200).json({
