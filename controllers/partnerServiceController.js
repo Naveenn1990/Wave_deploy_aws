@@ -675,9 +675,9 @@ exports.completeBooking = async (req, res) => {
     const { id } = req.params;
     const files = req.files;
 
-    // Extract photo and video paths
-    const photos = files.photos ? files.photos.map(file => file.path) : [];
-    const videos = files.videos ? files.videos.map(file => file.path) : [];
+    // Extract only the filename from the path without using path module
+    const photos = files.photos ? files.photos.map(file => file.path.split('/').pop()) : [];
+    const videos = files.videos ? files.videos.map(file => file.path.split('/').pop()) : [];
 
     // Find and update the booking
     const booking = await Booking.findByIdAndUpdate(
@@ -728,6 +728,7 @@ exports.completeBooking = async (req, res) => {
     });
   }
 };
+
 
 // Get completed bookings
 exports.getCompletedBookings = async (req, res) => {
@@ -1049,18 +1050,29 @@ exports.getProductsByCategory = async (req, res) => {
 // 1. Add Product to Partner’s Cart
 exports.addToCart = async (req, res) => {
   try {
-    const { partnerId, productId, quantity } = req.body;
-    const partner = await Partner.findById(partnerId);
-    const product = await Product.findById(productId);
+    const { bookingId, productId, quantity } = req.body;
+    const partnerId = req.partner.id; // Assuming partner token is decoded & stored in req.partner
 
-    if (!partner || !product) {
-      return res.status(404).json({ message: "Partner or product not found" });
+    const partner = await Partner.findById(partnerId);
+    if (!partner) {
+      return res.status(404).json({ message: "Partner not found" });
     }
 
-    // Ensure the partner has an accepted booking
-    const activeBooking = await Booking.findOne({ _id: { $in: partner.bookings }, status: "accepted" });
+    // Validate product
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Check if the given bookingId exists and is accepted for this partner
+    const activeBooking = await Booking.findOne({
+      _id: bookingId,
+      partner: partnerId, // Ensure the booking belongs to this partner
+      status: "accepted",
+    });
+
     if (!activeBooking) {
-      return res.status(400).json({ message: "No active accepted booking found" });
+      return res.status(400).json({ message: "Invalid or unaccepted booking" });
     }
 
     // Check if product is already in cart
@@ -1073,61 +1085,63 @@ exports.addToCart = async (req, res) => {
 
     await partner.save();
     res.status(200).json({ message: "Product added to cart", cart: partner.cart });
+
   } catch (error) {
     res.status(500).json({ message: "Error adding product to cart", error: error.message });
   }
 };
 
 
+
 // ✅ Use a product (decrease stock)
 
-// ✅ Use products (Reduce stock after approval)
-exports.useProducts = async (req, res) => {
-  try {
-    const { partnerId } = req.body;
-    const partner = await Partner.findById(partnerId).populate("cart.product");
-    if (!partner || !partner.cartApproved) {
-      return res.status(400).json({ message: "Cart not approved or partner not found" });
-    }
+// // ✅ Use products (Reduce stock after approval)
+// exports.useProducts = async (req, res) => {
+//   try {
+//     const { partnerId } = req.body;
+//     const partner = await Partner.findById(partnerId).populate("cart.product");
+//     if (!partner || !partner.cartApproved) {
+//       return res.status(400).json({ message: "Cart not approved or partner not found" });
+//     }
 
-    for (let item of partner.cart) {
-      const product = await Product.findById(item.product._id);
-      if (product.stock >= item.quantity) {
-        product.stock -= item.quantity;
-        await product.save();
-      } else {
-        return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
-      }
-    }
-    res.status(200).json({ message: "Products used successfully" });
-  } catch (error) {
-    console.error("Error using products:", error);
-    res.status(500).json({ message: "Error using products", error: error.message });
-  }
-};
+//     for (let item of partner.cart) {
+//       const product = await Product.findById(item.product._id);
+//       if (product.stock >= item.quantity) {
+//         product.stock -= item.quantity;
+//         await product.save();
+//       } else {
+//         return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
+//       }
+//     }
+//     res.status(200).json({ message: "Products used successfully" });
+//   } catch (error) {
+//     console.error("Error using products:", error);
+//     res.status(500).json({ message: "Error using products", error: error.message });
+//   }
+// };
 
 
-// ✅ Return a product (increase stock)
-exports.returnProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
+// // ✅ Return a product (increase stock)
+// exports.returnProduct = async (req, res) => {
+//   try {
+//     const { id } = req.params;
 
-    // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid product ID" });
-    }
+//     // Validate ObjectId format
+//     if (!mongoose.Types.ObjectId.isValid(id)) {
+//       return res.status(400).json({ message: "Invalid product ID" });
+//     }
 
-    const product = await Product.findById(id);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
+//     const product = await Product.findById(id);
+//     if (!product) {
+//       return res.status(404).json({ message: "Product not found" });
+//     }
 
-    product.stock += 1; // You can add a stock limit if required
-    await product.save();
+//     product.stock += 1; // You can add a stock limit if required
+//     await product.save();
 
-    res.status(200).json({ message: "Product returned successfully", product });
-  } catch (error) {
-    console.error("Error returning product:", error);
-    res.status(500).json({ message: "Error returning product", error: error.message });
-  }
-};
+//     res.status(200).json({ message: "Product returned successfully", product });
+//   } catch (error) {
+//     console.error("Error returning product:", error);
+//     res.status(500).json({ message: "Error returning product", error: error.message });
+//   }
+// };
