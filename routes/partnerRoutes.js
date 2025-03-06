@@ -233,5 +233,10 @@ router.get('/products/:category',auth,partnerServiceController.getProductsByCate
 router.post('/products/add', auth, partnerServiceController.addToCart); // Add new product
 
 
+router.get('/bookings', auth, partnerServiceController.allpartnerBookings);
+
+
+
+
 
 module.exports = router;

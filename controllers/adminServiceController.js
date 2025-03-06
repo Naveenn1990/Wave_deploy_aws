@@ -1102,21 +1102,58 @@ exports.getAllProducts = async (req, res) => {
 // ✅ Update product (Admin)
 exports.updateProduct = async (req, res) => {
   try {
-      const { id } = req.params;
-      const updates = req.body;
+    console.log("Received params:", req.params); // Debugging
 
-      if (req.file) updates.image = req.file.path; // Update image if provided
+    const { id: productId } = req.params; // Extract correct param
 
-      const updatedProduct = await Product.findByIdAndUpdate(id, updates, { new: true });
+    if (!productId) {
+      return res.status(400).json({ message: "Product ID is required" });
+    }
 
-      if (!updatedProduct) return res.status(404).json({ message: "Product not found" });
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ message: "Invalid product ID format" });
+    }
 
-      res.status(200).json({ message: "Product updated successfully", product: updatedProduct });
+    // Find the existing product
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Prepare update fields
+    const updateFields = { ...req.body };
+
+    // Handle image update
+    if (req.file) {
+      updateFields.image = path.basename(req.file.path);
+    }
+
+    // Remove empty values to ensure partial update
+    Object.keys(updateFields).forEach((key) => {
+      if (updateFields[key] === undefined || updateFields[key] === null || updateFields[key] === "") {
+        delete updateFields[key];
+      }
+    });
+
+    // Update only the provided fields
+    Object.assign(product, updateFields);
+
+    // Save updated product
+    await product.save();
+
+    res.status(200).json({
+      message: "Product updated successfully",
+      product,
+    });
+
   } catch (error) {
     console.log("error : " , error)
       res.status(500).json({ message: "Error updating product", error });
   }
 };
+
+
+
 
 
 // ✅ Delete product (Admin)

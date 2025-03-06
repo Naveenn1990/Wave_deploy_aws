@@ -3,9 +3,9 @@ const ServiceCategory = require("../models/ServiceCategory");
 const Service = require("../models/Service");
 const SubService = require("../models/SubService");
 const SubCategory = require("../models/SubCategory");
-const Booking = require("../models/booking"); // Assuming you have a Booking model
-// const PartnerModel = require('../models/Partner');
+const Booking = require("../models/booking");
 const Partner = require("../models/Partner");
+
 // Helper function to get clean image filename
 function getCleanImageName(imagePath) {
     if (!imagePath) return null;
@@ -632,7 +632,7 @@ const getUserSubCategoryHierarchy = async (req, res) => {
 
 
 // Book subservice
-exports.bookSubService = async (req, res) => {
+const bookSubService = async (req, res) => {
     const { subServiceId, userId } = req.body; // Assuming these are passed in the request
 
     // Logic to find the subservice and create a booking
@@ -653,83 +653,135 @@ exports.bookSubService = async (req, res) => {
 };
 
 // View cart of partner 
-exports.getPartnerCart = async (req, res) => {
+const viewPartnerCart = async (req, res) => {
   try {
-    const { partnerId } = req.params;
+    const userId = req.user.id; // Authenticated user
+    const { bookingId } = req.params;
 
-    // Validate partner ID
-    if (!mongoose.Types.ObjectId.isValid(partnerId)) {
-      return res.status(400).json({ message: "Invalid partner ID" });
+    console.log("Authenticated User ID:", userId);
+    console.log("Requested Booking ID:", bookingId);
+
+    // Step 1: Check if the booking exists and belongs to the user
+    const booking = await Booking.findOne({ _id: bookingId, user: userId });
+    console.log("Booking Found:", booking);
+
+    if (!booking) {
+      return res.status(403).json({ message: "Unauthorized to view this cart" });
     }
 
-    // Check if the partner exists
+    // Step 2: Find the partner associated with this booking
+    const partner = await Partner.findOne({ bookings: bookingId }).populate("cart.product");
+
+    if (!partner) {
+      return res.status(404).json({ message: "Partner not found for this booking" });
+    }
+
+    // Step 3: Return the cart items
+    return res.status(200).json({ success: true, cart: partner.cart });
+
+  } catch (error) {
+    console.error("Error fetching partner cart:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+//approve cart of partner
+const approvePartnerCart = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const partnerId = req.partner.id; // Partner ID from token
+
+    // Fetch Partner
     const partner = await Partner.findById(partnerId);
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
     }
 
-    // Fetch cart for the given partner
-    const cart = await Cart.findOne({ partnerId }).populate("items.productId");
-
-    if (!cart || cart.items.length === 0) {
-      return res.status(404).json({ message: "Partner's cart is empty" });
+    // Validate Booking
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
     }
 
-    // Calculate total price with discount
-    const formattedItems = cart.items.map((item) => {
-      const discountAmount = (item.productId.price * item.productId.discount) / 100;
-      const finalPrice = item.productId.price - discountAmount;
+    // Ensure the Partner is Assigned to the Booking
+    if (!booking.partner || booking.partner.toString() !== partnerId.toString()) {
+      return res.status(403).json({ message: "Unauthorized: You are not assigned to this booking" });
+    }
 
-      return {
-        productId: {
-          _id: item.productId._id,
-          name: item.productId.name,
-          price: item.productId.price,
-          discount: item.productId.discount,
-          finalPrice: parseFloat(finalPrice.toFixed(2)),
-          image: item.productId.image,
-          gst: item.productId.gst,
-          hsnCode: item.productId.hsnCode,
-          brand: item.productId.brand,
-        },
-        quantity: item.quantity,
-      };
+    // Check if there is a cart for this booking
+    if (!partner.cart || !partner.cart[bookingId] || partner.cart[bookingId].length === 0) {
+      return res.status(400).json({ message: "No products in cart for this booking" });
+    }
+
+    let updatedInventory = [];
+    let usedProducts = [];
+
+    // Deduct Stock from Inventory
+    for (const item of partner.cart[bookingId]) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        console.error("Product not found:", item.product);
+        continue;
+      }
+
+      // Check stock availability
+      if (product.stock < item.quantity) {
+        return res.status(400).json({ message: `Insufficient stock for product: ${product.name}` });
+      }
+
+      // Deduct stock
+      product.stock -= item.quantity;
+      await product.save();
+
+      // Collect product details for response
+      usedProducts.push({
+        productId: product._id,
+        name: product.name,
+        usedQuantity: item.quantity,
+        usedAt: new Date(),
+      });
+
+      updatedInventory.push({
+        productId: product._id,
+        name: product.name,
+        remainingStock: product.stock,
+      });
+    }
+
+    // Store Used Products in Booking History
+    booking.usedProducts = usedProducts;
+    await booking.save();
+
+    // Save Used Products in Partner's Cart History
+    if (!partner.cartHistory) {
+      partner.cartHistory = [];
+    }
+    partner.cartHistory.push({
+      bookingId: bookingId,
+      usedProducts: usedProducts,
+      timestamp: new Date(),
     });
 
-    // Calculate total cart price
-    const totalPrice = formattedItems.reduce(
-      (sum, item) => sum + item.finalPrice * item.quantity,
-      0
-    );
+    // Clear the Cart for this Booking After Approval
+    delete partner.cart[bookingId];
 
-    res.status(200).json({
-      partnerId: partner._id,
-      partnerName: partner.name,
-      items: formattedItems,
-      totalPrice: parseFloat(totalPrice.toFixed(2)),
+    await partner.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Products approved and inventory updated",
+      usedProducts: usedProducts,
+      updatedInventory: updatedInventory,
+      partnerCartHistory: partner.cartHistory,
     });
   } catch (error) {
-    console.error("Error fetching partner's cart:", error);
-    res.status(500).json({ message: "Error fetching partner's cart", error: error.message });
+    console.error("Error approving cart:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// //Approve cart 
-// exports.approveCart = async (req, res) => {
-//   try {
-//     const { partnerId } = req.body;
-//     const partner = await Partner.findById(partnerId);
-//     if (!partner) {
-//       return res.status(404).json({ message: "Partner not found" });
-//     }
 
-//     partner.cart.forEach(item => (item.approved = true));
-//     await partner.save();
-//     res.status(200).json({ message: "Cart approved", cart: partner.cart });
-//   } catch (error) {
-//     res.status(500).json({ message: "Error approving cart", error: error.message });
-//   }
-// };
 
 module.exports = {
   getCategories,
@@ -748,5 +800,8 @@ module.exports = {
   getAllCategories,
   getSubCategoryHierarchy,
   getUserSubCategoryHierarchy,
-  getAllPartners
+  getAllPartners,
+  viewPartnerCart,
+  bookSubService,
+  approvePartnerCart
 };

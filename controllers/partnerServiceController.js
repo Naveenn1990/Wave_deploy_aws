@@ -1124,63 +1124,28 @@ exports.getProductsByCategory = async (req, res) => {
   }
 };
 
-// ✅ Use a product (decrease stock)
-// exports.useProduct = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { quantity } = req.body; // Accept quantity from request body
-
-//     // Validate ObjectId format
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       return res.status(400).json({ message: "Invalid product ID" });
-//     }
-
-//     // Validate quantity (default to 1 if not provided)
-//     const qty = parseInt(quantity) || 1;
-//     if (qty < 1) {
-//       return res.status(400).json({ message: "Quantity must be at least 1" });
-//     }
-
-//     const product = await Product.findById(id);
-//     if (!product) {
-//       return res.status(404).json({ message: "Product not found" });
-//     }
-
-//     if (product.stock < qty) {
-//       return res.status(400).json({ message: `Not enough stock available. Current stock: ${product.stock}` });
-//     }
-
-//     product.stock -= qty; // Decrease stock by specified quantity
-//     await product.save();
-
-//     res.status(200).json({ message: `Used ${qty} of ${product.name}`, product });
-//   } catch (error) {
-//     console.error("Error using product:", error);
-//     res.status(500).json({ message: "Error using product", error: error.message });
-//   }
-// };
-
-// 1. Add Product to Partner’s Cart
+// add to cart (Products)
 exports.addToCart = async (req, res) => {
   try {
-    const { bookingId, productId, quantity } = req.body;
-    const partnerId = req.partner.id; // Assuming partner token is decoded & stored in req.partner
+    const { bookingId, productId, change } = req.body;
+    const partnerId = req.partner.id;
 
+    // Fetch Partner
     const partner = await Partner.findById(partnerId);
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
     }
 
-    // Validate product
+    // Validate Product
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Check if the given bookingId exists and is accepted for this partner
+    // Validate Booking
     const activeBooking = await Booking.findOne({
       _id: bookingId,
-      partner: partnerId, // Ensure the booking belongs to this partner
+      partner: partnerId, // Ensure booking belongs to the partner
       status: "accepted",
     });
 
@@ -1188,75 +1153,106 @@ exports.addToCart = async (req, res) => {
       return res.status(400).json({ message: "Invalid or unaccepted booking" });
     }
 
-    // Check if product is already in cart
-    const existingItem = partner.cart.find(
+    // Ensure cart follows `{ bookingId: [...products] }`
+    if (!partner.cart) {
+      partner.cart = {};
+    }
+    if (!partner.cart[bookingId]) {
+      partner.cart[bookingId] = [];
+    }
+
+    // Check if product already exists in cart for this booking
+    const existingItemIndex = partner.cart[bookingId].findIndex(
       (item) => item.product.toString() === productId
     );
-    if (existingItem) {
-      existingItem.quantity += quantity;
-    } else {
-      partner.cart.push({ product: productId, quantity, approved: false });
+
+    if (existingItemIndex !== -1) {
+      // Update quantity
+      partner.cart[bookingId][existingItemIndex].quantity += change;
+
+      // Remove item if quantity is 0 or negative
+      if (partner.cart[bookingId][existingItemIndex].quantity <= 0) {
+        partner.cart[bookingId].splice(existingItemIndex, 1);
+      }
+    } else if (change > 0) {
+      // Add new product to the booking's cart
+      partner.cart[bookingId].push({ product: productId, quantity: 1, approved: false });
     }
 
     await partner.save();
-    res
-      .status(200)
-      .json({ message: "Product added to cart", cart: partner.cart });
+    return res.status(200).json({
+      message: "Cart updated successfully",
+      cart: partner.cart,
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error adding product to cart", error: error.message });
+    return res.status(500).json({ message: "Error updating cart", error: error.message });
   }
 };
 
-// ✅ Use a product (decrease stock)
+// get all bookings
+// Get all bookings
+exports.allpartnerBookings = async (req, res) => {
+  try {
+    const partnerId = req.partner.id; // Assuming partner ID is available in req.partner
 
-// // ✅ Use products (Reduce stock after approval)
-// exports.useProducts = async (req, res) => {
-//   try {
-//     const { partnerId } = req.body;
-//     const partner = await Partner.findById(partnerId).populate("cart.product");
-//     if (!partner || !partner.cartApproved) {
-//       return res.status(400).json({ message: "Cart not approved or partner not found" });
-//     }
+    // Find partner and populate bookings with correct references
+    const partner = await Partner.findById(partnerId).populate({
+      path: "bookings",
+      select: "status service user createdAt updatedAt", // Select relevant fields
+      populate: [
+        {
+          path: "service",
+          select: "name subService",
+          populate: { path: "subService", select: "name description" },
+        },
+        { path: "user", select: "name email phone" },
+      ],
+    });
 
-//     for (let item of partner.cart) {
-//       const product = await Product.findById(item.product._id);
-//       if (product.stock >= item.quantity) {
-//         product.stock -= item.quantity;
-//         await product.save();
-//       } else {
-//         return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
-//       }
-//     }
-//     res.status(200).json({ message: "Products used successfully" });
-//   } catch (error) {
-//     console.error("Error using products:", error);
-//     res.status(500).json({ message: "Error using products", error: error.message });
-//   }
-// };
+    if (!partner) {
+      return res.status(404).json({ message: "Partner not found" });
+    }
 
-// // ✅ Return a product (increase stock)
-// exports.returnProduct = async (req, res) => {
-//   try {
-//     const { id } = req.params;
+    // Define booking statuses
+    const statuses = ["accepted", "completed", "in_progress", "pending", "cancelled", "paused"];
+    const bookingsByStatus = {};
 
-//     // Validate ObjectId format
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       return res.status(400).json({ message: "Invalid product ID" });
-//     }
+    // Initialize booking status arrays
+    statuses.forEach((status) => (bookingsByStatus[status] = []));
 
-//     const product = await Product.findById(id);
-//     if (!product) {
-//       return res.status(404).json({ message: "Product not found" });
-//     }
+    // Categorize bookings by status
+    partner.bookings.forEach((booking) => {
+      const status = booking.status || "pending"; // Default to pending if no status
+      if (statuses.includes(status)) {
+        bookingsByStatus[status].push(booking);
+      }
+    });
 
-//     product.stock += 1; // You can add a stock limit if required
-//     await product.save();
+    // Total bookings count
+    const totalBookings = partner.bookings.length;
+    const completedCount = bookingsByStatus.completed.length;
 
-//     res.status(200).json({ message: "Product returned successfully", product });
-//   } catch (error) {
-//     console.error("Error returning product:", error);
-//     res.status(500).json({ message: "Error returning product", error: error.message });
-//   }
-// };
+    // Count all statuses except "completed" as pending
+    const pendingCount = statuses
+      .filter((status) => status !== "completed")
+      .reduce((count, status) => count + bookingsByStatus[status].length, 0);
+
+    return res.status(200).json({
+      message: "Partner bookings retrieved successfully",
+      bookings: bookingsByStatus,
+      counts: {
+        completedOutOfTotal: `${completedCount} out of ${totalBookings}`,
+        pendingOutOfTotal: `${pendingCount} out of ${totalBookings}`,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching partner bookings:", error);
+    return res.status(500).json({ message: "Error fetching bookings", error: error.message });
+  }
+};
+
+
+
+
+
+
