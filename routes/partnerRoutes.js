@@ -232,9 +232,8 @@ router.get('/products/:category',auth,partnerServiceController.getProductsByCate
 // router.put('/products/return/:id', auth, partnerServiceController.returnProduct); // Return product (increase stock)
 router.post('/products/add', auth, partnerServiceController.addToCart); // Add new product
 
-// Use approved cart products
-router.put("/use-products/:bookingId", auth, partnerServiceController.useApprovedCartProductsForBooking);
 
+router.get('/bookings', auth, partnerServiceController.allpartnerBookings);
 
 
 

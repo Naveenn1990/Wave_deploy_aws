@@ -1127,24 +1127,25 @@ exports.getProductsByCategory = async (req, res) => {
 // add to cart (Products)
 exports.addToCart = async (req, res) => {
   try {
-    const { bookingId, productId, change } = req.body; // 'change' is either +1 or -1
-    const partnerId = req.partner.id; // Assuming partner token is decoded & stored in req.partner
+    const { bookingId, productId, change } = req.body;
+    const partnerId = req.partner.id;
 
+    // Fetch Partner
     const partner = await Partner.findById(partnerId);
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
     }
 
-    // Validate product
+    // Validate Product
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Check if the given bookingId exists and is accepted for this partner
+    // Validate Booking
     const activeBooking = await Booking.findOne({
       _id: bookingId,
-      partner: partnerId, // Ensure the booking belongs to this partner
+      partner: partnerId, // Ensure booking belongs to the partner
       status: "accepted",
     });
 
@@ -1152,134 +1153,88 @@ exports.addToCart = async (req, res) => {
       return res.status(400).json({ message: "Invalid or unaccepted booking" });
     }
 
-    // Check if the product is already in the cart
-    const existingItemIndex = partner.cart.findIndex(
+    // Ensure cart follows `{ bookingId: [...products] }`
+    if (!partner.cart) {
+      partner.cart = {};
+    }
+    if (!partner.cart[bookingId]) {
+      partner.cart[bookingId] = [];
+    }
+
+    // Check if product already exists in cart for this booking
+    const existingItemIndex = partner.cart[bookingId].findIndex(
       (item) => item.product.toString() === productId
     );
 
     if (existingItemIndex !== -1) {
-      // Update quantity based on change (+1 or -1)
-      partner.cart[existingItemIndex].quantity += change;
+      // Update quantity
+      partner.cart[bookingId][existingItemIndex].quantity += change;
 
       // Remove item if quantity is 0 or negative
-      if (partner.cart[existingItemIndex].quantity <= 0) {
-        partner.cart.splice(existingItemIndex, 1);
+      if (partner.cart[bookingId][existingItemIndex].quantity <= 0) {
+        partner.cart[bookingId].splice(existingItemIndex, 1);
       }
     } else if (change > 0) {
-      // If product is not in the cart and change is positive, add it
-      partner.cart.push({ product: productId, quantity: 1, approved: false });
+      // Add new product to the booking's cart
+      partner.cart[bookingId].push({ product: productId, quantity: 1, approved: false });
     }
 
     await partner.save();
-    return res.status(200).json({ message: "Cart updated successfully", cart: partner.cart });
+    return res.status(200).json({
+      message: "Cart updated successfully",
+      cart: partner.cart,
+    });
   } catch (error) {
     return res.status(500).json({ message: "Error updating cart", error: error.message });
   }
 };
 
-
-
-// Use Approved Cart Products for a Booking
-exports.useApprovedCartProductsForBooking = async (req, res) => {
+// get all bookings
+exports.allpartnerBookings = async (req, res) => {
   try {
-    const { bookingId } = req.params;
-    const partnerId = req.partner.id;
+    const partnerId = req.partner.id; // Assuming partner ID is available in req.partner
 
-    console.log("Booking ID:", bookingId);
-    console.log("Partner ID:", partnerId);
+    // Find partner and populate bookings with correct references
+    const partner = await Partner.findById(partnerId).populate({
+      path: "bookings",
+      select: "status service user createdAt updatedAt", // Select relevant fields
+      populate: [
+        { path: "service", select: "name" }, // Fetch service details
+        { path: "user", select: "name email phone" }, // Fetch user details instead of customer
+      ],
+    });
 
-    // Fetch Booking
-    const booking = await Booking.findById(bookingId);
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-
-    // Ensure the Partner is Assigned
-    if (!booking.partner || booking.partner.toString() !== partnerId.toString()) {
-      return res.status(403).json({ message: "Unauthorized: You are not assigned to this booking" });
-    }
-
-    // Fetch Partner Cart
-    const partner = await Partner.findById(partnerId).populate("cart.product");
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
     }
 
-    console.log("Partner Cart:", partner.cart);
+    // Group bookings by status
+    const bookingsByStatus = {
+      accepted: [],
+      completed: [],
+      in_progress: [],
+      pending: [],
+      cancelled: [],
+    };
 
-    // Filter Approved and Valid Products
-    const approvedCartItems = partner.cart.filter(
-      item => item.approved === true && item.product !== null
-    );
-
-    if (approvedCartItems.length === 0) {
-      return res.status(400).json({ message: "No valid approved products in cart for this booking" });
-    }
-
-    let updatedInventory = [];
-    let usedProducts = [];
-
-    // Deduct Stock from Inventory
-    for (const item of approvedCartItems) {
-      const product = await Product.findById(item.product._id);
-      if (!product) {
-        console.error("Product not found:", item.product._id);
-        continue;
+    partner.bookings.forEach((booking) => {
+      const status = booking.status || "pending"; // Default to pending if no status
+      if (!bookingsByStatus[status]) {
+        bookingsByStatus[status] = [];
       }
-
-      // Check stock availability
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ message: `Insufficient stock for product: ${product.name}` });
-      }
-
-      // Deduct stock
-      product.stock -= item.quantity;
-      await product.save();
-
-      // Collect product details for response
-      usedProducts.push({
-        productId: product._id,
-        name: product.name,
-        usedQuantity: item.quantity,
-        usedAt: new Date(),
-      });
-
-      updatedInventory.push({
-        productId: product._id,
-        name: product.name,
-        remainingStock: product.stock,
-      });
-    }
-
-    // Store Used Products in Booking History
-    booking.usedProducts = usedProducts;
-    await booking.save();
-
-    // Save Used Products in Partner's Cart History
-    partner.cartHistory = partner.cartHistory || [];
-    partner.cartHistory.push({
-      bookingId: bookingId,
-      usedProducts: usedProducts,
-      timestamp: new Date(),
+      bookingsByStatus[status].push(booking);
     });
-
-    // Clear Partner's Cart After Usage
-    partner.cart = [];
-    await partner.save();
 
     return res.status(200).json({
-      success: true,
-      message: "Products used successfully, inventory updated for booking",
-      usedProducts: usedProducts,
-      updatedInventory: updatedInventory,
-      partnerCartHistory: partner.cartHistory,
+      message: "Partner bookings retrieved successfully",
+      bookings: bookingsByStatus,
     });
-
   } catch (error) {
-    console.error("Error using products for booking:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+    console.error("Error fetching partner bookings:", error);
+    return res.status(500).json({ message: "Error fetching bookings", error: error.message });
   }
 };
+
 
 
 

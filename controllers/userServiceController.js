@@ -689,37 +689,94 @@ const viewPartnerCart = async (req, res) => {
 //approve cart of partner
 const approvePartnerCart = async (req, res) => {
   try {
-    const userId = req.user.id; // Authenticated user
     const { bookingId } = req.params;
+    const partnerId = req.partner.id; // Partner ID from token
 
-    console.log("Authenticated User ID:", userId);
-    console.log("Booking ID for Approval:", bookingId);
-
-    // Step 1: Verify the user owns this booking
-    const booking = await Booking.findOne({ _id: bookingId, user: userId });
-
-    if (!booking) {
-      return res.status(403).json({ message: "Unauthorized to approve this cart" });
-    }
-
-    // Step 2: Find the partner associated with this booking
-    const partner = await Partner.findOne({ bookings: bookingId });
-
+    // Fetch Partner
+    const partner = await Partner.findById(partnerId);
     if (!partner) {
-      return res.status(404).json({ message: "Partner not found for this booking" });
+      return res.status(404).json({ message: "Partner not found" });
     }
 
-    // Step 3: Approve all cart items
-    partner.cart.forEach(item => {
-      item.approved = true;
+    // Validate Booking
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Ensure the Partner is Assigned to the Booking
+    if (!booking.partner || booking.partner.toString() !== partnerId.toString()) {
+      return res.status(403).json({ message: "Unauthorized: You are not assigned to this booking" });
+    }
+
+    // Check if there is a cart for this booking
+    if (!partner.cart || !partner.cart[bookingId] || partner.cart[bookingId].length === 0) {
+      return res.status(400).json({ message: "No products in cart for this booking" });
+    }
+
+    let updatedInventory = [];
+    let usedProducts = [];
+
+    // Deduct Stock from Inventory
+    for (const item of partner.cart[bookingId]) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        console.error("Product not found:", item.product);
+        continue;
+      }
+
+      // Check stock availability
+      if (product.stock < item.quantity) {
+        return res.status(400).json({ message: `Insufficient stock for product: ${product.name}` });
+      }
+
+      // Deduct stock
+      product.stock -= item.quantity;
+      await product.save();
+
+      // Collect product details for response
+      usedProducts.push({
+        productId: product._id,
+        name: product.name,
+        usedQuantity: item.quantity,
+        usedAt: new Date(),
+      });
+
+      updatedInventory.push({
+        productId: product._id,
+        name: product.name,
+        remainingStock: product.stock,
+      });
+    }
+
+    // Store Used Products in Booking History
+    booking.usedProducts = usedProducts;
+    await booking.save();
+
+    // Save Used Products in Partner's Cart History
+    if (!partner.cartHistory) {
+      partner.cartHistory = [];
+    }
+    partner.cartHistory.push({
+      bookingId: bookingId,
+      usedProducts: usedProducts,
+      timestamp: new Date(),
     });
+
+    // Clear the Cart for this Booking After Approval
+    delete partner.cart[bookingId];
 
     await partner.save();
 
-    return res.status(200).json({ success: true, message: "Cart approved successfully" });
-
+    return res.status(200).json({
+      success: true,
+      message: "Products approved and inventory updated",
+      usedProducts: usedProducts,
+      updatedInventory: updatedInventory,
+      partnerCartHistory: partner.cartHistory,
+    });
   } catch (error) {
-    console.error("Error approving partner cart:", error);
+    console.error("Error approving cart:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
