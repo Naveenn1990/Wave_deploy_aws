@@ -1124,43 +1124,7 @@ exports.getProductsByCategory = async (req, res) => {
   }
 };
 
-// ✅ Use a product (decrease stock)
-// exports.useProduct = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { quantity } = req.body; // Accept quantity from request body
 
-//     // Validate ObjectId format
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       return res.status(400).json({ message: "Invalid product ID" });
-//     }
-
-//     // Validate quantity (default to 1 if not provided)
-//     const qty = parseInt(quantity) || 1;
-//     if (qty < 1) {
-//       return res.status(400).json({ message: "Quantity must be at least 1" });
-//     }
-
-//     const product = await Product.findById(id);
-//     if (!product) {
-//       return res.status(404).json({ message: "Product not found" });
-//     }
-
-//     if (product.stock < qty) {
-//       return res.status(400).json({ message: `Not enough stock available. Current stock: ${product.stock}` });
-//     }
-
-//     product.stock -= qty; // Decrease stock by specified quantity
-//     await product.save();
-
-//     res.status(200).json({ message: `Used ${qty} of ${product.name}`, product });
-//   } catch (error) {
-//     console.error("Error using product:", error);
-//     res.status(500).json({ message: "Error using product", error: error.message });
-//   }
-// };
-
-// 1. Add Product to Partner’s Cart
 exports.addToCart = async (req, res) => {
   try {
     const { bookingId, productId, quantity } = req.body;
@@ -1209,9 +1173,7 @@ exports.addToCart = async (req, res) => {
   }
 };
 
-<<<<<<< HEAD
 
-// Use Approved Cart Products for a Booking
 // Use Approved Cart Products for a Booking
 exports.useApprovedCartProductsForBooking = async (req, res) => {
   try {
@@ -1220,22 +1182,19 @@ exports.useApprovedCartProductsForBooking = async (req, res) => {
 
     console.log("Booking ID:", bookingId);
     console.log("Partner ID:", partnerId);
-=======
-// ✅ Use a product (decrease stock)
->>>>>>> 095ab01cc413634e9fc37a1f81235a68fb2d2690
 
-    // Step 1: Fetch Booking
+    // Fetch Booking
     const booking = await Booking.findById(bookingId);
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    // Step 2: Ensure the Partner is Assigned
+    // Ensure the Partner is Assigned
     if (!booking.partner || booking.partner.toString() !== partnerId.toString()) {
       return res.status(403).json({ message: "Unauthorized: You are not assigned to this booking" });
     }
 
-    // Step 3: Fetch Partner Cart
+    // Fetch Partner Cart
     const partner = await Partner.findById(partnerId).populate("cart.product");
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -1243,7 +1202,7 @@ exports.useApprovedCartProductsForBooking = async (req, res) => {
 
     console.log("Partner Cart:", partner.cart);
 
-    // Step 4: Filter Approved and Valid Products
+    // Filter Approved and Valid Products
     const approvedCartItems = partner.cart.filter(
       item => item.approved === true && item.product !== null
     );
@@ -1255,7 +1214,7 @@ exports.useApprovedCartProductsForBooking = async (req, res) => {
     let updatedInventory = [];
     let usedProducts = [];
 
-    // Step 5: Deduct Stock from Inventory
+    // Deduct Stock from Inventory
     for (const item of approvedCartItems) {
       const product = await Product.findById(item.product._id);
       if (!product) {
@@ -1287,11 +1246,19 @@ exports.useApprovedCartProductsForBooking = async (req, res) => {
       });
     }
 
-    // Step 6: Store Used Products in Booking History
+    // Store Used Products in Booking History
     booking.usedProducts = usedProducts;
     await booking.save();
 
-    // Step 7: Clear Partner's Cart After Usage
+    // Save Used Products in Partner's Cart History
+    partner.cartHistory = partner.cartHistory || [];
+    partner.cartHistory.push({
+      bookingId: bookingId,
+      usedProducts: usedProducts,
+      timestamp: new Date(),
+    });
+
+    // Clear Partner's Cart After Usage
     partner.cart = [];
     await partner.save();
 
@@ -1300,6 +1267,7 @@ exports.useApprovedCartProductsForBooking = async (req, res) => {
       message: "Products used successfully, inventory updated for booking",
       usedProducts: usedProducts,
       updatedInventory: updatedInventory,
+      partnerCartHistory: partner.cartHistory,
     });
 
   } catch (error) {
@@ -1308,12 +1276,5 @@ exports.useApprovedCartProductsForBooking = async (req, res) => {
   }
 };
 
-<<<<<<< HEAD
 
-=======
-// // ✅ Return a product (increase stock)
-// exports.returnProduct = async (req, res) => {
-//   try {
-//     const { id } = req.params;
->>>>>>> 095ab01cc413634e9fc37a1f81235a68fb2d2690
 

@@ -1147,13 +1147,8 @@ exports.updateProduct = async (req, res) => {
     });
 
   } catch (error) {
-<<<<<<< HEAD
-    console.error("Update Product Error:", error);
-    res.status(500).json({ message: "Server Error", error: error.message });
-=======
     console.log("error : " , error)
       res.status(500).json({ message: "Error updating product", error });
->>>>>>> 095ab01cc413634e9fc37a1f81235a68fb2d2690
   }
 };
 
