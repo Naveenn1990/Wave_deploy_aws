@@ -818,7 +818,7 @@ exports.getPendingBookings = async (req, res) => {
   }
 };
 
-// Get completed bookings
+// Get rejected bookings
 exports.getRejectedBookings = async (req, res) => {
   try {
     const token = req.headers.authorization.split(" ")[1]; // Get the token from the header
@@ -1191,51 +1191,75 @@ exports.addToCart = async (req, res) => {
 
 // get all bookings
 // Get all bookings
+// Get all bookings
 exports.allpartnerBookings = async (req, res) => {
   try {
-    const partnerId = req.partner.id; // Assuming partner ID is available in req.partner
+    if (!req.partner || !req.partner.id) {
+      return res.status(400).json({ message: "Invalid partner credentials" });
+    }
 
-    // Find partner and populate bookings with correct references
-    const partner = await Partner.findById(partnerId).populate({
-      path: "bookings",
-      select: "status service user createdAt updatedAt", // Select relevant fields
-      populate: [
-        {
-          path: "service",
-          select: "name subService",
-          populate: { path: "subService", select: "name description" },
-        },
-        { path: "user", select: "name email phone" },
-      ],
-    });
+    const partnerId = req.partner.id;
+
+    // Fetch partner and populate bookings
+    const partner = await Partner.findById(partnerId)
+      .populate({
+        path: "bookings",
+        select: "status service user createdAt updatedAt",
+        populate: [
+          {
+            path: "service",
+            select: "name subService",
+            populate: { path: "subService", select: "name description" },
+          },
+          { path: "user", select: "name email phone" },
+        ],
+      })
+      .lean(); // Convert to plain JS object for optimization
 
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
     }
 
-    // Define booking statuses
-    const statuses = ["accepted", "completed", "in_progress", "pending", "cancelled", "paused"];
-    const bookingsByStatus = {};
+    if (!partner.bookings || partner.bookings.length === 0) {
+      return res.status(200).json({
+        message: "No bookings found for this partner",
+        bookings: {},
+        counts: {
+          completedOutOfTotal: "0 out of 0",
+          pendingOutOfTotal: "0 out of 0",
+        },
+      });
+    }
 
-    // Initialize booking status arrays
-    statuses.forEach((status) => (bookingsByStatus[status] = []));
+    // Debugging logs
+    console.log("Total Bookings for Partner:", partner.bookings.length);
+
+    // Define booking status categories
+    const statuses = ["accepted", "completed", "in_progress", "rejected", "paused"];
+    const bookingsByStatus = Object.fromEntries(statuses.map((status) => [status, []]));
 
     // Categorize bookings by status
     partner.bookings.forEach((booking) => {
-      const status = booking.status || "pending"; // Default to pending if no status
+      const status = booking.status || "pending"; // Default to "pending" if missing
+      console.log(`Booking ID: ${booking._id}, Status: ${status}`);
+
       if (statuses.includes(status)) {
         bookingsByStatus[status].push(booking);
       }
     });
 
+    // Direct DB query to verify completed bookings
+    const completedBookingsCount = await Booking.countDocuments({
+      partner: partnerId,
+      status: "completed",
+    });
+
+    console.log("Verified Completed Bookings Count from DB:", completedBookingsCount);
+
     // Total bookings count
     const totalBookings = partner.bookings.length;
     const completedCount = bookingsByStatus.completed.length;
-
-    // Count all statuses except "completed" as pending
-    const pendingCount = statuses
-      .filter((status) => status !== "completed")
-      .reduce((count, status) => count + bookingsByStatus[status].length, 0);
+    const pendingCount = totalBookings - completedCount; // Everything except "completed" is pending
 
     return res.status(200).json({
       message: "Partner bookings retrieved successfully",
@@ -1250,6 +1274,42 @@ exports.allpartnerBookings = async (req, res) => {
     return res.status(500).json({ message: "Error fetching bookings", error: error.message });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
