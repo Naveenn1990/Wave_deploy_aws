@@ -1124,10 +1124,10 @@ exports.getProductsByCategory = async (req, res) => {
   }
 };
 
-
+// add to cart (Products)
 exports.addToCart = async (req, res) => {
   try {
-    const { bookingId, productId, quantity } = req.body;
+    const { bookingId, productId, change } = req.body; // 'change' is either +1 or -1
     const partnerId = req.partner.id; // Assuming partner token is decoded & stored in req.partner
 
     const partner = await Partner.findById(partnerId);
@@ -1152,26 +1152,31 @@ exports.addToCart = async (req, res) => {
       return res.status(400).json({ message: "Invalid or unaccepted booking" });
     }
 
-    // Check if product is already in cart
-    const existingItem = partner.cart.find(
+    // Check if the product is already in the cart
+    const existingItemIndex = partner.cart.findIndex(
       (item) => item.product.toString() === productId
     );
-    if (existingItem) {
-      existingItem.quantity += quantity;
-    } else {
-      partner.cart.push({ product: productId, quantity, approved: false });
+
+    if (existingItemIndex !== -1) {
+      // Update quantity based on change (+1 or -1)
+      partner.cart[existingItemIndex].quantity += change;
+
+      // Remove item if quantity is 0 or negative
+      if (partner.cart[existingItemIndex].quantity <= 0) {
+        partner.cart.splice(existingItemIndex, 1);
+      }
+    } else if (change > 0) {
+      // If product is not in the cart and change is positive, add it
+      partner.cart.push({ product: productId, quantity: 1, approved: false });
     }
 
     await partner.save();
-    res
-      .status(200)
-      .json({ message: "Product added to cart", cart: partner.cart });
+    return res.status(200).json({ message: "Cart updated successfully", cart: partner.cart });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error adding product to cart", error: error.message });
+    return res.status(500).json({ message: "Error updating cart", error: error.message });
   }
 };
+
 
 
 // Use Approved Cart Products for a Booking
