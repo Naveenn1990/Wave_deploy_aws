@@ -1093,56 +1093,99 @@ exports.addToCart = async (req, res) => {
 };
 
 
+// Use Approved Cart Products for a Booking
+// Use Approved Cart Products for a Booking
+exports.useApprovedCartProductsForBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const partnerId = req.partner.id;
 
-// ✅ Use a product (decrease stock)
+    console.log("Booking ID:", bookingId);
+    console.log("Partner ID:", partnerId);
 
-// // ✅ Use products (Reduce stock after approval)
-// exports.useProducts = async (req, res) => {
-//   try {
-//     const { partnerId } = req.body;
-//     const partner = await Partner.findById(partnerId).populate("cart.product");
-//     if (!partner || !partner.cartApproved) {
-//       return res.status(400).json({ message: "Cart not approved or partner not found" });
-//     }
+    // Step 1: Fetch Booking
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
 
-//     for (let item of partner.cart) {
-//       const product = await Product.findById(item.product._id);
-//       if (product.stock >= item.quantity) {
-//         product.stock -= item.quantity;
-//         await product.save();
-//       } else {
-//         return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
-//       }
-//     }
-//     res.status(200).json({ message: "Products used successfully" });
-//   } catch (error) {
-//     console.error("Error using products:", error);
-//     res.status(500).json({ message: "Error using products", error: error.message });
-//   }
-// };
+    // Step 2: Ensure the Partner is Assigned
+    if (!booking.partner || booking.partner.toString() !== partnerId.toString()) {
+      return res.status(403).json({ message: "Unauthorized: You are not assigned to this booking" });
+    }
+
+    // Step 3: Fetch Partner Cart
+    const partner = await Partner.findById(partnerId).populate("cart.product");
+    if (!partner) {
+      return res.status(404).json({ message: "Partner not found" });
+    }
+
+    console.log("Partner Cart:", partner.cart);
+
+    // Step 4: Filter Approved and Valid Products
+    const approvedCartItems = partner.cart.filter(
+      item => item.approved === true && item.product !== null
+    );
+
+    if (approvedCartItems.length === 0) {
+      return res.status(400).json({ message: "No valid approved products in cart for this booking" });
+    }
+
+    let updatedInventory = [];
+    let usedProducts = [];
+
+    // Step 5: Deduct Stock from Inventory
+    for (const item of approvedCartItems) {
+      const product = await Product.findById(item.product._id);
+      if (!product) {
+        console.error("Product not found:", item.product._id);
+        continue;
+      }
+
+      // Check stock availability
+      if (product.stock < item.quantity) {
+        return res.status(400).json({ message: `Insufficient stock for product: ${product.name}` });
+      }
+
+      // Deduct stock
+      product.stock -= item.quantity;
+      await product.save();
+
+      // Collect product details for response
+      usedProducts.push({
+        productId: product._id,
+        name: product.name,
+        usedQuantity: item.quantity,
+        usedAt: new Date(),
+      });
+
+      updatedInventory.push({
+        productId: product._id,
+        name: product.name,
+        remainingStock: product.stock,
+      });
+    }
+
+    // Step 6: Store Used Products in Booking History
+    booking.usedProducts = usedProducts;
+    await booking.save();
+
+    // Step 7: Clear Partner's Cart After Usage
+    partner.cart = [];
+    await partner.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Products used successfully, inventory updated for booking",
+      usedProducts: usedProducts,
+      updatedInventory: updatedInventory,
+    });
+
+  } catch (error) {
+    console.error("Error using products for booking:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 
-// // ✅ Return a product (increase stock)
-// exports.returnProduct = async (req, res) => {
-//   try {
-//     const { id } = req.params;
 
-//     // Validate ObjectId format
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       return res.status(400).json({ message: "Invalid product ID" });
-//     }
-
-//     const product = await Product.findById(id);
-//     if (!product) {
-//       return res.status(404).json({ message: "Product not found" });
-//     }
-
-//     product.stock += 1; // You can add a stock limit if required
-//     await product.save();
-
-//     res.status(200).json({ message: "Product returned successfully", product });
-//   } catch (error) {
-//     console.error("Error returning product:", error);
-//     res.status(500).json({ message: "Error returning product", error: error.message });
-//   }
-// };
