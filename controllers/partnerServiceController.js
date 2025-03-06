@@ -1190,6 +1190,7 @@ exports.addToCart = async (req, res) => {
 };
 
 // get all bookings
+// Get all bookings
 exports.allpartnerBookings = async (req, res) => {
   try {
     const partnerId = req.partner.id; // Assuming partner ID is available in req.partner
@@ -1199,8 +1200,12 @@ exports.allpartnerBookings = async (req, res) => {
       path: "bookings",
       select: "status service user createdAt updatedAt", // Select relevant fields
       populate: [
-        { path: "service", select: "name" }, // Fetch service details
-        { path: "user", select: "name email phone" }, // Fetch user details instead of customer
+        {
+          path: "service",
+          select: "name subService",
+          populate: { path: "subService", select: "name description" },
+        },
+        { path: "user", select: "name email phone" },
       ],
     });
 
@@ -1208,32 +1213,45 @@ exports.allpartnerBookings = async (req, res) => {
       return res.status(404).json({ message: "Partner not found" });
     }
 
-    // Group bookings by status
-    const bookingsByStatus = {
-      accepted: [],
-      completed: [],
-      in_progress: [],
-      pending: [],
-      cancelled: [],
-    };
+    // Define booking statuses
+    const statuses = ["accepted", "completed", "in_progress", "pending", "cancelled", "paused"];
+    const bookingsByStatus = {};
 
+    // Initialize booking status arrays
+    statuses.forEach((status) => (bookingsByStatus[status] = []));
+
+    // Categorize bookings by status
     partner.bookings.forEach((booking) => {
       const status = booking.status || "pending"; // Default to pending if no status
-      if (!bookingsByStatus[status]) {
-        bookingsByStatus[status] = [];
+      if (statuses.includes(status)) {
+        bookingsByStatus[status].push(booking);
       }
-      bookingsByStatus[status].push(booking);
     });
+
+    // Total bookings count
+    const totalBookings = partner.bookings.length;
+    const completedCount = bookingsByStatus.completed.length;
+
+    // Count all statuses except "completed" as pending
+    const pendingCount = statuses
+      .filter((status) => status !== "completed")
+      .reduce((count, status) => count + bookingsByStatus[status].length, 0);
 
     return res.status(200).json({
       message: "Partner bookings retrieved successfully",
       bookings: bookingsByStatus,
+      counts: {
+        completedOutOfTotal: `${completedCount} out of ${totalBookings}`,
+        pendingOutOfTotal: `${pendingCount} out of ${totalBookings}`,
+      },
     });
   } catch (error) {
     console.error("Error fetching partner bookings:", error);
     return res.status(500).json({ message: "Error fetching bookings", error: error.message });
   }
 };
+
+
 
 
 
