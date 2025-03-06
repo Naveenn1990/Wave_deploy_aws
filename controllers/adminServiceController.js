@@ -1038,56 +1038,66 @@ exports.getAllCategoriesWithDetails = async (req, res) => {
     }
 };
 
-//add product for partner 
+
+// add product for partner
 exports.addProduct = async (req, res) => {
   try {
-      console.log("Request Body:", req.body);
-      console.log("Uploaded File:", req.file);
+    const { name, category, brand, description, price, stock, specifications, howToUse, hsnCode, gstPercentage, discountPercentage, model } = req.body;
+    
+    let imagePath = req.file ? req.file.path : ""; // Get uploaded image path
 
-      let { name, category, brand, description, price, stock, specifications, howToUse } = req.body;
-      const image = req.file ? req.file.path : null;
+    // Extract only the filename from the image path
+    if (imagePath) {
+      imagePath = imagePath.split("/").pop(); // Extracts '1741171846734-220232475.png'
+    }
 
-      // Validate all required fields
-      if (!name || !category || !brand || !description || !price || !stock || !specifications || !howToUse || !image) {
-          return res.status(400).json({ message: "All fields are required" });
-      }
+    const newProduct = new Product({
+      name,
+      category,
+      brand,
+      description,
+      price,
+      stock,
+      specifications,
+      howToUse,
+      hsnCode,
+      gstPercentage,
+      discountPercentage,
+      model,
+      image: imagePath, // Save only filename
+    });
 
-      // Convert category to ObjectId
-      if (!mongoose.Types.ObjectId.isValid(category)) {
-          return res.status(400).json({ message: "Invalid category ID" });
-      }
-      category = new mongoose.Types.ObjectId(category); // Convert to ObjectId
+    await newProduct.save();
 
-      // Create a new product
-      const newProduct = new Product({
-          name,
-          category, // Store as ObjectId
-          brand,
-          description,
-          price,
-          stock,
-          image,
-          specifications,
-          howToUse
-      });
-
-      await newProduct.save();
-
-      res.status(201).json({ message: "Product added successfully", product: newProduct });
+    res.status(201).json({ message: "Product added successfully", product: newProduct });
   } catch (error) {
-      console.error("Error adding product:", error);
-      res.status(500).json({ message: "Error adding product", error: error.message });
+    console.error("Error adding product:", error);
+    res.status(500).json({ message: "Error adding product", error: error.message });
   }
 };
+
+
 // ✅ Get all products (Admin)
+// exports.getAllProducts = async (req, res) => {    
+//   try {
+//       const products = await Product.find();
+//       res.status(200).json(products);
+//   } catch (error) {
+//       res.status(500).json({ message: "Error fetching products", error });
+//   }
+// };
+
+// ✅ Get all products (Admin) with populated category
 exports.getAllProducts = async (req, res) => {    
   try {
-      const products = await Product.find();
+      const products = await Product.find().populate("category"); // Populating the category field
       res.status(200).json(products);
   } catch (error) {
+    console.log("error : " , error)
       res.status(500).json({ message: "Error fetching products", error });
   }
 };
+
 
 // ✅ Update product (Admin)
 exports.updateProduct = async (req, res) => {
@@ -1103,9 +1113,11 @@ exports.updateProduct = async (req, res) => {
 
       res.status(200).json({ message: "Product updated successfully", product: updatedProduct });
   } catch (error) {
+    console.log("error : " , error)
       res.status(500).json({ message: "Error updating product", error });
   }
 };
+
 
 // ✅ Delete product (Admin)
 exports.deleteProduct = async (req, res) => {

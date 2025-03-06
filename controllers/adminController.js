@@ -844,18 +844,19 @@ exports.completeBooking = async (req, res) => {
 exports.getAllReviews = async (req, res) => {
   try {
     const reviews = await Review.find()
-      .populate('user', 'name email') // Populate customer details
-      .populate('subService', 'name description') // Populate subService details
+      .populate('user') // Populate customer details
+      .populate('subService') // Populate subService details
       .populate({
         path: 'booking', // Populate booking
         populate: {
           path: 'partner', // Populate partner from the booking
-          select: 'name email' // Select fields from partner
+           // Select fields from partner
         }
       });
 
     // Format the response to include desired fields
     const formattedReviews = reviews.map(review => ({
+      _id : review._id,
       customer: {
         name: review.user?.name || 'Unknown',
         email: review.user?.email || 'Unknown'
@@ -881,7 +882,8 @@ exports.getAllReviews = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Fetched all reviews successfully',
-      data: formattedReviews
+      data: reviews
+      // data: formattedReviews
     });
   } catch (error) {
     console.error('Error fetching reviews:', error);
@@ -896,6 +898,7 @@ exports.getAllReviews = async (req, res) => {
 exports.updateReviewStatus = async (req, res) => {
   const { reviewId } = req.params;
   const { status } = req.body;
+  console.log("Incoming Data :", req.params , req.body)
 
   if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({ message: "Invalid status. Choose 'approved' or 'rejected'." });
@@ -914,6 +917,7 @@ exports.updateReviewStatus = async (req, res) => {
 
       res.status(200).json({ message: `Review ${status} successfully`, review });
   } catch (error) {
+    console.log(error)
       res.status(500).json({ message: "Error updating review status", error: error.message });
   }
 };

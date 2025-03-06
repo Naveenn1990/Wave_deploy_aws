@@ -630,6 +630,7 @@ const getUserSubCategoryHierarchy = async (req, res) => {
     }
 };
 
+
 // Book subservice
 exports.bookSubService = async (req, res) => {
     const { subServiceId, userId } = req.body; // Assuming these are passed in the request
@@ -650,6 +651,85 @@ exports.bookSubService = async (req, res) => {
     await booking.save();
     return res.status(201).json({ message: "Booking created successfully", booking });
 };
+
+// View cart of partner 
+exports.getPartnerCart = async (req, res) => {
+  try {
+    const { partnerId } = req.params;
+
+    // Validate partner ID
+    if (!mongoose.Types.ObjectId.isValid(partnerId)) {
+      return res.status(400).json({ message: "Invalid partner ID" });
+    }
+
+    // Check if the partner exists
+    const partner = await Partner.findById(partnerId);
+    if (!partner) {
+      return res.status(404).json({ message: "Partner not found" });
+    }
+
+    // Fetch cart for the given partner
+    const cart = await Cart.findOne({ partnerId }).populate("items.productId");
+
+    if (!cart || cart.items.length === 0) {
+      return res.status(404).json({ message: "Partner's cart is empty" });
+    }
+
+    // Calculate total price with discount
+    const formattedItems = cart.items.map((item) => {
+      const discountAmount = (item.productId.price * item.productId.discount) / 100;
+      const finalPrice = item.productId.price - discountAmount;
+
+      return {
+        productId: {
+          _id: item.productId._id,
+          name: item.productId.name,
+          price: item.productId.price,
+          discount: item.productId.discount,
+          finalPrice: parseFloat(finalPrice.toFixed(2)),
+          image: item.productId.image,
+          gst: item.productId.gst,
+          hsnCode: item.productId.hsnCode,
+          brand: item.productId.brand,
+        },
+        quantity: item.quantity,
+      };
+    });
+
+    // Calculate total cart price
+    const totalPrice = formattedItems.reduce(
+      (sum, item) => sum + item.finalPrice * item.quantity,
+      0
+    );
+
+    res.status(200).json({
+      partnerId: partner._id,
+      partnerName: partner.name,
+      items: formattedItems,
+      totalPrice: parseFloat(totalPrice.toFixed(2)),
+    });
+  } catch (error) {
+    console.error("Error fetching partner's cart:", error);
+    res.status(500).json({ message: "Error fetching partner's cart", error: error.message });
+  }
+};
+
+// //Approve cart 
+// exports.approveCart = async (req, res) => {
+//   try {
+//     const { partnerId } = req.body;
+//     const partner = await Partner.findById(partnerId);
+//     if (!partner) {
+//       return res.status(404).json({ message: "Partner not found" });
+//     }
+
+//     partner.cart.forEach(item => (item.approved = true));
+//     await partner.save();
+//     res.status(200).json({ message: "Cart approved", cart: partner.cart });
+//   } catch (error) {
+//     res.status(500).json({ message: "Error approving cart", error: error.message });
+//   }
+// };
 
 module.exports = {
   getCategories,
