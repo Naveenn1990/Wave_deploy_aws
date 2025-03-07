@@ -4,6 +4,7 @@ const Booking = require('../models/booking');
 const SubService = require('../models/SubService');
 const Wallet = require("../models/Wallet");
 const { v4: uuidv4 } = require("uuid");
+const Partner = require("../models/Partner");
 
 // Submit a new review
 exports.submitReview = async (req, res) => {
@@ -221,6 +222,8 @@ exports.transactionsWallet = async (req, res) => {
 
 
 // Get all reviews for Admin with partner details
+
+
 exports.getAllReviewsForAdminWithPartnerDetails = async (req, res) => {
     try {
         const reviews = await Review.find()
@@ -249,4 +252,51 @@ exports.getAllReviewsForAdminWithPartnerDetails = async (req, res) => {
             error: error.message
         });
     }
+};
+
+
+
+
+exports.reviewPartner = async (req, res) => {
+  try {
+      const { bookingId, partnerId,rating, comment } = req.body;
+      const userId = req.user._id;
+
+      // Check if the booking exists and belongs to the user
+      const booking = await Booking.findOne({ 
+          _id: bookingId,
+          user: userId,
+          partner: partnerId,
+          status: "completed"
+      });
+
+      if (!booking) {
+          return res.status(400).json({ message: "Invalid booking or booking not completed." });
+      }
+
+      // Find the partner
+      const partner = await Partner.findById(partnerId);
+      if (!partner) {
+          return res.status(404).json({ message: "Partner not found." });
+      }
+
+      // Create review object
+      const review = {
+          user: userId,
+          booking: bookingId,
+          partner: partnerId,
+          rating,
+          comment,
+          createdAt: new Date()
+      };
+
+      // Push review into the partner's reviews array
+      partner.reviews.push(review);
+      await partner.save();
+
+      res.status(201).json({ message: "Review submitted successfully!", review });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Server error. Please try again later." });
+  }
 };

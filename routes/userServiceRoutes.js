@@ -444,6 +444,12 @@ router.get("/partner-cart/:bookingId", auth, userServiceController.viewPartnerCa
 //Approve cart of partner
 router.put("/approve/:bookingId", auth, userServiceController.approvePartnerCart);
 
+//review partner 
+router.post("/review/partner", auth, ReviewController.reviewPartner);
+
+
+
+
 
 
 module.exports = router; 

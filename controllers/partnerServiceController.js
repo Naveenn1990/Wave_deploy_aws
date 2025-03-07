@@ -1284,6 +1284,32 @@ exports.allpartnerBookings = async (req, res) => {
 
 
 
+exports.getUserReviews = async (req, res) => {
+  try {
+      const partner = await Partner.findById(req.partner._id)
+          .populate({
+              path: "reviews.user",
+              select: "name _id", // Fetch only name and _id from User model
+          })
+          .populate({
+              path: "reviews.booking",
+              select: "status _id", // Fetch only status and _id from Booking model
+          });
+
+      if (!partner) {
+          return res.status(404).json({ success: false, message: "Partner not found." });
+      }
+
+      res.json({ success: true, reviews: partner.reviews });
+  } catch (error) {
+      console.error("Error fetching partner reviews:", error);
+      res.status(500).json({ success: false, message: "Server error. Please try again later." });
+  }
+};
+
+
+
+
 
 
 
