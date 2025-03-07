@@ -4,18 +4,18 @@ const { auth } = require("../middleware/partnerauth");
 const { adminAuth } = require("../middleware/adminAuth");
 const multer = require("multer");
 const path = require("path");
-const fs = require('fs');
-const crypto = require('crypto');
-const partnerServiceController = require('../controllers/partnerServiceController');
-const partnerAuthController = require('../controllers/partnerAuthController');
-const partnerWalletController = require('../controllers/partnerWalletController');
+const fs = require("fs");
+const crypto = require("crypto");
+const partnerServiceController = require("../controllers/partnerServiceController");
+const partnerAuthController = require("../controllers/partnerAuthController");
+const partnerWalletController = require("../controllers/partnerWalletController");
 
 // Create upload directories if they don't exist
-const uploadDir = path.join(__dirname, '..', 'uploads');
-const profilesDir = path.join(uploadDir, 'profiles');
-const kycDir = path.join(uploadDir, 'kyc');
-const bookingPhotosDir = path.join(uploadDir, 'booking-photos');
-const bookingVideosDir = path.join(uploadDir, 'booking-videos');
+const uploadDir = path.join(__dirname, "..", "uploads");
+const profilesDir = path.join(uploadDir, "profiles");
+const kycDir = path.join(uploadDir, "kyc");
+const bookingPhotosDir = path.join(uploadDir, "booking-photos");
+const bookingVideosDir = path.join(uploadDir, "booking-videos");
 
 // Create directories with recursive option
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -32,7 +32,7 @@ const {
   getServiceHistory,
   updateServiceStatus,
   getMatchingBookings,
-  acceptBooking
+  acceptBooking,
 } = partnerServiceController;
 
 const {
@@ -44,66 +44,74 @@ const {
   completeProfile,
   completeKYC,
   getAllPartnerProfile,
-  updateKYCStatus
+  updateKYCStatus,
 } = require("../controllers/partnerAuthController");
 
-const {
-    completeBooking
-  } = require("../controllers/partnerServiceController");
+const { completeBooking } = require("../controllers/partnerServiceController");
 
 const {
   createProduct,
   getPartnerProducts,
   getProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
 } = require("../controllers/partnerProductController");
 
-const { getAllCategories } = require("../controllers/partnerDropdownController");
+const {
+  getAllCategories,
+} = require("../controllers/partnerDropdownController");
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        if (file.fieldname === 'profilePicture') {
-            cb(null, profilesDir);
-        } else if (file.fieldname === 'panCard' || file.fieldname === 'aadhaar' || file.fieldname === 'chequeImage') {
-            cb(null, kycDir);
-        } else if (file.fieldname === 'photos') {
-            cb(null, bookingPhotosDir);
-        } else if (file.fieldname === 'videos') {
-            cb(null, bookingVideosDir);
-        }
-    },
-    filename: function (req, file, cb) {
-        const hash = crypto.createHash('md5').update(Date.now().toString()).digest('hex');
-        const ext = path.extname(file.originalname).toLowerCase();
-        cb(null, `${hash}${ext}`);
+  destination: function (req, file, cb) {
+    if (file.fieldname === "profilePicture") {
+      cb(null, profilesDir);
+    } else if (
+      file.fieldname === "panCard" ||
+      file.fieldname === "aadhaar" ||
+      file.fieldname === "chequeImage"
+    ) {
+      cb(null, kycDir);
+    } else if (file.fieldname === "photos") {
+      cb(null, bookingPhotosDir);
+    } else if (file.fieldname === "videos") {
+      cb(null, bookingVideosDir);
     }
+  },
+  filename: function (req, file, cb) {
+    const hash = crypto
+      .createHash("md5")
+      .update(Date.now().toString())
+      .digest("hex");
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${hash}${ext}`);
+  },
 });
 
 const fileFilter = (req, file, cb) => {
-    if (file.fieldname === 'profilePicture') {
-        if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
-            return cb(new Error('Please upload an image file'));
-        }
-    } else if (file.fieldname === 'photos') {
-        if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
-            return cb(new Error('Please upload an image file'));
-        }
-    } else if (file.fieldname === 'videos') {
-        if (!file.originalname.match(/\.(mp4|mov|avi|mkv)$/)) {
-            return cb(new Error('Please upload a video file'));
-        }
+  if (file.fieldname === "profilePicture") {
+    if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+      return cb(new Error("Please upload an image file"));
     }
-    cb(null, true);
+  } else if (file.fieldname === "photos") {
+    if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+      return cb(new Error("Please upload an image file"));
+    }
+  } else if (file.fieldname === "videos") {
+    if (!file.originalname.match(/\.(mp4|mov|avi|mkv)$/)) {
+      return cb(new Error("Please upload a video file"));
+    }
+  }
+  cb(null, true);
 };
 
-const upload = multer({ 
-    storage: storage,
-    limits: {
-        fileSize: file => file.fieldname === 'videos' ? 100 * 1024 * 1024 : 5 * 1024 * 1024 // 100MB for videos, 5MB for images
-    },
-    fileFilter: fileFilter
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: (file) =>
+      file.fieldname === "videos" ? 100 * 1024 * 1024 : 5 * 1024 * 1024, // 100MB for videos, 5MB for images
+  },
+  fileFilter: fileFilter,
 });
 
 // Partner Authentication Routes
@@ -115,63 +123,78 @@ router.post("/auth/verify-otp", verifyLoginOTP);
 router.get("/profile", auth, getProfile);
 router.get("/partnersprofile", getAllPartnerProfile);
 
-router.put("/profile/update", auth, (req, res, next) => {
-    upload.single('profilePicture')(req, res, (err) => {
-        if (err instanceof multer.MulterError) {
-            return res.status(400).json({
-                success: false,
-                message: `Upload error: ${err.message}`
-            });
-        } else if (err) {
-            return res.status(400).json({
-                success: false,
-                message: err.message
-            });
-        }
-        next();
+router.put(
+  "/profile/update",
+  auth,
+  (req, res, next) => {
+    upload.single("profilePicture")(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({
+          success: false,
+          message: `Upload error: ${err.message}`,
+        });
+      } else if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.message,
+        });
+      }
+      next();
     });
-}, updateProfile);
+  },
+  updateProfile
+);
 
-router.post("/profile/complete", auth, (req, res, next) => {
-    upload.single('profilePicture')(req, res, (err) => {
-        if (err instanceof multer.MulterError) {
-            return res.status(400).json({
-                success: false,
-                message: `Upload error: ${err.message}`
-            });
-        } else if (err) {
-            return res.status(400).json({
-                success: false,
-                message: err.message
-            });
-        }
-        next();
+router.post(
+  "/profile/complete",
+  auth,
+  (req, res, next) => {
+    upload.single("profilePicture")(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({
+          success: false,
+          message: `Upload error: ${err.message}`,
+        });
+      } else if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.message,
+        });
+      }
+      next();
     });
-}, completeProfile);
+  },
+  completeProfile
+);
 
 // Partner KYC Routes (Protected)
-router.post("/kyc/complete", auth, (req, res, next) => {
+router.post(
+  "/kyc/complete",
+  auth,
+  (req, res, next) => {
     upload.fields([
-        { name: 'panCard', maxCount: 1 },
-        { name: 'aadhaar', maxCount: 1 },
-        { name: 'chequeImage', maxCount: 1 }
+      { name: "panCard", maxCount: 1 },
+      { name: "aadhaar", maxCount: 1 },
+      { name: "chequeImage", maxCount: 1 },
     ])(req, res, (err) => {
-        if (err instanceof multer.MulterError) {
-            return res.status(400).json({
-                success: false,
-                message: `Upload error: ${err.message}`
-            });
-        } else if (err) {
-            return res.status(400).json({
-                success: false,
-                message: err.message
-            });
-        }
-        // Log the files received
-        console.log('Files received:', req.files);
-        next();
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({
+          success: false,
+          message: `Upload error: ${err.message}`,
+        });
+      } else if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.message,
+        });
+      }
+      // Log the files received
+      console.log("Files received:", req.files);
+      next();
     });
-}, completeKYC);
+  },
+  completeKYC
+);
 
 // Admin route to update KYC status (Protected, Admin Only)
 router.put("/kyc/:partnerId/status", adminAuth, updateKYCStatus);
@@ -183,56 +206,104 @@ router.get("/services/current", auth, getCurrentService);
 router.get("/services/history", auth, getServiceHistory);
 router.put("/services/status", auth, updateServiceStatus);
 router.get("/bookings/matching", auth, getMatchingBookings);
-router.put("/bookings/:bookingId/accept",  partnerServiceController.acceptBooking);
-router.put("/bookings/:bookingId/reject",  partnerServiceController.rejectBooking);
+router.put(
+  "/bookings/:bookingId/accept",
+  partnerServiceController.acceptBooking
+);
+router.put(
+  "/bookings/:bookingId/reject",
+  partnerServiceController.rejectBooking
+);
 
 // New route to mark an accepted booking as completed and handle photo/video uploads
-router.post('/bookings/:id/complete', auth, 
-    upload.fields([
-        { name: 'photos', maxCount: 10 },
-        { name: 'videos', maxCount: 5 }
-    ]), 
-    partnerServiceController.completeBooking
+router.post(
+  "/bookings/:id/complete",
+  auth,
+  upload.fields([
+    { name: "photos", maxCount: 10 },
+    { name: "videos", maxCount: 5 },
+  ]),
+  partnerServiceController.completeBooking
 );
 
 // Dropdown data route
 router.get("/dropdown/categories", getAllCategories);
 
-
-
 // Route to get all completed bookings for a partner
-router.get('/bookings/completed', auth, partnerServiceController.getCompletedBookings);
+router.get(
+  "/bookings/completed",
+  auth,
+  partnerServiceController.getCompletedBookings
+);
 
 // Route to get all pending bookings for a partner
-router.get('/bookings/pending', auth, partnerServiceController.getPendingBookings);
+router.get(
+  "/bookings/pending",
+  auth,
+  partnerServiceController.getPendingBookings
+);
 
 // Route to get all rejected bookings for a partner
-router.get('/bookings/rejected', auth, partnerServiceController.getRejectedBookings);
+router.get(
+  "/bookings/rejected",
+  auth,
+  partnerServiceController.getRejectedBookings
+);
 // Route to select a service and category
-router.post('/select-category-and-service', auth, partnerAuthController.selectCategoryAndServices);
+router.post(
+  "/select-category-and-service",
+  auth,
+  partnerAuthController.selectCategoryAndServices
+);
 
 // Route to get all accepted bookings for a partner
-router.get('/bookings/accepted/:partnerId', auth, partnerServiceController.getPartnerBookings);
+router.get(
+  "/bookings/accepted/:partnerId",
+  auth,
+  partnerServiceController.getPartnerBookings
+);
 
 // Route to pause a booking
-router.post('/bookings/:bookingId/pause', auth, partnerServiceController.pauseBooking);
+router.post(
+  "/bookings/:bookingId/pause",
+  auth,
+  partnerServiceController.pauseBooking
+);
 
 // Routes for paused bookings
-router.get('/bookings/paused', auth, partnerServiceController.getPausedBookings);
-router.post('/bookings/:bookingId/resume', auth, partnerServiceController.resumeBooking);
+router.get(
+  "/bookings/paused",
+  auth,
+  partnerServiceController.getPausedBookings
+);
+router.post(
+  "/bookings/:bookingId/resume",
+  auth,
+  partnerServiceController.resumeBooking
+);
 
 // Route to top up wallet
-router.post('/wallet/topup/:partnerId', auth, partnerWalletController.topUpWallet);
+router.post(
+  "/wallet/topup/:partnerId",
+  auth,
+  partnerWalletController.topUpWallet
+);
 // Route to get wallet transactions
-router.get('/wallet/transactions', auth, partnerWalletController.transactionsWallet);
+router.get(
+  "/wallet/transactions",
+  auth,
+  partnerWalletController.transactionsWallet
+);
 
-
-router.get('/products/:category',auth,partnerServiceController.getProductsByCategory); // Get products by category
+router.get(
+  "/products/:category",
+  auth,
+  partnerServiceController.getProductsByCategory
+); // Get products by category
 // router.put('/products/use/:id', auth, partnerServiceController.useProduct); // Use product (decrease stock)
 // router.put('/products/return/:id', auth, partnerServiceController.returnProduct); // Return product (increase stock)
-router.post('/products/add', auth, partnerServiceController.addToCart); // Add new product
+router.post("/products/add", auth, partnerServiceController.addToCart); // Add new product
 
-
-router.get('/bookings', auth, partnerServiceController.allpartnerBookings); 
+router.get("/bookings", auth, partnerServiceController.allpartnerBookings);
 
 module.exports = router;
