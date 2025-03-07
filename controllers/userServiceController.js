@@ -681,8 +681,6 @@ const viewPartnerCart = async (req, res) => {
   }
 };
 
-
-//approve cart of partner
 const approvePartnerCart = async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -700,11 +698,19 @@ const approvePartnerCart = async (req, res) => {
       return res.status(400).json({ message: "No products in cart for this booking" });
     }
 
+    // **New Check: If all cart items are already approved, return early**
+    const isAlreadyApproved = booking.cart.every(item => item.approved);
+    if (isAlreadyApproved) {
+      return res.status(400).json({ message: "Cart is already approved" });
+    }
+
     let updatedInventory = [];
     let usedProducts = [];
 
     // Step 3: Deduct Stock from Inventory & Approve Cart
     for (const item of booking.cart) {
+      if (item.approved) continue; // Skip already approved items
+
       const product = await Product.findById(item.product);
       if (!product) {
         console.error("Product not found:", item.product);
@@ -754,6 +760,7 @@ const approvePartnerCart = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 
 

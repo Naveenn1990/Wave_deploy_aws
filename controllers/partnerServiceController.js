@@ -1289,11 +1289,11 @@ exports.getUserReviews = async (req, res) => {
       const partner = await Partner.findById(req.partner._id)
           .populate({
               path: "reviews.user",
-              select: "name _id", // Fetch only name and _id from User model
+              // select: "name _id", // Fetch only name and _id from User model
           })
           .populate({
               path: "reviews.booking",
-              select: "status _id", // Fetch only status and _id from Booking model
+              // select: "status _id", // Fetch only status and _id from Booking model
           });
 
       if (!partner) {
