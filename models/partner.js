@@ -113,26 +113,7 @@ const partnerSchema = new mongoose.Schema(
     otpExpiry: {
       type: Date,
       select: false, // Ensures it is fetched only when explicitly requested
-    },
-
-    // Partner Cart - Stores selected products before approval
-    cart: [
-      {
-        product: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Product",
-        },
-        quantity: {
-          type: Number,
-          required: true,
-          default: 1,
-        },
-        approved: {
-          type: Boolean,
-          default: false,
-        },
-      },
-    ],
+    }
   },
   { timestamps: true }
 );

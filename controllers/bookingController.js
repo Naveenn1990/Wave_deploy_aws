@@ -208,10 +208,6 @@ exports.getUserBookings = async (req, res) => {
             })
             .populate({
                 path: 'partner', // Populate partner details
-                populate: {
-                    path: 'cart.product', // Populate products inside the partner's cart
-                    // select: 'name price description', // Select required product fields
-                }
             })
             .sort({ createdAt: -1 })
             .lean(); // Convert to plain JS objects for better performance

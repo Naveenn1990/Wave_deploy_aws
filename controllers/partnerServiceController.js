@@ -1125,12 +1125,13 @@ exports.getProductsByCategory = async (req, res) => {
 };
 
 // add to cart (Products)
+// Add Product to Booking Cart
 exports.addToCart = async (req, res) => {
   try {
     const { bookingId, productId, change } = req.body;
-    const partnerId = req.partner.id;
+    const partnerId = req.partner.id; // Assuming partner authentication is handled
 
-    // Fetch Partner
+    // Validate Partner
     const partner = await Partner.findById(partnerId);
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -1142,52 +1143,57 @@ exports.addToCart = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Validate Booking
-    const activeBooking = await Booking.findOne({
+    // Validate Booking (Ensure it belongs to this partner & is accepted)
+    const booking = await Booking.findOne({
       _id: bookingId,
-      partner: partnerId, // Ensure booking belongs to the partner
+      partner: partnerId, // Ensure booking belongs to this partner
       status: "accepted",
     });
 
-    if (!activeBooking) {
+    if (!booking) {
       return res.status(400).json({ message: "Invalid or unaccepted booking" });
     }
 
-    // Ensure cart follows `{ bookingId: [...products] }`
-    if (!partner.cart) {
-      partner.cart = {};
-    }
-    if (!partner.cart[bookingId]) {
-      partner.cart[bookingId] = [];
+    // Initialize cart if empty
+    if (!booking.cart) {
+      booking.cart = [];
     }
 
-    // Check if product already exists in cart for this booking
-    const existingItemIndex = partner.cart[bookingId].findIndex(
+    // Check if product already exists in cart
+    const existingItemIndex = booking.cart.findIndex(
       (item) => item.product.toString() === productId
     );
 
     if (existingItemIndex !== -1) {
       // Update quantity
-      partner.cart[bookingId][existingItemIndex].quantity += change;
+      booking.cart[existingItemIndex].quantity += change;
 
       // Remove item if quantity is 0 or negative
-      if (partner.cart[bookingId][existingItemIndex].quantity <= 0) {
-        partner.cart[bookingId].splice(existingItemIndex, 1);
+      if (booking.cart[existingItemIndex].quantity <= 0) {
+        booking.cart.splice(existingItemIndex, 1);
       }
     } else if (change > 0) {
-      // Add new product to the booking's cart
-      partner.cart[bookingId].push({ product: productId, quantity: 1, approved: false });
+      // Add new product to cart
+      booking.cart.push({
+        product: productId,
+        quantity: change,
+        approved: false,
+        addedByPartner: partnerId, // Store partner details
+      });
     }
 
-    await partner.save();
+    // Save the updated booking with the modified cart
+    await booking.save();
+
     return res.status(200).json({
       message: "Cart updated successfully",
-      cart: partner.cart,
+      cart: booking.cart,
     });
   } catch (error) {
     return res.status(500).json({ message: "Error updating cart", error: error.message });
   }
 };
+
 
 // get all bookings
 // Get all bookings

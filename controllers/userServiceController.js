@@ -5,6 +5,7 @@ const SubService = require("../models/SubService");
 const SubCategory = require("../models/SubCategory");
 const Booking = require("../models/booking");
 const Partner = require("../models/Partner");
+const Product = require("../models/product");
 
 // Helper function to get clean image filename
 function getCleanImageName(imagePath) {
@@ -661,23 +662,18 @@ const viewPartnerCart = async (req, res) => {
     console.log("Authenticated User ID:", userId);
     console.log("Requested Booking ID:", bookingId);
 
-    // Step 1: Check if the booking exists and belongs to the user
-    const booking = await Booking.findOne({ _id: bookingId, user: userId });
-    console.log("Booking Found:", booking);
+    // Step 1: Verify if the booking exists and belongs to the user
+    const booking = await Booking.findOne({ _id: bookingId, user: userId }).populate("cart.product");
 
     if (!booking) {
       return res.status(403).json({ message: "Unauthorized to view this cart" });
     }
 
-    // Step 2: Find the partner associated with this booking
-    const partner = await Partner.findOne({ bookings: bookingId }).populate("cart.product");
-
-    if (!partner) {
-      return res.status(404).json({ message: "Partner not found for this booking" });
-    }
-
-    // Step 3: Return the cart items
-    return res.status(200).json({ success: true, cart: partner.cart });
+    // Step 2: Return the cart items from the Booking schema
+    return res.status(200).json({
+      success: true,
+      cart: booking.cart,
+    });
 
   } catch (error) {
     console.error("Error fetching partner cart:", error);
@@ -690,35 +686,25 @@ const viewPartnerCart = async (req, res) => {
 const approvePartnerCart = async (req, res) => {
   try {
     const { bookingId } = req.params;
-    const partnerId = req.partner.id; // Partner ID from token
+    const userId = req.user.id; // Authenticated User ID (Approving the cart)
 
-    // Fetch Partner
-    const partner = await Partner.findById(partnerId);
-    if (!partner) {
-      return res.status(404).json({ message: "Partner not found" });
-    }
+    // Step 1: Validate Booking & Ownership
+    const booking = await Booking.findOne({ _id: bookingId, user: userId }).populate("cart.product");
 
-    // Validate Booking
-    const booking = await Booking.findById(bookingId);
     if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
+      return res.status(403).json({ message: "Unauthorized: This booking does not belong to you" });
     }
 
-    // Ensure the Partner is Assigned to the Booking
-    if (!booking.partner || booking.partner.toString() !== partnerId.toString()) {
-      return res.status(403).json({ message: "Unauthorized: You are not assigned to this booking" });
-    }
-
-    // Check if there is a cart for this booking
-    if (!partner.cart || !partner.cart[bookingId] || partner.cart[bookingId].length === 0) {
+    // Step 2: Check if the booking has a cart
+    if (!booking.cart || booking.cart.length === 0) {
       return res.status(400).json({ message: "No products in cart for this booking" });
     }
 
     let updatedInventory = [];
     let usedProducts = [];
 
-    // Deduct Stock from Inventory
-    for (const item of partner.cart[bookingId]) {
+    // Step 3: Deduct Stock from Inventory & Approve Cart
+    for (const item of booking.cart) {
       const product = await Product.findById(item.product);
       if (!product) {
         console.error("Product not found:", item.product);
@@ -747,33 +733,21 @@ const approvePartnerCart = async (req, res) => {
         name: product.name,
         remainingStock: product.stock,
       });
+
+      // Mark cart items as approved
+      item.approved = true;
     }
 
-    // Store Used Products in Booking History
-    booking.usedProducts = usedProducts;
+    // Step 4: Save Approved Cart Permanently
+    booking.savedCart = booking.cart; // Save the cart permanently
     await booking.save();
-
-    // Save Used Products in Partner's Cart History
-    if (!partner.cartHistory) {
-      partner.cartHistory = [];
-    }
-    partner.cartHistory.push({
-      bookingId: bookingId,
-      usedProducts: usedProducts,
-      timestamp: new Date(),
-    });
-
-    // Clear the Cart for this Booking After Approval
-    delete partner.cart[bookingId];
-
-    await partner.save();
 
     return res.status(200).json({
       success: true,
-      message: "Products approved and inventory updated",
+      message: "Products approved, inventory updated, and cart saved permanently",
       usedProducts: usedProducts,
       updatedInventory: updatedInventory,
-      partnerCartHistory: partner.cartHistory,
+      savedCart: booking.savedCart,
     });
   } catch (error) {
     console.error("Error approving cart:", error);

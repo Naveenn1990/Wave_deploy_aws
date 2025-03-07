@@ -1,19 +1,10 @@
 const mongoose = require("mongoose");
 
 const locationSchema = new mongoose.Schema({
-  address: {
-    type: String,
-    required: true,
-  },
-  landmark: {
-    type: String,
-    default: "",
-  },
-  pincode: {
-    type: String,
-    required: false,
-  }
-}, { _id: false }); // Prevent MongoDB from creating _id for subdocument
+  address: { type: String, required: true },
+  landmark: { type: String, default: "" },
+  pincode: { type: String },
+}, { _id: false });
 
 const bookingSchema = new mongoose.Schema(
   {
@@ -27,37 +18,16 @@ const bookingSchema = new mongoose.Schema(
       ref: "SubService",
       required: true
     },
-    service: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Service"
-    },
-    subCategory: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "SubCategory"
-    },
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "ServiceCategory"
-    },
-    scheduledDate: {
-      type: Date,
-      required: true,
-    },
-    scheduledTime: {
-      type: String,
-      required: true,
-    },
-    location: {
-      type: locationSchema,
-      required: true,
-    },
-    amount: {
-      type: Number,
-      required: true,
-    },
+    service: { type: mongoose.Schema.Types.ObjectId, ref: "Service" },
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "SubCategory" },
+    category: { type: mongoose.Schema.Types.ObjectId, ref: "ServiceCategory" },
+    scheduledDate: { type: Date, required: true },
+    scheduledTime: { type: String, required: true },
+    location: { type: locationSchema, required: true },
+    amount: { type: Number, required: true },
     paymentMode: {
       type: String,
-      enum: ["credit card", "cash", "paypal", "bank transfer"], 
+      enum: ["credit card", "cash", "paypal", "bank transfer"],
       required: true,
     },
     status: {
@@ -73,37 +43,47 @@ const bookingSchema = new mongoose.Schema(
     cancellationReason: String,
     cancellationTime: Date,
     review: {
-      rating: {
-        type: Number, 
-        min: 1,
-        max: 5,
-      },
+      rating: { type: Number, min: 1, max: 5 },
       comment: String,
       createdAt: Date,
     },
     partner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Partner" // Partner will be assigned when they accept the booking
+      ref: "Partner", // Assigned when the partner accepts the booking
     },
-    // Tracking timestamps
     acceptedAt: Date,
     completedAt: Date,
-    // New fields for paused bookings
     pauseDetails: {
       nextScheduledDate: Date,
       nextScheduledTime: String,
       pauseReason: String,
-      pausedAt: Date
+      pausedAt: Date,
     },
-    // Add photos and videos fields
-    photos: [{
-      type: String,  // Store the photo URLs/paths
-      required: false
-    }],
-    videos: [{
-      type: String,  // Store the video URLs/paths
-      required: false
-    }]
+    photos: [{ type: String }],
+    videos: [{ type: String }],
+
+    // **New Field: Partner Cart (Stores selected products before approval)**
+    cart: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          default: 1,
+        },
+        approved: {
+          type: Boolean,
+          default: false, // User approval required
+        },
+        addedByPartner: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Partner",
+        }
+      }
+    ],
   },
   { 
     timestamps: true,
