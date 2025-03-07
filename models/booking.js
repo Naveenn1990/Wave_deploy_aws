@@ -51,6 +51,7 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Partner", // Assigned when the partner accepts the booking
     },
+
     acceptedAt: Date,
     completedAt: Date,
     pauseDetails: {

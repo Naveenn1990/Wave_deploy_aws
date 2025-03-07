@@ -181,6 +181,7 @@ exports.getAllBookingsWithFilters = async (req, res) => {
 
 // Get user's bookings
 // Get user's bookings
+// Get user's bookings
 exports.getUserBookings = async (req, res) => { 
     try {
         const { status } = req.query;
@@ -209,6 +210,13 @@ exports.getUserBookings = async (req, res) => {
             .populate({
                 path: 'partner', // Populate partner details
             })
+            .populate({
+                path: 'cart.product', // Populate product details inside cart
+            })
+            .populate({
+                path: 'cart.addedByPartner', // Populate partner who added the product
+                select: 'profile.name profile.email' // Select specific fields
+            })
             .sort({ createdAt: -1 })
             .lean(); // Convert to plain JS objects for better performance
 
@@ -225,6 +233,7 @@ exports.getUserBookings = async (req, res) => {
         });
     }
 };
+
 
 
 // Get booking details
