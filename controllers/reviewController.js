@@ -350,3 +350,22 @@ exports.ContactUs = async (req, res) => {
     res.status(500).json({ error: "Server error. Please try again later." });
   }
 }
+
+exports.getAllContactUs = async (req, res) => {
+  try {
+    // const { fullName, email, phone, message } = req.body;
+    
+    // if (!fullName || !email || !phone || !message) {
+    //   return res.status(400).json({ error: "All fields are required" });
+    // }
+
+    // const newContact = new Contact({ fullName, email, phone, message });
+    // await newContact.save();
+    const allContacts = await Contact.find(); 
+    
+    res.status(201).json({ data : allContacts });
+  } catch (error) {
+    console.error("Error fetching contact  data:", error);
+    res.status(500).json({ error: "Server error. Please try again later." });
+  }
+}
