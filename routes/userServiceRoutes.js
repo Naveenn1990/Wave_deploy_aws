@@ -433,7 +433,7 @@ router.post('/reviews', ReviewController.submitReview);
 // Route to fetch reviews for a specific subservice
 router.get('/subservices/:subServiceId/reviews', ReviewController.getReviews);
 
-router.get('/wallet/topup:userId', ReviewController.topUpWallet);
+router.get('/wallet/topup/:userId', ReviewController.topUpWallet);
 router.post('/wallet/transactions', ReviewController.transactionsWallet);
 router.get('/offers', getAllOffers);
 
