@@ -475,32 +475,38 @@ const getAllSubCategoriesForUser = async (req, res) => {
 //         res.status(500).json({ success: false, message: error.message });
 //     }
 // };
-
-
-//get all subservice
 const getAllSubServices = async (req, res) => {
   try {
       const subservices = await SubService.find({ isActive: true })
-          .populate({
-              path: 'service', 
-              select: 'name description'
-          });
-
+      .populate({
+        path: 'service',
+        populate: {
+            path: 'subCategory',
+            populate: {
+                path: 'category',
+                model: 'ServiceCategory'
+            }
+        }
+      });
       // Attach reviews and calculate average rating
       const enrichedSubservices = await Promise.all(
           subservices.map(async (subservice) => {
               const reviews = await Review.find({ subService: subservice._id, status: 'approved' })
-                  .populate('user', 'name email'); // Populate user details in reviews
+                  .populate('user', 'name email');
 
               const totalRatings = reviews.reduce((sum, review) => sum + review.rating, 0);
-              const averageRating = reviews.length > 0 
-                  ? (totalRatings / reviews.length).toFixed(1) 
+              const averageRating = reviews.length > 0
+                  ? (totalRatings / reviews.length).toFixed(1)
                   : "No rating till now";
 
               return {
                   ...subservice.toObject(),
                   reviews,
-                  averageRating
+                  averageRating,
+                  discount: subservice.discount || 0,
+                  gst: subservice.gst || 0,
+                  commission: subservice.commission || 0,
+                  rating: subservice.rating || 0,
               };
           })
       );
@@ -515,6 +521,11 @@ const getAllSubServices = async (req, res) => {
       res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+
+
+
 
 
 const getAllSubServicesForUser = async (req, res) => {
