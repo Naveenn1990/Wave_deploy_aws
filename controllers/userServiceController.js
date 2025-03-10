@@ -476,62 +476,40 @@ const getAllSubCategoriesForUser = async (req, res) => {
 //     }
 // };
 
+
+//get all subservice
 const getAllSubServices = async (req, res) => {
   try {
-      const subservices = await SubService.aggregate([
-          {
-              $match: { isActive: true }
-          },
-          {
-              $lookup: {
-                  from: 'services', // Reference to Service collection
-                  localField: 'service',
-                  foreignField: '_id',
-                  as: 'service'
-              }
-          },
-          {
-              $lookup: {
-                  from: 'reviews', // Reference to Review collection
-                  localField: 'reviews',
-                  foreignField: '_id',
-                  as: 'reviews'
-              }
-          },
-          {
-              $addFields: {
-                  averageRating: {
-                      $cond: {
-                          if: { $gt: [{ $size: "$reviews" }, 0] },
-                          then: { $avg: "$reviews.rating" },
-                          else: "No rating till now"
-                      }
-                  }
-              }
-          },
-          {
-              $project: {
-                  name: 1,
-                  description: 1,
-                  price: 1,
-                  discount: 1,
-                  basePrice: 1,
-                  gst: 1,
-                  commission: 1,
-                  icon: 1,
-                  includes: 1,
-                  excludes: 1,
-                  isActive: 1,
-                  createdAt: 1,
-                  averageRating: 1 // Include calculated rating
-              }
-          }
-      ]);
+      const subservices = await SubService.find({ isActive: true })
+          .populate({
+              path: 'service', 
+              select: 'name description'
+          });
+
+      // Attach reviews and calculate average rating
+      const enrichedSubservices = await Promise.all(
+          subservices.map(async (subservice) => {
+              const reviews = await Review.find({ subService: subservice._id, status: 'approved' })
+                  .populate('user', 'name email'); // Populate user details in reviews
+
+              const totalRatings = reviews.reduce((sum, review) => sum + review.rating, 0);
+              const averageRating = reviews.length > 0 
+                  ? (totalRatings / reviews.length).toFixed(1) 
+                  : "No rating till now";
+
+              return {
+                  ...subservice.toObject(),
+                  reviews,
+                  averageRating
+              };
+          })
+      );
 
       res.status(200).json({
           success: true,
-          data: subservices
+          data: enrichedSubservices
       });
+
   } catch (error) {
       console.error('Error fetching subservices:', error);
       res.status(500).json({ success: false, message: error.message });
