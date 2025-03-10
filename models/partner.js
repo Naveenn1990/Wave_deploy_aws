@@ -68,6 +68,11 @@ const partnerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    profileStatus: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active"
+    },
     profile: {
       name: {
         type: String,

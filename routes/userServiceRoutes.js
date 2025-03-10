@@ -448,6 +448,8 @@ router.put("/approve/:bookingId", auth, userServiceController.approvePartnerCart
 router.post("/review/partner", auth, ReviewController.reviewPartner);
 
 router.post("/contactus", auth, ReviewController.ContactUs);
+//get all completed booking in system 
+router.get('/completed-bookings', userServiceController.getAllCompletedBookingsinsystem);
 
 
 

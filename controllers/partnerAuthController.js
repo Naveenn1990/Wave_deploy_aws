@@ -214,7 +214,7 @@ exports.completeProfile = async (req, res) => {
     }
 
     // 📂 Handle file upload
-    const profilePicturePath = req.file ? req.file.path : null;
+    const profilePicturePath = req.file ? req.file.path.split('/').pop() : null;
 
     // 🆕 Create the new Partner (without requiring category, subcategory, etc.)
     // const newPartner = new Partner({
