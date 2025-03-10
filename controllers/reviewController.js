@@ -7,18 +7,39 @@ const { v4: uuidv4 } = require("uuid");
 const Partner = require("../models/Partner");
 
 // Submit a new review
+// Submit a new review
 exports.submitReview = async (req, res) => {
-    const { user, subService, rating, comment } = req.body;
-    console.log(user, subService, rating, comment , "testing")
-    // console.log(user, subService, rating, comment);
-    try {
-        const review = new Review({ user, subService, rating, comment });
-        await review.save();
-        res.status(201).json({ message: 'Review submitted successfully', review });
-    } catch (error) {
-        res.status(400).json({ message: 'Error submitting review', error: error.message });
-    }
-}; 
+  const { user, subService, rating, comment } = req.body;
+  console.log(user, subService, rating, comment, "testing");
+
+  try {
+      // Check if the user has already reviewed this subService
+      const existingReview = await Review.findOne({ user, subService });
+      if (existingReview) {
+          return res.status(400).json({
+              success: false,
+              message: "You have already submitted a review for this sub-service."
+          });
+      }
+
+      // Create and save the new review
+      const review = new Review({ user, subService, rating, comment });
+      await review.save();
+
+      res.status(201).json({ 
+          success: true,
+          message: 'Review submitted successfully', 
+          review 
+      });
+  } catch (error) {
+      console.error("Error submitting review:", error);
+      res.status(400).json({ 
+          success: false, 
+          message: 'Error submitting review', 
+          error: error.message 
+      });
+  }
+};
 
 // Get reviews for a specific subservice
 
@@ -256,14 +277,13 @@ exports.getAllReviewsForAdminWithPartnerDetails = async (req, res) => {
 
 
 
-
 exports.reviewPartner = async (req, res) => {
   try {
-      const { bookingId, partnerId,rating, comment } = req.body;
+      const { bookingId, partnerId, rating, comment } = req.body;
       const userId = req.user._id;
 
       // Check if the booking exists and belongs to the user
-      const booking = await Booking.findOne({ 
+      const booking = await Booking.findOne({
           _id: bookingId,
           user: userId,
           partner: partnerId,
@@ -278,6 +298,17 @@ exports.reviewPartner = async (req, res) => {
       const partner = await Partner.findById(partnerId);
       if (!partner) {
           return res.status(404).json({ message: "Partner not found." });
+      }
+
+      // Check if the user has already reviewed this partner
+      const existingReview = partner.reviews.find(
+          (review) => review.user.toString() === userId.toString()
+      );
+
+      if (existingReview) {
+          return res.status(400).json({
+              message: "You have already submitted a review for this partner."
+          });
       }
 
       // Create review object

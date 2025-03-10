@@ -117,7 +117,12 @@ const subServiceSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    rating: {
+        type: Number, 
+        default: 0
+    },
+    
 });
 
 // Pre-save hook to calculate basePrice

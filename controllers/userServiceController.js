@@ -6,6 +6,7 @@ const SubCategory = require("../models/SubCategory");
 const Booking = require("../models/booking");
 const Partner = require("../models/Partner");
 const Product = require("../models/product");
+const Review = require("../models/Review");
 
 // Helper function to get clean image filename
 function getCleanImageName(imagePath) {
@@ -477,25 +478,55 @@ const getAllSubCategoriesForUser = async (req, res) => {
 
 const getAllSubServices = async (req, res) => {
   try {
-      const subservices = await SubService.find({ isActive: true })
-          .populate({
-              path: 'service',
-              populate: {
-                  path: 'subCategory',
-                  populate: {
-                      path: 'category', // This refers to the ServiceCategory
-                      model: 'ServiceCategory'
+      const subservices = await SubService.aggregate([
+          {
+              $match: { isActive: true }
+          },
+          {
+              $lookup: {
+                  from: 'services', // Reference to Service collection
+                  localField: 'service',
+                  foreignField: '_id',
+                  as: 'service'
+              }
+          },
+          {
+              $lookup: {
+                  from: 'reviews', // Reference to Review collection
+                  localField: 'reviews',
+                  foreignField: '_id',
+                  as: 'reviews'
+              }
+          },
+          {
+              $addFields: {
+                  averageRating: {
+                      $cond: {
+                          if: { $gt: [{ $size: "$reviews" }, 0] },
+                          then: { $avg: "$reviews.rating" },
+                          else: "No rating till now"
+                      }
                   }
               }
-          })
-          .populate({
-            path: 'reviews',  // Make sure this matches the updated schema
-            model: 'Review'
-            // populate: {
-            //     path: 'user',  // If you want to get user details along with the review
-            //     model: 'User'
-            // }
-        });
+          },
+          {
+              $project: {
+                  name: 1,
+                  description: 1,
+                  price: 1,
+                  discount: 1,
+                  basePrice: 1,
+                  gst: 1,
+                  commission: 1,
+                  icon: 1,
+                  includes: 1,
+                  excludes: 1,
+                  isActive: 1,
+                  createdAt: 1,
+                  averageRating: 1 // Include calculated rating
+              }
+          }
+      ]);
 
       res.status(200).json({
           success: true,
@@ -680,7 +711,7 @@ const viewPartnerCart = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
+//approve cart of partner
 const approvePartnerCart = async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -759,7 +790,36 @@ const approvePartnerCart = async (req, res) => {
     console.error("Error approving cart:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
-};
+};   
+
+
+//get all completed booking in system 
+const getAllCompletedBookingsinsystem = async (req, res) => {
+  try {
+    const completedBookings = await Booking.find({ status: "completed" })
+      .populate("user", "name email")
+      .populate("subService", "name description")
+      .populate("service", "name")
+      .populate("partner", "profile.name profile.email")
+      .sort({ completedAt: -1 }); // Sort by latest completed
+
+    const totalBookingsCount = await Booking.countDocuments(); // Count all bookings in the system
+
+    if (completedBookings.length === 0) {
+      return res.status(404).json({ success: false, message: "No completed bookings found." });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: completedBookings.length,
+      totalBookings: totalBookingsCount,
+      data: completedBookings,
+    });
+  } catch (error) {
+    console.error("Error fetching completed bookings:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+}; 
 
 
 
@@ -784,5 +844,6 @@ module.exports = {
   getAllPartners,
   viewPartnerCart,
   bookSubService,
-  approvePartnerCart
+  approvePartnerCart,
+  getAllCompletedBookingsinsystem
 };
