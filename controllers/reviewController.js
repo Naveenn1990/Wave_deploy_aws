@@ -5,6 +5,7 @@ const SubService = require('../models/SubService');
 const Wallet = require("../models/Wallet");
 const { v4: uuidv4 } = require("uuid");
 const Partner = require("../models/Partner");
+const Contact = require("../models/Contact");
 
 // Submit a new review
 exports.submitReview = async (req, res) => {
@@ -300,3 +301,21 @@ exports.reviewPartner = async (req, res) => {
       res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
+
+exports.ContactUs = async (req, res) => {
+  try {
+    const { fullName, email, phone, message } = req.body;
+    
+    if (!fullName || !email || !phone || !message) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    const newContact = new Contact({ fullName, email, phone, message });
+    await newContact.save();
+    
+    res.status(201).json({ message: "Your query has been sent successfully!" });
+  } catch (error) {
+    console.error("Error saving contact form data:", error);
+    res.status(500).json({ error: "Server error. Please try again later." });
+  }
+}
