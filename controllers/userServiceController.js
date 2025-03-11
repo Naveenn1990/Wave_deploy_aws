@@ -6,6 +6,7 @@ const SubCategory = require("../models/SubCategory");
 const Booking = require("../models/booking");
 const Partner = require("../models/Partner");
 const Product = require("../models/product");
+const Review = require("../models/Review");
 
 // Helper function to get clean image filename
 function getCleanImageName(imagePath) {
@@ -474,38 +475,57 @@ const getAllSubCategoriesForUser = async (req, res) => {
 //         res.status(500).json({ success: false, message: error.message });
 //     }
 // };
-
 const getAllSubServices = async (req, res) => {
   try {
       const subservices = await SubService.find({ isActive: true })
-          .populate({
-              path: 'service',
-              populate: {
-                  path: 'subCategory',
-                  populate: {
-                      path: 'category', // This refers to the ServiceCategory
-                      model: 'ServiceCategory'
-                  }
-              }
+      .populate({
+        path: 'service',
+        populate: {
+            path: 'subCategory',
+            populate: {
+                path: 'category',
+                model: 'ServiceCategory'
+            }
+        }
+      });
+      // Attach reviews and calculate average rating
+      const enrichedSubservices = await Promise.all(
+          subservices.map(async (subservice) => {
+              const reviews = await Review.find({ subService: subservice._id, status: 'approved' })
+                  .populate('user', 'name email');
+
+              const totalRatings = reviews.reduce((sum, review) => sum + review.rating, 0);
+              const averageRating = reviews.length > 0
+                  ? (totalRatings / reviews.length).toFixed(1)
+                  : "No rating till now";
+
+              return {
+                  ...subservice.toObject(),
+                  reviews,
+                  averageRating,
+                  discount: subservice.discount || 0,
+                  gst: subservice.gst || 0,
+                  commission: subservice.commission || 0,
+                  rating: subservice.rating || 0,
+              };
           })
-          .populate({
-            path: 'reviews',  // Make sure this matches the updated schema
-            model: 'Review'
-            // populate: {
-            //     path: 'user',  // If you want to get user details along with the review
-            //     model: 'User'
-            // }
-        });
+      );
 
       res.status(200).json({
           success: true,
-          data: subservices
+          data: enrichedSubservices
       });
+
   } catch (error) {
       console.error('Error fetching subservices:', error);
       res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+
+
+
 
 
 const getAllSubServicesForUser = async (req, res) => {
@@ -680,8 +700,6 @@ const viewPartnerCart = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-
 //approve cart of partner
 const approvePartnerCart = async (req, res) => {
   try {
@@ -700,11 +718,19 @@ const approvePartnerCart = async (req, res) => {
       return res.status(400).json({ message: "No products in cart for this booking" });
     }
 
+    // **New Check: If all cart items are already approved, return early**
+    const isAlreadyApproved = booking.cart.every(item => item.approved);
+    if (isAlreadyApproved) {
+      return res.status(400).json({ message: "Cart is already approved" });
+    }
+
     let updatedInventory = [];
     let usedProducts = [];
 
     // Step 3: Deduct Stock from Inventory & Approve Cart
     for (const item of booking.cart) {
+      if (item.approved) continue; // Skip already approved items
+
       const product = await Product.findById(item.product);
       if (!product) {
         console.error("Product not found:", item.product);
@@ -753,7 +779,37 @@ const approvePartnerCart = async (req, res) => {
     console.error("Error approving cart:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
-};
+};   
+
+
+//get all completed booking in system 
+const getAllCompletedBookingsinsystem = async (req, res) => {
+  try {
+    const completedBookings = await Booking.find({ status: "completed" })
+      .populate("user", "name email")
+      .populate("subService", "name description")
+      .populate("service", "name")
+      .populate("partner", "profile.name profile.email")
+      .sort({ completedAt: -1 }); // Sort by latest completed
+
+    const totalBookingsCount = await Booking.countDocuments(); // Count all bookings in the system
+
+    if (completedBookings.length === 0) {
+      return res.status(404).json({ success: false, message: "No completed bookings found." });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: completedBookings.length,
+      totalBookings: totalBookingsCount,
+      data: completedBookings,
+    });
+  } catch (error) {
+    console.error("Error fetching completed bookings:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+}; 
+
 
 
 
@@ -777,5 +833,6 @@ module.exports = {
   getAllPartners,
   viewPartnerCart,
   bookSubService,
-  approvePartnerCart
+  approvePartnerCart,
+  getAllCompletedBookingsinsystem
 };

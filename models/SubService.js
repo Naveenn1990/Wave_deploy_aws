@@ -79,6 +79,10 @@ const subServiceSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Review', 
     }], 
+    user : {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    },
     price: {
         type: Number,
         required: true
@@ -117,12 +121,17 @@ const subServiceSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    rating: {
+        type: Number, 
+        default: 0
+    },
+    
 });
 
 // Pre-save hook to calculate basePrice
 subServiceSchema.pre('save', function (next) {
-    this.basePrice = this.mrp - (this.mrp * this.discount / 100);
+    this.basePrice = this.price - (this.price * this.discount / 100);
     next();
 });
 

@@ -202,22 +202,37 @@ exports.getDashboardAnalytics = async (req, res) => {
 };
 
 // Get pending KYC verifications
+// Get pending KYC verifications
 exports.getPendingKYC = async (req, res) => {
   try {
     const pendingPartners = await Partner.find({
-      kycDetails: { $exists: true },
-      "kycDetails.isVerified": false,
-    }).select("phone profile kycDetails createdAt");
+      kyc: { $exists: true },
+      "kyc.status": "Pending", // Ensuring we fetch only pending verifications
+    }).select("phone profile kyc createdAt");
+
+    const formattedPartners = pendingPartners.map((partner) => ({
+      id: partner._id,
+      phone: partner.phone,
+      name: partner.profile?.name || "N/A",
+      email: partner.profile?.email || "N/A",
+      createdAt: partner.createdAt,
+      KYC: {
+        status: partner.kyc?.status || "Pending",
+        panCard: partner.kyc?.panCard || "Not Uploaded",
+        aadhaar: partner.kyc?.aadhaar || "Not Uploaded",
+      },
+    }));
 
     res.json({
       count: pendingPartners.length,
-      partners: pendingPartners,
+      partners: formattedPartners,
     });
   } catch (error) {
     console.error("Pending KYC Error:", error);
-    res.status(500).json({ message: "Error fetching pending KYC" });
+    res.status(500).json({ message: "Error fetching pending KYC verifications" });
   }
 };
+
 
 // Get partner KYC details
 exports.getPartnerKYC = async (req, res) => {
@@ -313,39 +328,59 @@ exports.verifyPartnerKYC = async (req, res) => {
 };
 
 // Get all partners
+// Get all partners
+// Get all partners
+// Get all partners
 exports.getAllPartners = async (req, res) => {
   try {
-    // const temppartners = await Partner.find()
-    // return res.json({
-    //   temppartners 
-    // });
+    const partners = await Partner.find()
+      .populate("bookings")
+      .populate("category")
+      .populate("subcategory")
+      .populate("service")
+      .populate("kyc")
+      .populate("reviews.user", "name email") // Fetch user name & email in reviews
+      .populate("reviews.booking") // Fetch booking details in reviews
+      .select("-tempOTP") // Exclude tempOTP from the response
+      .sort({ createdAt: -1 });
 
-    const { status, page = 1, limit = 100 } = req.query;
-
-    const query = {};
-    if (status) {
-      query["kycDetails.isVerified"] = status === "verified";
-    }
-
-    const partners = await Partner.find(query)
-      .select("-tempOTP")
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await Partner.countDocuments(query);
+    const formattedPartners = partners.map((partner) => ({
+      Profile: {
+        id: partner._id,
+        name: partner.profile?.name || "N/A",
+        email: partner.profile?.email || "N/A",
+        phone: partner.phone,
+        address: partner.profile?.address || "N/A",
+        landmark: partner.profile?.landmark || "N/A",
+        pincode: partner.profile?.pincode || "N/A",
+        experience: partner.experience || "N/A",
+        qualification: partner.qualification || "N/A",
+        modeOfService: partner.modeOfService || "N/A",
+        profileCompleted: partner.profileCompleted,
+        profilePicture: partner.profilePicture || "N/A",
+        createdAt: partner.createdAt,
+        updatedAt: partner.updatedAt,
+        KYC: {
+          status: partner.kyc?.status || "Pending",
+          panCard: partner.kyc?.panCard ? `/uploads/kyc/${partner.kyc.panCard}` : "Not Uploaded",
+          aadhaar: partner.kyc?.aadhaar ? `/uploads/kyc/${partner.kyc.aadhaar}` : "Not Uploaded",
+        },
+      },
+      Bookings: partner.bookings.length > 0 ? partner.bookings : "No bookings",
+      Reviews: partner.reviews.length > 0 ? partner.reviews : "No reviews",
+      Services: partner.service.length > 0 ? partner.service : "No services",
+    }));
 
     res.json({
-      partners,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total,
+      partners: formattedPartners,
+      total: partners.length,
     });
   } catch (error) {
     console.error("Get Partners Error:", error);
     res.status(500).json({ message: "Error fetching partners" });
   }
 };
+
 
 // Get partner details
 exports.getPartnerDetails = async (req, res) => {
@@ -1045,3 +1080,4 @@ exports.updateUserStatus = async (req, res) => {
       return res.status(500).json({ message: 'Server error', error });
   }
 };
+

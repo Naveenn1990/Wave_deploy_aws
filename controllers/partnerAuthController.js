@@ -214,7 +214,7 @@ exports.completeProfile = async (req, res) => {
     }
 
     // 📂 Handle file upload
-    const profilePicturePath = req.file ? req.file.path : null;
+    const profilePicturePath = req.file ? req.file.path.split('/').pop() : null;
 
     // 🆕 Create the new Partner (without requiring category, subcategory, etc.)
     // const newPartner = new Partner({
@@ -460,56 +460,53 @@ exports.completeKYC = async (req, res) => {
   try {
     const { accountNumber, ifscCode, accountHolderName, bankName } = req.body;
 
-    // Get filenames from uploaded files
-    const panCard = req.files["panCard"]
-      ? req.files["panCard"][0].filename
-      : null;
-    const aadhaar = req.files["aadhaar"]
-      ? req.files["aadhaar"][0].filename
-      : null;
-    const chequeImage = req.files["chequeImage"]
-      ? req.files["chequeImage"][0].filename
-      : null;
-
-    // Log the received files and body for debugging
-    console.log("Files received:", req.files);
+    // Log received body data
     console.log("Body received:", req.body);
 
+    // Log received files to debug missing fields
+    console.log("Uploaded Files:", req.files);
+
+    // Extract filenames safely
+    const panCard = req.files?.panCard?.[0]?.filename || null;
+    const aadhaar = req.files?.aadhaar?.[0]?.filename || null;
+    const chequeImage = req.files?.chequeImage?.[0]?.filename || null;
+
     // Validate required fields
-    if (
-      !accountNumber ||
-      !ifscCode ||
-      !accountHolderName ||
-      !bankName ||
-      !panCard ||
-      !aadhaar ||
-      !chequeImage
-    ) {
+    if (!accountNumber || !ifscCode || !accountHolderName || !bankName) {
       return res.status(400).json({
         success: false,
-        message: "Please provide all required fields and documents",
+        message: "Please provide all required bank details.",
       });
     }
 
-    // Get partner profile
+    if (!panCard || !aadhaar || !chequeImage) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload all required documents (PAN, Aadhaar, Cheque Image).",
+      });
+    }
+
+    // Fetch partner profile
     console.log("Partner ID:", req.partner._id);
-    const profile = await Partner.findOne({ _id: req.partner._id });
+    const profile = await Partner.findById(req.partner._id);
+
     if (!profile) {
       return res.status(404).json({
         success: false,
-        message: "Partner profile not found",
+        message: "Partner profile not found.",
       });
     }
 
-    // Update KYC details with status
+    // Update KYC details
     profile.kyc = {
       panCard,
       aadhaar,
       chequeImage,
-      status: 'pending', // Set initial status as pending
-      remarks: null // Clear any previous remarks
+      status: "pending", // Initial status
+      remarks: null, // Clear previous remarks
     };
 
+    // Update bank details
     profile.bankDetails = {
       accountNumber,
       ifscCode,
@@ -518,18 +515,24 @@ exports.completeKYC = async (req, res) => {
       chequeImage,
     };
 
+    // Save profile
     await profile.save();
+
+    // Log the updated profile
+    console.log("Updated KYC Profile:", profile.kyc);
 
     res.json({
       success: true,
       message: "KYC documents uploaded successfully. Pending admin approval.",
       profile: {
-        ...profile.toJSON(),
+        ...profile.toObject(),
         kyc: {
           status: profile.kyc.status,
-          remarks: profile.kyc.remarks
-        }
-      }
+          remarks: profile.kyc.remarks,
+          panCard,
+          aadhaar
+        },
+      },
     });
   } catch (error) {
     console.error("Complete KYC Error:", error);
@@ -540,6 +543,7 @@ exports.completeKYC = async (req, res) => {
     });
   }
 };
+
 
 // New endpoint for admin to update KYC status
 exports.updateKYCStatus = async (req, res) => {
