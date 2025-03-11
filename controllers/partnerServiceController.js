@@ -577,54 +577,11 @@ exports.getCompletedBookings = async (req, res) => {
 };
 
 // Get rejected bookings
-exports.getRejectedBookings = async (req, res) => {
-  try {
-    const rejectedBookings = await Booking.find({
-      partner: req.partner._id,
-      status: "rejected",
-    })
-      .populate({
-        path: "user",
-        select: "name email phone profilePhoto address",
-      })
-      .populate({
-        path: "subService",
-        select: "name price photo description duration",
-      })
-      .populate({
-        path: "service",
-        select: "name description",
-      })
-      .populate({
-        path: "partner",
-        select:
-          "name email phone profilePicture address experience qualification profile",
-      })
-      .sort({ updatedAt: -1 });
+// Get rejected bookings for the logged-in partner
 
-    if (!rejectedBookings.length) {
-      return res.status(200).json({
-        success: true,
-        message: "No rejected bookings found",
-        data: [],
-      });
-    }
 
-    res.status(200).json({
-      success: true,
-      message: "Rejected bookings fetched successfully",
-      data: rejectedBookings,
-    });
-  } catch (error) {
-    console.error("Error fetching rejected bookings:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error fetching rejected bookings",
-      error: error.message,
-    });
-  }
-};
 
+// Reject booking
 // Reject booking
 exports.rejectBooking = async (req, res) => {
   try {
@@ -644,32 +601,26 @@ exports.rejectBooking = async (req, res) => {
     // Validate partner existence
     const partner = await Partner.findById(partnerId);
     if (!partner) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Partner not found" });
+      return res.status(404).json({ success: false, message: "Partner not found" });
     }
 
     // Validate booking existence
     const booking = await Booking.findById(bookingId);
     if (!booking) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Booking not found" });
+      return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
     console.log("Current Booking Status:", booking.status);
 
     // Check if booking is already accepted, rejected, or canceled
     if (["accepted", "cancelled", "rejected"].includes(booking.status)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Cannot reject this booking" });
+      return res.status(400).json({ success: false, message: "Cannot reject this booking" });
     }
 
-    // Update Booking: Change status to 'rejected'
+    // Update Booking: Change status to 'rejected' and assign the partner
     const updatedBooking = await Booking.findByIdAndUpdate(
       bookingId,
-      { status: "rejected" },
+      { status: "rejected", partner: partnerId }, // Added 'partner' field here
       { new: true }
     );
 
@@ -687,6 +638,7 @@ exports.rejectBooking = async (req, res) => {
     });
   }
 };
+
 
 // Complete booking - Partner uploads photos and videos before marking the job as completed
 exports.completeBooking = async (req, res) => {
@@ -819,28 +771,36 @@ exports.getPendingBookings = async (req, res) => {
 };
 
 // Get rejected bookings
+// Get rejected bookings for the logged-in partner
 exports.getRejectedBookings = async (req, res) => {
   try {
-    const token = req.headers.authorization.split(" ")[1]; // Get the token from the header
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Decode the token
-    const partnerId = decoded._id; // Extract partner ID from the decoded token
-
+    // Find rejected bookings for the partner
     const rejectedBookings = await Booking.find({
-      partnerId: partnerId,
+      partner: req.partner._id, // Using req.partner._id instead of decoded token
       status: "rejected",
-    });
+    })
+      .populate("service", "name") // Populate service details
+      .populate("subService", "name") // Populate subService details
+      .select("-__v") // Exclude version key
+      .sort({ rejectedAt: -1 }); // Sort by rejected date, newest first
 
     if (!rejectedBookings.length) {
-      return res.status(404).json({ message: "No rejected bookings found" });
+      return res.status(200).json({
+        success: true,
+        message: "No rejected bookings found",
+        bookings: [],
+      });
     }
 
     res.status(200).json({
+      success: true,
       message: "Rejected bookings fetched successfully",
       bookings: rejectedBookings,
     });
   } catch (error) {
     console.error("Error fetching rejected bookings:", error);
     res.status(500).json({
+      success: false,
       message: "Error fetching rejected bookings",
       error: error.message || "Unknown error",
     });
