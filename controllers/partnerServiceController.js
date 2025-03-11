@@ -579,8 +579,6 @@ exports.getCompletedBookings = async (req, res) => {
 // Get rejected bookings
 // Get rejected bookings for the logged-in partner
 
-
-
 // Reject booking
 // Reject booking
 exports.rejectBooking = async (req, res) => {
@@ -601,20 +599,26 @@ exports.rejectBooking = async (req, res) => {
     // Validate partner existence
     const partner = await Partner.findById(partnerId);
     if (!partner) {
-      return res.status(404).json({ success: false, message: "Partner not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Partner not found" });
     }
 
     // Validate booking existence
     const booking = await Booking.findById(bookingId);
     if (!booking) {
-      return res.status(404).json({ success: false, message: "Booking not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
     }
 
     console.log("Current Booking Status:", booking.status);
 
     // Check if booking is already accepted, rejected, or canceled
     if (["accepted", "cancelled", "rejected"].includes(booking.status)) {
-      return res.status(400).json({ success: false, message: "Cannot reject this booking" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Cannot reject this booking" });
     }
 
     // Update Booking: Change status to 'rejected' and assign the partner
@@ -638,7 +642,6 @@ exports.rejectBooking = async (req, res) => {
     });
   }
 };
-
 
 // Complete booking - Partner uploads photos and videos before marking the job as completed
 exports.completeBooking = async (req, res) => {
@@ -1257,7 +1260,6 @@ exports.allpartnerBookings = async (req, res) => {
 
 exports.getUserReviews = async (req, res) => {
   try {
-<<<<<<< HEAD
     const partner = await Partner.findById(req.partner._id)
       .populate({
         path: "reviews.user",
@@ -1265,19 +1267,8 @@ exports.getUserReviews = async (req, res) => {
       })
       .populate({
         path: "reviews.booking",
-        //select: "status _id", // Fetch only status and _id from Booking model
+        // select: "status _id", // Fetch only status and _id from Booking model
       });
-=======
-      const partner = await Partner.findById(req.partner._id)
-          .populate({
-              path: "reviews.user",
-              // select: "name _id", // Fetch only name and _id from User model
-          })
-          .populate({
-              path: "reviews.booking",
-              // select: "status _id", // Fetch only status and _id from Booking model
-          });
->>>>>>> 9b54049700a7f13b24c4106bbacda6d7796b87ed
 
     if (!partner) {
       return res

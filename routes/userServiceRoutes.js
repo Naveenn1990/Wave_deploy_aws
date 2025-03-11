@@ -439,15 +439,11 @@ router.get("/reviews", getAllReviews);
 router.post("/reviews", ReviewController.submitReview);
 
 // Route to fetch reviews for a specific subservice
-<<<<<<< HEAD
-router.get("/subservices/:subServiceId/reviews", ReviewController.getReviews);
-=======
 router.get('/subservices/:subServiceId/reviews', ReviewController.getReviews);
 
 router.get('/wallet/topup/:userId', ReviewController.topUpWallet);
 router.post('/wallet/transactions', ReviewController.transactionsWallet);
 router.get('/offers', getAllOffers);
->>>>>>> 9b54049700a7f13b24c4106bbacda6d7796b87ed
 
 router.get("/wallet/topup/:userId", ReviewController.topUpWallet);
 router.post("/wallet/transactions", ReviewController.transactionsWallet);
