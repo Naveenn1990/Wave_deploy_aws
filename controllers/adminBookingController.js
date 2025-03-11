@@ -4,11 +4,36 @@ exports.getAllBookings = async (req, res) => {
     try {
         console.log('getAllBookings controller called');
 
+        // Step 1: Aggregate monthly booking counts
+        const monthlyCounts = await Booking.aggregate([
+            {
+                $group: {
+                    _id: { 
+                        year: { $year: "$createdAt" }, 
+                        month: { $month: "$createdAt" }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            { 
+                $sort: { "_id.year": 1, "_id.month": 1 }
+            }
+        ]);
+
+        // Step 2: Format the monthly data
+        const monthWiseBookingCount = {};
+        monthlyCounts.forEach(entry => {
+            const monthName = new Date(entry._id.year, entry._id.month - 1)
+                .toLocaleString('default', { month: 'long' });
+            monthWiseBookingCount[`${monthName} ${entry._id.year}`] = entry.count;
+        });
+
+        // Step 3: Fetch all bookings
         const bookings = await Booking.find()
             .populate('user', 'name email phone')
             .populate({
                 path: 'partner',
-                select: '_id profile.phone profile.email profile.name profile.address' // Corrected partner population
+                select: '_id profile.phone profile.email profile.name profile.address'
             })
             .populate({
                 path: 'subService',
@@ -28,6 +53,7 @@ exports.getAllBookings = async (req, res) => {
 
         console.log('Raw bookings found:', bookings.length);
 
+        // Step 4: Format the bookings
         const formattedBookings = bookings.map(booking => ({
             _id: booking._id,
             customerName: booking.user?.name || 'N/A',
@@ -57,6 +83,7 @@ exports.getAllBookings = async (req, res) => {
 
         return res.status(200).json({
             success: true,
+            monthlyBookingCount: monthWiseBookingCount,
             count: formattedBookings.length,
             data: formattedBookings
         });
