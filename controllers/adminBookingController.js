@@ -9,7 +9,7 @@ exports.getAllBookings = async (req, res) => {
             .populate('user', 'name email phone') // Populate user details
             .populate({
                 path: 'partner',
-                select: 'name _id email phone address' // Include full partner details
+                // select: 'name _id email phone address' // Include full partner details
             })
             .populate({
                 path: 'subService',
