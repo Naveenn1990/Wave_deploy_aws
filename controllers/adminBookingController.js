@@ -2,34 +2,32 @@ const Booking = require('../models/booking');  // Make sure this path is correct
 
 exports.getAllBookings = async (req, res) => {
     try {
-        console.log('getAllBookings controller called'); // Debug log
+        console.log('getAllBookings controller called');
 
-        // Fetch all bookings with correct population hierarchy, including the partner
         const bookings = await Booking.find()
-            .populate('user', 'name email phone') // Populate user details
+            .populate('user', 'name email phone')
             .populate({
                 path: 'partner',
-                select: 'name _id email phone address' // Include full partner details
+                select: '_id profile.phone profile.email profile.name profile.address' // Corrected partner population
             })
             .populate({
                 path: 'subService',
                 populate: {
-                    path: 'service', // SubService → Service
+                    path: 'service',
                     populate: {
-                        path: 'subCategory', // Service → SubCategory
+                        path: 'subCategory',
                         populate: {
-                            path: 'category', // SubCategory → ServiceCategory
+                            path: 'category',
                             select: 'name description'
                         }
                     }
                 }
             })
             .sort({ createdAt: -1 })
-            .lean(); // Convert to plain JS objects for better performance
+            .lean();
 
-        console.log('Raw bookings found:', bookings.length); // Debug log
+        console.log('Raw bookings found:', bookings.length);
 
-        // Format the response
         const formattedBookings = bookings.map(booking => ({
             _id: booking._id,
             customerName: booking.user?.name || 'N/A',
@@ -38,12 +36,12 @@ exports.getAllBookings = async (req, res) => {
             serviceName: booking.subService?.service?.name || 'N/A',
             categoryName: booking.subService?.service?.subCategory?.category?.name || 'N/A',
             partnerId: booking.partner?._id || 'N/A',
-            partnerName: booking.partner?.name || (booking.partner ? 'Still not assigned' : 'N/A'), // Handle unassigned partners
-            partnerEmail: booking.partner?.email || 'N/A',
-            partnerPhone: booking.partner?.phone || 'N/A',
-            partnerAddress: booking.partner?.address || 'N/A',
+            partnerName: booking.partner?.profile?.name || 'Still not assigned',
+            partnerEmail: booking.partner?.profile?.email || 'N/A',
+            partnerPhone: booking.partner?.profile?.phone || 'N/A',
+            partnerAddress: booking.partner?.profile?.address || 'N/A',
             amount: booking.amount || 0,
-            paymentMode: booking.paymentMode || 'N/A', // Include payment mode
+            paymentMode: booking.paymentMode || 'N/A',
             status: booking.status || 'N/A',
             scheduledDate: booking.scheduledDate,
             scheduledTime: booking.scheduledTime,
@@ -55,7 +53,7 @@ exports.getAllBookings = async (req, res) => {
             createdAt: booking.createdAt
         }));
 
-        console.log('Formatted bookings:', formattedBookings.length); // Debug log
+        console.log('Formatted bookings:', formattedBookings.length);
 
         return res.status(200).json({
             success: true,
