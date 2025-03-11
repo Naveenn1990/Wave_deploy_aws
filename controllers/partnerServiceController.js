@@ -647,6 +647,7 @@ exports.rejectBooking = async (req, res) => {
 };
 
 // Complete booking - Partner uploads photos and videos before marking the job as completed
+// Complete booking - Partner uploads photos and videos before marking the job as completed
 exports.completeBooking = async (req, res) => {
   try {
     const { id } = req.params;
@@ -665,6 +666,7 @@ exports.completeBooking = async (req, res) => {
       id,
       {
         status: "completed",
+        paymentStatus: "completed", // Update payment status to completed
         photos,
         videos,
         completedAt: new Date(),
