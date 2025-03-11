@@ -10,7 +10,7 @@ const {
   cancelBooking,
   addReview,
   getAllBookings,
-  getAllReviews
+  getAllReviews,
 } = require("../controllers/bookingController");
 const {
   addToCart,
@@ -18,13 +18,12 @@ const {
   removeFromCart,
   updateCartItem,
   clearCart,
-  addSubServiceToCart
+  addSubServiceToCart,
 } = require("../controllers/cartController");
-const ReviewController = require('../controllers/reviewController');
+const ReviewController = require("../controllers/reviewController");
 const { getAllOffers } = require("../controllers/offerController");
 const Partner = require("../models/Partner");
 const booking = require("../models/booking");
-
 
 /**
  * @swagger
@@ -88,7 +87,10 @@ router.get("/patners", userServiceController.getAllPartners);
  *       500:
  *         description: Server error
  */
-router.get("/categories-for-user", userServiceController.getAllCategoriesForUser);
+router.get(
+  "/categories-for-user",
+  userServiceController.getAllCategoriesForUser
+);
 
 /**
  * @swagger
@@ -185,7 +187,7 @@ router.get("/popular", userServiceController.getPopularServices);
  *       500:
  *         description: Server error
  */
-router.get('/subcategories', userServiceController.getAllSubCategories);
+router.get("/subcategories", userServiceController.getAllSubCategories);
 
 /**
  * @swagger
@@ -199,7 +201,7 @@ router.get('/subcategories', userServiceController.getAllSubCategories);
  *       500:
  *         description: Server error
  */
-router.get('/subservices', userServiceController.getAllSubServices);
+router.get("/subservices", userServiceController.getAllSubServices);
 
 /**
  * @swagger
@@ -213,7 +215,7 @@ router.get('/subservices', userServiceController.getAllSubServices);
  *       500:
  *         description: Server error
  */
-router.get('/subservices', userServiceController.getAllSubServicesForUser);
+router.get("/subservices", userServiceController.getAllSubServicesForUser);
 
 /**
  * @swagger
@@ -227,7 +229,7 @@ router.get('/subservices', userServiceController.getAllSubServicesForUser);
  *       500:
  *         description: Server error
  */
-router.get('/services', userServiceController.getAllServicesForUser);
+router.get("/services", userServiceController.getAllServicesForUser);
 
 /**
  * @swagger
@@ -241,7 +243,7 @@ router.get('/services', userServiceController.getAllServicesForUser);
  *       500:
  *         description: Server error
  */
-router.get('/services', userServiceController.getAllServices);
+router.get("/services", userServiceController.getAllServices);
 
 /**
  * @swagger
@@ -255,7 +257,10 @@ router.get('/services', userServiceController.getAllServices);
  *       500:
  *         description: Server error
  */
-router.get('/subcategory-hierarchy', userServiceController.getSubCategoryHierarchy);
+router.get(
+  "/subcategory-hierarchy",
+  userServiceController.getSubCategoryHierarchy
+);
 
 /**
  * @swagger
@@ -269,7 +274,10 @@ router.get('/subcategory-hierarchy', userServiceController.getSubCategoryHierarc
  *       500:
  *         description: Server error
  */
-router.get('/subcategory-hierarchy', userServiceController.getSubCategoryHierarchy);
+router.get(
+  "/subcategory-hierarchy",
+  userServiceController.getSubCategoryHierarchy
+);
 
 // Cart routes
 /**
@@ -412,7 +420,7 @@ router.delete("/cart/:itemId", auth, removeFromCart);
 router.delete("/cart", auth, clearCart);
 
 // Add subservice to cart
-router.post('/cart/subservice', auth, addSubServiceToCart);
+router.post("/cart/subservice", auth, addSubServiceToCart);
 
 // User Booking routes
 router.post("/bookings", auth, createBooking);
@@ -422,13 +430,13 @@ router.put("/bookings/:bookingId", auth, updateBooking);
 router.put("/bookings/:bookingId/cancel", auth, cancelBooking);
 router.post("/bookings/:bookingId/review", auth, addReview);
 
-router.get('/categories', userServiceController.getAllCategories);
+router.get("/categories", userServiceController.getAllCategories);
 
 // Fetch all reviews made by all users
-router.get('/reviews', getAllReviews);
+router.get("/reviews", getAllReviews);
 
 // Route to submit a review
-router.post('/reviews', ReviewController.submitReview);
+router.post("/reviews", ReviewController.submitReview);
 
 // Route to fetch reviews for a specific subservice
 router.get('/subservices/:subServiceId/reviews', ReviewController.getReviews);
@@ -437,16 +445,30 @@ router.get('/wallet/topup/:userId', ReviewController.topUpWallet);
 router.post('/wallet/transactions', ReviewController.transactionsWallet);
 router.get('/offers', getAllOffers);
 
+router.get("/wallet/topup/:userId", ReviewController.topUpWallet);
+router.post("/wallet/transactions", ReviewController.transactionsWallet);
+router.get("/offers", getAllOffers);
 
 // View cart of partner
-router.get("/partner-cart/:bookingId", auth, userServiceController.viewPartnerCart);
+router.get(
+  "/partner-cart/:bookingId",
+  auth,
+  userServiceController.viewPartnerCart
+);
 
 //Approve cart of partner
-router.put("/approve/:bookingId", auth, userServiceController.approvePartnerCart);
+router.put(
+  "/approve/:bookingId",
+  auth,
+  userServiceController.approvePartnerCart
+);
 
-//review partner 
+//review partner
 router.post("/review/partner", auth, ReviewController.reviewPartner);
 
+<<<<<<< HEAD
+module.exports = router;
+=======
 router.post("/contactus", auth, ReviewController.ContactUs);
 router.get("/contactus", auth, ReviewController.getAllContactUs);
 //get all completed booking in system 
@@ -458,3 +480,4 @@ router.get('/completed-bookings', userServiceController.getAllCompletedBookingsi
 
 
 module.exports = router; 
+>>>>>>> 9b54049700a7f13b24c4106bbacda6d7796b87ed
