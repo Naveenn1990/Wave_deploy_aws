@@ -17,7 +17,7 @@ const reviewSchema = new mongoose.Schema({
     subService: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SubService',
-        required: true
+        // required: true
     },
     rating: {
         type: Number,

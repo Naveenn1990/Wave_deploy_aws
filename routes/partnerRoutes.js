@@ -306,4 +306,9 @@ router.post("/products/add", auth, partnerServiceController.addToCart); // Add n
 
 router.get("/bookings", auth, partnerServiceController.allpartnerBookings);
 
+router.get("/bookings", auth, partnerServiceController.allpartnerBookings);
+
+// Route to get user reviews
+router.get("/reviews/user", auth, partnerServiceController.getUserReviews);
+
 module.exports = router;

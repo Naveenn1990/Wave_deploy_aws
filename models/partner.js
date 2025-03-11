@@ -8,10 +8,10 @@ const partnerSchema = new mongoose.Schema(
       ref: "Booking",
     }],
 
-    kyc : {
-      panCard : String,
-      aadhaar : String,
-      chequeImage : String,
+    kyc: {
+      panCard: String,
+      aadhaar: String,
+      chequeImage: String,
       status: {
         type: String,
         enum: ['pending', 'approved', 'rejected'],
@@ -19,12 +19,12 @@ const partnerSchema = new mongoose.Schema(
       },
       remarks: String // For admin to provide feedback if rejected
     },
-    bankDetails : {
-      accountNumber : String,
-      ifscCode : String,
-      accountHolderName : String,
-      bankName : String,
-      chequeImage : String,
+    bankDetails: {
+      accountNumber: String,
+      ifscCode: String,
+      accountHolderName: String,
+      bankName: String,
+      chequeImage: String,
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,
@@ -113,7 +113,18 @@ const partnerSchema = new mongoose.Schema(
     otpExpiry: {
       type: Date,
       select: false, // Ensures it is fetched only when explicitly requested
-    }
+    },
+
+    // Add Reviews Field
+    reviews: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        booking: { type: mongoose.Schema.Types.ObjectId, ref: "Booking" },
+        rating: { type: Number, required: true },
+        comment: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now }
+      }
+    ]
   },
   { timestamps: true }
 );

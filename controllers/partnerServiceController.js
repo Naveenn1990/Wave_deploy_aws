@@ -1190,10 +1190,11 @@ exports.addToCart = async (req, res) => {
       cart: booking.cart,
     });
   } catch (error) {
-    return res.status(500).json({ message: "Error updating cart", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error updating cart", error: error.message });
   }
 };
-
 
 // get all bookings
 // Get all bookings
@@ -1241,8 +1242,16 @@ exports.allpartnerBookings = async (req, res) => {
     console.log("Total Bookings for Partner:", partner.bookings.length);
 
     // Define booking status categories
-    const statuses = ["accepted", "completed", "in_progress", "rejected", "paused"];
-    const bookingsByStatus = Object.fromEntries(statuses.map((status) => [status, []]));
+    const statuses = [
+      "accepted",
+      "completed",
+      "in_progress",
+      "rejected",
+      "paused",
+    ];
+    const bookingsByStatus = Object.fromEntries(
+      statuses.map((status) => [status, []])
+    );
 
     // Categorize bookings by status
     partner.bookings.forEach((booking) => {
@@ -1260,7 +1269,10 @@ exports.allpartnerBookings = async (req, res) => {
       status: "completed",
     });
 
-    console.log("Verified Completed Bookings Count from DB:", completedBookingsCount);
+    console.log(
+      "Verified Completed Bookings Count from DB:",
+      completedBookingsCount
+    );
 
     // Total bookings count
     const totalBookings = partner.bookings.length;
@@ -1277,48 +1289,36 @@ exports.allpartnerBookings = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching partner bookings:", error);
-    return res.status(500).json({ message: "Error fetching bookings", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error fetching bookings", error: error.message });
   }
 };
 
+exports.getUserReviews = async (req, res) => {
+  try {
+    const partner = await Partner.findById(req.partner._id)
+      .populate({
+        path: "reviews.user",
+        // select: "name _id", // Fetch only name and _id from User model
+      })
+      .populate({
+        path: "reviews.booking",
+        //select: "status _id", // Fetch only status and _id from Booking model
+      });
 
+    if (!partner) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Partner not found." });
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    res.json({ success: true, reviews: partner.reviews });
+  } catch (error) {
+    console.error("Error fetching partner reviews:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error. Please try again later.",
+    });
+  }
+};
