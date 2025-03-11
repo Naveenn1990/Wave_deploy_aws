@@ -238,4 +238,7 @@ router.get('/bookings', auth, partnerServiceController.allpartnerBookings);
 // Route to get user reviews
 router.get('/reviews/user', auth, partnerServiceController.getUserReviews);
 
+// Route to review user
+router.post('/reviews/user', auth, partnerServiceController.reviewUser);
+
 module.exports = router;

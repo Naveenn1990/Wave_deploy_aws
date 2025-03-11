@@ -1267,8 +1267,57 @@ exports.getUserReviews = async (req, res) => {
   }
 };
 
+//review user
+exports.reviewUser = async (req, res) => {
+  try {
+    const { bookingId, userId, rating, comment } = req.body;
+    const partnerId = req.user._id; // Assuming authenticated partner's ID is stored in req.user
 
+    // Check if the booking exists and is completed
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
 
+    if (booking.status !== "completed") {
+      return res.status(400).json({ success: false, message: "Booking is not yet completed" });
+    }
+
+    // Check if the user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Check if the partner has already reviewed this booking
+    const existingReview = user.reviews.find(
+      review => review.bookingId.toString() === bookingId
+    );
+    if (existingReview) {
+      return res.status(400).json({ success: false, message: "You have already reviewed this user for this booking." });
+    }
+
+    // Add review to user schema
+    user.reviews.push({
+      bookingId,
+      partnerId,
+      rating,
+      comment
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Review added successfully",
+      reviews: user.reviews
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
 
 
 
