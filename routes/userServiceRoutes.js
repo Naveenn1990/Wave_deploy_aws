@@ -466,9 +466,6 @@ router.put(
 //review partner
 router.post("/review/partner", auth, ReviewController.reviewPartner);
 
-<<<<<<< HEAD
-module.exports = router;
-=======
 router.post("/contactus", auth, ReviewController.ContactUs);
 router.get("/contactus", auth, ReviewController.getAllContactUs);
 //get all completed booking in system 
@@ -480,4 +477,3 @@ router.get('/completed-bookings', userServiceController.getAllCompletedBookingsi
 
 
 module.exports = router; 
->>>>>>> 9b54049700a7f13b24c4106bbacda6d7796b87ed
