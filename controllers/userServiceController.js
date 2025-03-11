@@ -475,99 +475,6 @@ const getAllSubCategoriesForUser = async (req, res) => {
 //         res.status(500).json({ success: false, message: error.message });
 //     }
 // };
-
-// const getAllSubServices = async (req, res) => {
-//   try {
-//       const subservices = await SubService.aggregate([
-//           {
-//               $match: { isActive: true }
-//           },
-//           {
-//               $lookup: {
-//                   from: 'services', // Reference to Service collection
-//                   localField: 'service',
-//                   foreignField: '_id',
-//                   as: 'service'
-//               }
-//           },
-//           {
-//               $lookup: {
-//                   from: 'reviews', // Reference to Review collection
-//                   localField: 'reviews',
-//                   foreignField: '_id',
-//                   as: 'reviews'
-//               }
-//           },
-//           {
-//               $addFields: {
-//                   averageRating: {
-//                       $cond: {
-//                           if: { $gt: [{ $size: "$reviews" }, 0] },
-//                           then: { $avg: "$reviews.rating" },
-//                           else: "No rating till now"
-//                       }
-//                   }
-//               }
-//           },
-//           {
-//               $project: {
-//                   name: 1,
-//                   description: 1,
-//                   price: 1,
-//                   discount: 1,
-//                   basePrice: 1,
-//                   gst: 1,
-//                   commission: 1,
-//                   icon: 1,
-//                   includes: 1,
-//                   excludes: 1,
-//                   isActive: 1,
-//                   createdAt: 1,
-//                   averageRating: 1 // Include calculated rating
-//               }
-//           }
-//       ]);
-
-//       res.status(200).json({
-//           success: true,
-//           data: subservices
-//       });
-//   } catch (error) {
-//       console.error('Error fetching subservices:', error);
-//       res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-// const getAllSubServices = async (req, res) => {
-//   try {
-//       const subservices = await SubService.find({ isActive: true })
-//           .populate({
-//               path: 'service',
-//               populate: {
-//                   path: 'subCategory',
-//                   populate: {
-//                       path: 'category', // This refers to the ServiceCategory
-//                       model: 'ServiceCategory'
-//                   }
-//               }
-//           })
-//           .populate({
-//             path: 'reviews',  // Make sure this matches the updated schema
-//             model: 'Review'
-//             // populate: {
-//             //     path: 'user',  // If you want to get user details along with the review
-//             //     model: 'User'
-//             // }
-//         });
-
-//       res.status(200).json({
-//           success: true,
-//           data: subservices
-//       });
-//   } catch (error) {
-//       console.error('Error fetching subservices:', error);
-//       res.status(500).json({ success: false, message: error.message });
-//   }
-// };
 const getAllSubServices = async (req, res) => {
   try {
       const subservices = await SubService.find({ isActive: true })
@@ -614,6 +521,12 @@ const getAllSubServices = async (req, res) => {
       res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+
+
+
+
 
 const getAllSubServicesForUser = async (req, res) => {
   console.log("hi")
