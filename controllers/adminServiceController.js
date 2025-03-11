@@ -7,6 +7,7 @@ const path = require('path');
 const { stripUrl } = require('../middleware/upload');
 const SubCategory = require("../models/SubCategory");
 const Product = require("../models/product");
+const Partner = require("../models/Partner");
 // Get all services
 exports.getAllServices = async (req, res) => {
   try {
@@ -1203,5 +1204,52 @@ exports.returnProduct = async (req, res) => {
       res.status(200).json({ message: "Product returned successfully", product });
   } catch (error) {
       res.status(500).json({ message: "Error returning product", error });
+  }
+};
+
+
+
+//change the partner profile status 
+// Admin API to update partner's profile status
+exports.updatePartnerStatus = async (req, res) => {
+  try {
+      const { partnerId } = req.params;
+      const { status } = req.body;
+
+      // Validate status value
+      if (!['active', 'inactive'].includes(status)) {
+          return res.status(400).json({
+              success: false,
+              message: "Invalid status value. Must be 'active' or 'inactive'."
+          });
+      }
+
+      // Find and update partner's status
+      const updatedPartner = await Partner.findByIdAndUpdate(
+          partnerId,
+          { profileStatus: status },
+          { new: true } // Return updated document
+      );
+
+      if (!updatedPartner) {
+          return res.status(404).json({
+              success: false,
+              message: "Partner not found."
+          });
+      }
+
+      res.status(200).json({
+          success: true,
+          message: `Partner's status updated to '${status}'.`,
+          data: updatedPartner
+      });
+
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({
+          success: false,
+          message: "Internal server error",
+          error: error.message
+      });
   }
 };

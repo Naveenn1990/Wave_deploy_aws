@@ -7,6 +7,7 @@ const jwt = require("jsonwebtoken");
 const SubService = require("../models/SubService");
 const mongoose = require("mongoose");
 const Product = require("../models/product");
+const User = require("../models/User");
 
 // Get all available services for partners
 exports.getAvailableServices = async (req, res) => {
@@ -1286,58 +1287,62 @@ exports.getUserReviews = async (req, res) => {
   }
 };
 
-// Route to review user
+
+// Review partner
 exports.reviewUser = async (req, res) => {
   try {
-    const { bookingId, userId, rating, comment } = req.body;
-    const partnerId = req.user._id; // Assuming authenticated partner's ID is stored in req.user
+      const { bookingId, userId, rating, comment } = req.body;
+      const partnerId = req.partner._id;
 
-    // Check if the booking exists and is completed
-    const booking = await Booking.findById(bookingId);
-    if (!booking) {
-      return res.status(404).json({ success: false, message: "Booking not found" });
-    }
+      // Check if the booking exists and belongs to the partner
+      const booking = await Booking.findOne({
+          _id: bookingId,
+          user: userId,
+          partner: partnerId,
+          status: "completed"
+      });
 
-    if (booking.status !== "completed") {
-      return res.status(400).json({ success: false, message: "Booking is not yet completed" });
-    }
+      if (!booking) {
+          return res.status(400).json({ success: false, message: "Invalid booking or booking not completed." });
+      }
 
-    // Check if the user exists
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
+      // Find the user
+      const user = await User.findById(userId);
+      if (!user) {
+          return res.status(404).json({ success: false, message: "User not found." });
+      }
 
-    // Check if the partner has already reviewed this booking
-    const existingReview = user.reviews.find(
-      review => review.bookingId.toString() === bookingId
-    );
-    if (existingReview) {
-      return res.status(400).json({ success: false, message: "You have already reviewed this user for this booking." });
-    }
+      // Check if the user has already reviewed this partner
+      const existingReview = user.reviews.find(
+          (review) => review.partner.toString() === partnerId.toString()
+      );
 
-    // Add review to user schema
-    user.reviews.push({
-      bookingId,
-      partnerId,
-      rating,
-      comment
-    });
+      if (existingReview) {
+          return res.status(400).json({
+              success: false,
+              message: "You have already submitted a review for this partner."
+          });
+      }
 
-    await user.save();
+      // Create review object
+      const review = {
+          user: userId,
+          booking: bookingId,
+          rating,
+          comment,
+          createdAt: new Date()
+      };
 
-    res.status(201).json({
-      success: true,
-      message: "Review added successfully",
-      reviews: user.reviews
-    });
+      // Push review into the user's reviews array
+      user.reviews.push(review);
+      await user.save();
 
+      res.status(201).json({ success: true, message: "Review submitted successfully!", review });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+      console.error(error);
+      res.status(500).json({ success: false, message: "Server error. Please try again later." });
   }
 };
-
 
 
 
