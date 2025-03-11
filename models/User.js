@@ -55,6 +55,17 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Add Reviews Field
+userSchema.reviews = [
+  {
+    partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner" },
+    booking: { type: mongoose.Schema.Types.ObjectId, ref: "Booking" },
+    rating: { type: Number, required: true },
+    comment: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+  }
+]
+
 // Hash password before saving
 userSchema.pre("save", async function(next) {
   try {

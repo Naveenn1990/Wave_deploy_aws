@@ -26,6 +26,8 @@ exports.submitReview = async (req, res) => {
       // Create and save the new review
       const review = new Review({ user, subService, rating, comment });
       await review.save();
+      
+
 
       res.status(201).json({ 
           success: true,
@@ -277,7 +279,7 @@ exports.getAllReviewsForAdminWithPartnerDetails = async (req, res) => {
 };
 
 
-
+// Review partner
 exports.reviewPartner = async (req, res) => {
   try {
       const { bookingId, partnerId, rating, comment } = req.body;
@@ -333,39 +335,40 @@ exports.reviewPartner = async (req, res) => {
   }
 };
 
+
 exports.ContactUs = async (req, res) => {
-  try {
-    const { fullName, email, phone, message } = req.body;
-    
-    if (!fullName || !email || !phone || !message) {
-      return res.status(400).json({ error: "All fields are required" });
+    try {
+      const { fullName, email, phone, message } = req.body;
+      
+      if (!fullName || !email || !phone || !message) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+  
+      const newContact = new Contact({ fullName, email, phone, message });
+      await newContact.save();
+      
+      res.status(201).json({ message: "Your query has been sent successfully!" });
+    } catch (error) {
+      console.error("Error saving contact form data:", error);
+      res.status(500).json({ error: "Server error. Please try again later." });
     }
-
-    const newContact = new Contact({ fullName, email, phone, message });
-    await newContact.save();
-    
-    res.status(201).json({ message: "Your query has been sent successfully!" });
-  } catch (error) {
-    console.error("Error saving contact form data:", error);
-    res.status(500).json({ error: "Server error. Please try again later." });
   }
-}
-
-exports.getAllContactUs = async (req, res) => {
-  try {
-    // const { fullName, email, phone, message } = req.body;
-    
-    // if (!fullName || !email || !phone || !message) {
-    //   return res.status(400).json({ error: "All fields are required" });
-    // }
-
-    // const newContact = new Contact({ fullName, email, phone, message });
-    // await newContact.save();
-    const allContacts = await Contact.find(); 
-    console.log(allContacts, "allContacts");
-    res.status(201).json({ data : allContacts });
-  } catch (error) {
-    console.error("Error fetching contact  data:", error);
-    res.status(500).json({ error: "Server error. Please try again later." });
+  
+  exports.getAllContactUs = async (req, res) => {
+    try {
+      // const { fullName, email, phone, message } = req.body;
+      
+      // if (!fullName || !email || !phone || !message) {
+      //   return res.status(400).json({ error: "All fields are required" });
+      // }
+  
+      // const newContact = new Contact({ fullName, email, phone, message });
+      // await newContact.save();
+      const allContacts = await Contact.find(); 
+      
+      res.status(201).json({ data : allContacts });
+    } catch (error) {
+      console.error("Error fetching contact  data:", error);
+      res.status(500).json({ error: "Server error. Please try again later." });
+    }
   }
-}

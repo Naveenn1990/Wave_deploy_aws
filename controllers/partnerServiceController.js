@@ -577,54 +577,9 @@ exports.getCompletedBookings = async (req, res) => {
 };
 
 // Get rejected bookings
-exports.getRejectedBookings = async (req, res) => {
-  try {
-    const rejectedBookings = await Booking.find({
-      partner: req.partner._id,
-      status: "rejected",
-    })
-      .populate({
-        path: "user",
-        select: "name email phone profilePhoto address",
-      })
-      .populate({
-        path: "subService",
-        select: "name price photo description duration",
-      })
-      .populate({
-        path: "service",
-        select: "name description",
-      })
-      .populate({
-        path: "partner",
-        select:
-          "name email phone profilePicture address experience qualification profile",
-      })
-      .sort({ updatedAt: -1 });
+// Get rejected bookings for the logged-in partner
 
-    if (!rejectedBookings.length) {
-      return res.status(200).json({
-        success: true,
-        message: "No rejected bookings found",
-        data: [],
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Rejected bookings fetched successfully",
-      data: rejectedBookings,
-    });
-  } catch (error) {
-    console.error("Error fetching rejected bookings:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error fetching rejected bookings",
-      error: error.message,
-    });
-  }
-};
-
+// Reject booking
 // Reject booking
 exports.rejectBooking = async (req, res) => {
   try {
@@ -666,10 +621,10 @@ exports.rejectBooking = async (req, res) => {
         .json({ success: false, message: "Cannot reject this booking" });
     }
 
-    // Update Booking: Change status to 'rejected'
+    // Update Booking: Change status to 'rejected' and assign the partner
     const updatedBooking = await Booking.findByIdAndUpdate(
       bookingId,
-      { status: "rejected" },
+      { status: "rejected", partner: partnerId }, // Added 'partner' field here
       { new: true }
     );
 
@@ -819,28 +774,36 @@ exports.getPendingBookings = async (req, res) => {
 };
 
 // Get rejected bookings
+// Get rejected bookings for the logged-in partner
 exports.getRejectedBookings = async (req, res) => {
   try {
-    const token = req.headers.authorization.split(" ")[1]; // Get the token from the header
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Decode the token
-    const partnerId = decoded._id; // Extract partner ID from the decoded token
-
+    // Find rejected bookings for the partner
     const rejectedBookings = await Booking.find({
-      partnerId: partnerId,
+      partner: req.partner._id, // Using req.partner._id instead of decoded token
       status: "rejected",
-    });
+    })
+      .populate("service", "name") // Populate service details
+      .populate("subService", "name") // Populate subService details
+      .select("-__v") // Exclude version key
+      .sort({ rejectedAt: -1 }); // Sort by rejected date, newest first
 
     if (!rejectedBookings.length) {
-      return res.status(404).json({ message: "No rejected bookings found" });
+      return res.status(200).json({
+        success: true,
+        message: "No rejected bookings found",
+        bookings: [],
+      });
     }
 
     res.status(200).json({
+      success: true,
       message: "Rejected bookings fetched successfully",
       bookings: rejectedBookings,
     });
   } catch (error) {
     console.error("Error fetching rejected bookings:", error);
     res.status(500).json({
+      success: false,
       message: "Error fetching rejected bookings",
       error: error.message || "Unknown error",
     });
@@ -1190,10 +1153,11 @@ exports.addToCart = async (req, res) => {
       cart: booking.cart,
     });
   } catch (error) {
-    return res.status(500).json({ message: "Error updating cart", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error updating cart", error: error.message });
   }
 };
-
 
 // get all bookings
 // Get all bookings
@@ -1241,8 +1205,16 @@ exports.allpartnerBookings = async (req, res) => {
     console.log("Total Bookings for Partner:", partner.bookings.length);
 
     // Define booking status categories
-    const statuses = ["accepted", "completed", "in_progress", "rejected", "paused"];
-    const bookingsByStatus = Object.fromEntries(statuses.map((status) => [status, []]));
+    const statuses = [
+      "accepted",
+      "completed",
+      "in_progress",
+      "rejected",
+      "paused",
+    ];
+    const bookingsByStatus = Object.fromEntries(
+      statuses.map((status) => [status, []])
+    );
 
     // Categorize bookings by status
     partner.bookings.forEach((booking) => {
@@ -1260,7 +1232,10 @@ exports.allpartnerBookings = async (req, res) => {
       status: "completed",
     });
 
-    console.log("Verified Completed Bookings Count from DB:", completedBookingsCount);
+    console.log(
+      "Verified Completed Bookings Count from DB:",
+      completedBookingsCount
+    );
 
     // Total bookings count
     const totalBookings = partner.bookings.length;
@@ -1277,37 +1252,91 @@ exports.allpartnerBookings = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching partner bookings:", error);
-    return res.status(500).json({ message: "Error fetching bookings", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error fetching bookings", error: error.message });
   }
 };
-
-
-
 
 exports.getUserReviews = async (req, res) => {
   try {
-      const partner = await Partner.findById(req.partner._id)
-          .populate({
-              path: "reviews.user",
-              // select: "name _id", // Fetch only name and _id from User model
-          })
-          .populate({
-              path: "reviews.booking",
-              // select: "status _id", // Fetch only status and _id from Booking model
-          });
+    const partner = await Partner.findById(req.partner._id)
+      .populate({
+        path: "reviews.user",
+        // select: "name _id", // Fetch only name and _id from User model
+      })
+      .populate({
+        path: "reviews.booking",
+        // select: "status _id", // Fetch only status and _id from Booking model
+      });
 
-      if (!partner) {
-          return res.status(404).json({ success: false, message: "Partner not found." });
-      }
+    if (!partner) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Partner not found." });
+    }
 
-      res.json({ success: true, reviews: partner.reviews });
+    res.json({ success: true, reviews: partner.reviews });
   } catch (error) {
-      console.error("Error fetching partner reviews:", error);
-      res.status(500).json({ success: false, message: "Server error. Please try again later." });
+    console.error("Error fetching partner reviews:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error. Please try again later.",
+    });
   }
 };
 
+// Route to review user
+exports.reviewUser = async (req, res) => {
+  try {
+    const { bookingId, userId, rating, comment } = req.body;
+    const partnerId = req.user._id; // Assuming authenticated partner's ID is stored in req.user
 
+    // Check if the booking exists and is completed
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    if (booking.status !== "completed") {
+      return res.status(400).json({ success: false, message: "Booking is not yet completed" });
+    }
+
+    // Check if the user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Check if the partner has already reviewed this booking
+    const existingReview = user.reviews.find(
+      review => review.bookingId.toString() === bookingId
+    );
+    if (existingReview) {
+      return res.status(400).json({ success: false, message: "You have already reviewed this user for this booking." });
+    }
+
+    // Add review to user schema
+    user.reviews.push({
+      bookingId,
+      partnerId,
+      rating,
+      comment
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Review added successfully",
+      reviews: user.reviews
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
 
 
 
