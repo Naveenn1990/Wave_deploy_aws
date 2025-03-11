@@ -438,6 +438,7 @@ exports.getMatchingBookings = async (req, res) => {
 };
 
 //accept booking
+//accept booking
 exports.acceptBooking = async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -472,10 +473,10 @@ exports.acceptBooking = async (req, res) => {
     console.log("Current Booking Status:", booking.status);
 
     // Check if booking is already accepted or canceled
-    if (["accepted", "cancelled"].includes(booking.status)) {
+    if (["accepted", "cancelled"].includes(booking.status) || booking.partner) {
       return res
         .status(400)
-        .json({ success: false, message: "Cannot accept this booking" });
+        .json({ success: false, message: "This booking has already been accepted or cancelled" });
     }
 
     // Update Booking: Assign partner and change status to 'accepted'
@@ -527,6 +528,7 @@ exports.acceptBooking = async (req, res) => {
     });
   }
 };
+
 
 // Get completed bookings
 exports.getCompletedBookings = async (req, res) => {
