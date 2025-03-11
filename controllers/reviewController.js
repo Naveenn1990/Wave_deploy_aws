@@ -362,7 +362,7 @@ exports.getAllContactUs = async (req, res) => {
     // const newContact = new Contact({ fullName, email, phone, message });
     // await newContact.save();
     const allContacts = await Contact.find(); 
-    
+    console.log(allContacts, "allContacts");
     res.status(201).json({ data : allContacts });
   } catch (error) {
     console.error("Error fetching contact  data:", error);
