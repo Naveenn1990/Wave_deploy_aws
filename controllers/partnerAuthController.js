@@ -6,10 +6,10 @@ const { sendOTP } = require("../utils/sendOTP");
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
 const path = require("path");
-const ServiceCategory = require("../models/ServiceCategory"); 
-const SubCategory = require("../models/SubCategory"); 
+const ServiceCategory = require("../models/ServiceCategory");
+const SubCategory = require("../models/SubCategory");
 const Service = require("../models/Service");
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 // Send OTP for partner login/registration
 exports.sendLoginOTP = async (req, res) => {
   try {
@@ -57,6 +57,7 @@ exports.sendLoginOTP = async (req, res) => {
       success: true,
       message: "OTP sent successfully",
       phone,
+      otp,
     });
   } catch (error) {
     console.error("Send Partner OTP Error:", error);
@@ -73,26 +74,39 @@ exports.verifyLoginOTP = async (req, res) => {
     const { phone, otp } = req.body;
 
     if (!phone || !otp) {
-      return res.status(400).json({ success: false, message: "Phone and OTP are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Phone and OTP are required" });
     }
 
     // Debug log
     console.log("Verifying OTP:", { phone, otp });
 
-    const partner = await Partner.findOne({ phone }).select("+tempOTP +otpExpiry");
+    const partner = await Partner.findOne({ phone }).select(
+      "+tempOTP +otpExpiry"
+    );
 
     // Debug log
     console.log("Found Partner:", partner);
     if (!partner) {
-      return res.status(400).json({ success: false, message: "Partner not found" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Partner not found" });
     }
 
     console.log("Stored OTP:", partner.tempOTP, "Entered OTP:", otp);
-    console.log("Stored OTP Expiry:", partner.otpExpiry, "Current Time:", new Date());
+    console.log(
+      "Stored OTP Expiry:",
+      partner.otpExpiry,
+      "Current Time:",
+      new Date()
+    );
 
     // Check if OTP is expired
     if (!partner.otpExpiry || partner.otpExpiry < new Date()) {
-      return res.status(400).json({ success: false, message: "OTP has expired" });
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP has expired" });
     }
 
     // Verify OTP (convert to string before comparison)
@@ -108,7 +122,9 @@ exports.verifyLoginOTP = async (req, res) => {
     await partner.save();
 
     // Generate JWT token
-    const token = jwt.sign({ id: partner._id }, process.env.JWT_SECRET, { expiresIn: "30d" });
+    const token = jwt.sign({ id: partner._id }, process.env.JWT_SECRET, {
+      expiresIn: "30d",
+    });
 
     // Ensure all required fields are included in the response
     res.json({
@@ -141,10 +157,15 @@ exports.verifyLoginOTP = async (req, res) => {
     });
   } catch (error) {
     console.error("Login Error:", error);
-    res.status(500).json({ success: false, message: "Error during login", error: error.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Error during login",
+        error: error.message,
+      });
   }
 };
-
 
 // Resend OTP for partner
 exports.resendOTP = async (req, res) => {
@@ -201,20 +222,31 @@ exports.resendOTP = async (req, res) => {
 
 // Complete partner profile
 
-
 exports.completeProfile = async (req, res) => {
   try {
     console.log("Received request body:", req.body);
     console.log("Received file:", req.file);
 
-    const { name, email, whatsappNumber, qualification, experience, contactNumber, address, landmark, pincode } = req.body;
+    const {
+      name,
+      email,
+      whatsappNumber,
+      qualification,
+      experience,
+      contactNumber,
+      address,
+      landmark,
+      pincode,
+    } = req.body;
 
     if (!name || !email) {
-      return res.status(400).json({ success: false, message: "Name and Email are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Name and Email are required" });
     }
 
     // 📂 Handle file upload
-    const profilePicturePath = req.file ? req.file.path.split('/').pop() : null;
+    const profilePicturePath = req.file ? req.file.path.split("/").pop() : null;
 
     // 🆕 Create the new Partner (without requiring category, subcategory, etc.)
     // const newPartner = new Partner({
@@ -231,7 +263,7 @@ exports.completeProfile = async (req, res) => {
       {
         $set: {
           profileCompleted: false, // Will be updated in another API
-          profile: { name, email,address,landmark,pincode },
+          profile: { name, email, address, landmark, pincode },
           whatsappNumber,
           qualification,
           experience,
@@ -243,25 +275,42 @@ exports.completeProfile = async (req, res) => {
 
     // await newPartner.save();
     if (!updatedPartner) {
-      return res.status(404).json({ success: false, message: "Partner not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Partner not found" });
     }
-    
-    return res.status(200).json({ success: true, message: "Partner updated successfully", data: updatedPartner });
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "Partner updated successfully",
+        data: updatedPartner,
+      });
 
     // return res.status(201).json({ success: true, message: "Profile created successfully", data: newPartner });
   } catch (error) {
     console.error("Complete Profile Error:", error.message);
-    return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Internal Server Error",
+        error: error.message,
+      });
   }
 };
 
 //select service and category
 exports.selectCategoryAndServices = async (req, res) => {
   try {
-    const { partnerId, category, subcategory, service, modeOfService } = req.body;
+    const { partnerId, category, subcategory, service, modeOfService } =
+      req.body;
 
     if (!partnerId || !category || !subcategory || !service || !modeOfService) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
     }
 
     // Log received data for debugging
@@ -270,13 +319,20 @@ exports.selectCategoryAndServices = async (req, res) => {
     // ✅ Validate category
     const validCategory = await ServiceCategory.findById(category);
     if (!validCategory) {
-      return res.status(400).json({ success: false, message: "Invalid category ID" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid category ID" });
     }
 
     // ✅ Validate subcategory
-    const validSubcategory = await SubCategory.findOne({ _id: subcategory, category });
+    const validSubcategory = await SubCategory.findOne({
+      _id: subcategory,
+      category,
+    });
     if (!validSubcategory) {
-      return res.status(400).json({ success: false, message: "Invalid subcategory ID" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid subcategory ID" });
     }
 
     // ✅ Validate services under the selected subcategory
@@ -284,21 +340,21 @@ exports.selectCategoryAndServices = async (req, res) => {
     console.log("Service IDs to check:", serviceIds);
 
     // const validServices = await Service.find({ _id: { $in: serviceIds }, subcategory });
-    const validServices = await Service.find({ 
-      _id: { $in: serviceIds.map(id => new mongoose.Types.ObjectId(id)) }, 
-      subCategory: subcategory    
+    const validServices = await Service.find({
+      _id: { $in: serviceIds.map((id) => new mongoose.Types.ObjectId(id)) },
+      subCategory: subcategory,
     });
-    
+
     console.log("Valid services found:", validServices);
 
     if (validServices.length !== serviceIds.length) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid service IDs", 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid service IDs",
         details: {
           requested: serviceIds,
-          found: validServices.map(s => s._id)
-        } 
+          found: validServices.map((s) => s._id),
+        },
       });
     }
 
@@ -316,21 +372,29 @@ exports.selectCategoryAndServices = async (req, res) => {
     );
 
     if (!updatedPartner) {
-      return res.status(404).json({ success: false, message: "Partner not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Partner not found" });
     }
 
-    return res.status(200).json({ success: true, message: "Profile updated successfully", data: updatedPartner });
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "Profile updated successfully",
+        data: updatedPartner,
+      });
   } catch (error) {
     console.error("Update Profile Error:", error);
-    return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Internal Server Error",
+        error: error.message,
+      });
   }
 };
-
-
-
-
-
-
 
 // Update KYC details
 exports.updateKYC = async (req, res) => {
@@ -482,7 +546,8 @@ exports.completeKYC = async (req, res) => {
     if (!panCard || !aadhaar || !chequeImage) {
       return res.status(400).json({
         success: false,
-        message: "Please upload all required documents (PAN, Aadhaar, Cheque Image).",
+        message:
+          "Please upload all required documents (PAN, Aadhaar, Cheque Image).",
       });
     }
 
@@ -530,7 +595,7 @@ exports.completeKYC = async (req, res) => {
           status: profile.kyc.status,
           remarks: profile.kyc.remarks,
           panCard,
-          aadhaar
+          aadhaar,
         },
       },
     });
@@ -544,17 +609,16 @@ exports.completeKYC = async (req, res) => {
   }
 };
 
-
 // New endpoint for admin to update KYC status
 exports.updateKYCStatus = async (req, res) => {
   try {
     const { partnerId } = req.params;
     const { status, remarks } = req.body;
 
-    if (!['pending', 'approved', 'rejected'].includes(status)) {
+    if (!["pending", "approved", "rejected"].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status. Must be 'pending', 'approved', or 'rejected'"
+        message: "Invalid status. Must be 'pending', 'approved', or 'rejected'",
       });
     }
 
@@ -562,7 +626,7 @@ exports.updateKYCStatus = async (req, res) => {
     if (!partner) {
       return res.status(404).json({
         success: false,
-        message: "Partner not found"
+        message: "Partner not found",
       });
     }
 
@@ -577,15 +641,15 @@ exports.updateKYCStatus = async (req, res) => {
       message: `KYC ${status} successfully`,
       kyc: {
         status: partner.kyc.status,
-        remarks: partner.kyc.remarks
-      }
+        remarks: partner.kyc.remarks,
+      },
     });
   } catch (error) {
     console.error("Update KYC Status Error:", error);
     res.status(500).json({
       success: false,
       message: "Error updating KYC status",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -600,7 +664,12 @@ exports.getProfile = async (req, res) => {
       });
     }
 
-    console.log("Partner ID:", req.partner._id, "Type:", typeof req.partner._id);
+    console.log(
+      "Partner ID:",
+      req.partner._id,
+      "Type:",
+      typeof req.partner._id
+    );
 
     const partnerId = new mongoose.Types.ObjectId(req.partner._id);
 
@@ -643,21 +712,18 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-
-exports.getAllPartnerProfile = async (req , res) => {
-  try{
-    const allPartners = await PartnerProfile.find() 
+exports.getAllPartnerProfile = async (req, res) => {
+  try {
+    const allPartners = await PartnerProfile.find();
     return res.status(200).json({
       success: false,
       message: "Profile not found",
-      data : allPartners
+      data: allPartners,
     });
-  } catch(err){
-    console.log("Error Occured : " , err)
+  } catch (err) {
+    console.log("Error Occured : ", err);
   }
-}
-
-
+};
 
 // Update partner profile
 exports.updateProfile = async (req, res) => {
