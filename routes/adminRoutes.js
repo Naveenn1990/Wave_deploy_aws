@@ -105,4 +105,7 @@ router.put('/products/:id', upload.single('image'),adminAuth,  adminServiceContr
 router.delete('/products/:id', adminAuth, adminServiceController.deleteProduct); // Delete product
 
 
+//change the status of partner 
+router.put('/partner/:partnerId/status', adminAuth, adminServiceController.updatePartnerStatus);
+
 module.exports = router;

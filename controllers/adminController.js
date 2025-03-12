@@ -344,10 +344,38 @@ exports.getAllPartners = async (req, res) => {
       .select("-tempOTP") // Exclude tempOTP from the response
       .sort({ createdAt: -1 });
 
-    const formattedPartners = partners.map((partner) => ({
-      Profile: {
-        id: partner._id,
-        name: partner.profile?.name || "N/A",
+
+      // Generate month-wise booking count
+    const formattedPartners = await Promise.all(partners.map(async (partner) => {
+      const bookingCounts = await booking.aggregate([
+        {
+          $match: { partner: partner._id } // Filter bookings for the current partner
+        },
+        {
+          $group: {
+            _id: { 
+              year: { $year: "$createdAt" }, 
+              month: { $month: "$createdAt" }
+            },
+            count: { $sum: 1 }
+          }
+        },
+        { 
+          $sort: { "_id.year": 1, "_id.month": 1 } 
+        }
+      ]);
+
+      // Convert bookingCounts into a structured object
+      const monthWiseBookings = {};
+      bookingCounts.forEach(entry => {
+        const monthName = new Date(entry._id.year, entry._id.month - 1).toLocaleString('default', { month: 'long' });
+        monthWiseBookings[monthName] = entry.count;
+      });
+
+      return {
+        Profile: {
+          id: partner._id,
+          name: partner.profile?.name || "N/A",
         email: partner.profile?.email || "N/A",
         phone: partner.phone,
         address: partner.profile?.address || "N/A",
@@ -369,7 +397,9 @@ exports.getAllPartners = async (req, res) => {
       Bookings: partner.bookings.length > 0 ? partner.bookings : "No bookings",
       Reviews: partner.reviews.length > 0 ? partner.reviews : "No reviews",
       Services: partner.service.length > 0 ? partner.service : "No services",
-    }));
+      MonthWiseBookingCount: monthWiseBookings
+    };
+        }));
 
     res.json({
       partners: formattedPartners,
