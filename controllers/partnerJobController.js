@@ -6,28 +6,33 @@ const PartnerWallet = require("../models/PartnerWallet");
 exports.getJobAlerts = async (req, res) => {
   try {
     const partner = await PartnerProfile.findOne({ partner: req.partner._id });
-    
+
     if (!partner) {
       return res.status(404).json({ message: "Partner profile not found" });
     }
 
     if (partner.dutyStatus !== "on") {
-      return res.status(400).json({ message: "Please turn on duty status to receive jobs" });
+      return res
+        .status(400)
+        .json({ message: "Please turn on duty status to receive jobs" });
     }
 
     // Get relevant jobs based on partner's service categories and location
+
     const jobs = await Booking.find({
       status: "pending",
-      serviceCategory: { $in: partner.serviceCategories.map(cat => cat.mainCategory) },
+      serviceCategory: {
+        $in: partner.serviceCategories.map((cat) => cat.mainCategory),
+      },
       "location.coordinates": {
         $near: {
           $geometry: {
             type: "Point",
-            coordinates: partner.currentLocation.coordinates
+            coordinates: partner.currentLocation.coordinates,
           },
-          $maxDistance: 10000 // 10km radius
-        }
-      }
+          $maxDistance: 10000, // 10km radius
+        },
+      },
     }).populate("user", "name phone");
 
     res.json(jobs);
@@ -48,7 +53,9 @@ exports.acceptJob = async (req, res) => {
     }
 
     if (booking.status !== "pending") {
-      return res.status(400).json({ message: "This job is no longer available" });
+      return res
+        .status(400)
+        .json({ message: "This job is no longer available" });
     }
 
     booking.partner = req.partner._id;
@@ -70,7 +77,7 @@ exports.startJob = async (req, res) => {
 
     const booking = await Booking.findOne({
       _id: bookingId,
-      partner: req.partner._id
+      partner: req.partner._id,
     });
 
     if (!booking) {
@@ -102,7 +109,7 @@ exports.completeJob = async (req, res) => {
 
     const booking = await Booking.findOne({
       _id: bookingId,
-      partner: req.partner._id
+      partner: req.partner._id,
     });
 
     if (!booking) {
@@ -150,7 +157,7 @@ exports.getJobHistory = async (req, res) => {
       bookings,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
-      total
+      total,
     });
   } catch (error) {
     console.error("Get Job History Error:", error);
@@ -162,7 +169,7 @@ exports.getJobHistory = async (req, res) => {
 exports.toggleDutyStatus = async (req, res) => {
   try {
     const profile = await PartnerProfile.findOne({ partner: req.partner._id });
-    
+
     if (!profile) {
       return res.status(404).json({ message: "Partner profile not found" });
     }
@@ -170,17 +177,17 @@ exports.toggleDutyStatus = async (req, res) => {
     // Check wallet balance
     const wallet = await PartnerWallet.findOne({ partner: req.partner._id });
     if (wallet.balance < wallet.minBalance) {
-      return res.status(400).json({ 
-        message: "Insufficient wallet balance. Please recharge to go on duty." 
+      return res.status(400).json({
+        message: "Insufficient wallet balance. Please recharge to go on duty.",
       });
     }
 
     profile.dutyStatus = profile.dutyStatus === "on" ? "off" : "on";
     await profile.save();
 
-    res.json({ 
+    res.json({
       message: `Duty status turned ${profile.dutyStatus}`,
-      dutyStatus: profile.dutyStatus
+      dutyStatus: profile.dutyStatus,
     });
   } catch (error) {
     console.error("Toggle Duty Status Error:", error);
