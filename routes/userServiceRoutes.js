@@ -473,14 +473,4 @@ router.get(
   "/completed-bookings",
   userServiceController.getAllCompletedBookingsinsystem
 );
-
-<<<<<<< HEAD
 module.exports = router;
-=======
-
-
-
-
-
-module.exports = router; 
->>>>>>> 0bd3b49e2030b9f6fab254f870ed3d655aab0526
