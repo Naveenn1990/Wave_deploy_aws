@@ -42,7 +42,6 @@ const userSchema = new mongoose.Schema({
     enum: ['active', 'blocked'],
     default: 'active'
   },
-  // ✅ Corrected Reviews Field
   reviews: [
     {
       partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner" },
@@ -73,5 +72,4 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// ✅ Correct Model Definition to Prevent Duplication
 module.exports = mongoose.models.User || mongoose.model("User", userSchema);
