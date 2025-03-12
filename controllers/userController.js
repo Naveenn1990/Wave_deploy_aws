@@ -39,14 +39,12 @@ exports.register = async (req, res) => {
     }
 
     if (user) {
-      // If user exists and is verified, update their details
       user.name = name;
       user.email = email;
-      user.password = password; // Ensure password hashing if required
+      user.password = password;
 
       await user.save();
     } else {
-      // If user does not exist (edge case), create a new user
       user = new User({
         name,
         email,
@@ -86,11 +84,10 @@ exports.register = async (req, res) => {
   }
 };
 
-
 // Login with password
 exports.loginWithPassword = async (req, res) => {
   try {
-    console.log("Request Body:", req.body)
+    console.log("Request Body:", req.body);
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -103,17 +100,23 @@ exports.loginWithPassword = async (req, res) => {
     // Find user
     const user = await User.findOne({ email }).select("+password"); // Ensure password is selected
     if (!user) {
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
     }
 
     // Verify password
     if (!user.password) {
-      return res.status(500).json({ success: false, message: "User does not have a password set" });
+      return res
+        .status(500)
+        .json({ success: false, message: "User does not have a password set" });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
     }
 
     // Update last login
@@ -121,7 +124,9 @@ exports.loginWithPassword = async (req, res) => {
     await user.save();
 
     // Generate token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
     res.status(200).json({
       success: true,
@@ -145,7 +150,6 @@ exports.loginWithPassword = async (req, res) => {
     });
   }
 };
-
 
 // Send OTP for login
 exports.sendLoginOTP = async (req, res) => {
@@ -236,7 +240,7 @@ exports.verifyLoginOTP = async (req, res) => {
 
     res.json({
       success: true,
-      user: user
+      user: user,
       // {
       //   token,
       //   _id: user._id,
@@ -254,8 +258,6 @@ exports.verifyLoginOTP = async (req, res) => {
     });
   }
 };
-
-
 
 // Send OTP for forgot password
 exports.sendForgotPasswordOTP = async (req, res) => {
@@ -367,7 +369,7 @@ exports.resetPassword = async (req, res) => {
     });
   }
 };
- 
+
 // Get user profile
 exports.getProfile = async (req, res, next) => {
   try {
@@ -396,7 +398,7 @@ exports.getProfile = async (req, res, next) => {
 
     res.json({
       success: true,
-      user
+      user,
       // : {
       //   name: user.name,
       //   email: user.email,
@@ -427,7 +429,7 @@ exports.updateProfile = async (req, res) => {
   try {
     const { name, email } = req.body;
     const updates = { name, email };
-    console.log("Req BOdy" , req.body )
+    console.log("Req BOdy", req.body);
     // Handle profile picture if uploaded
     if (req.file) {
       updates.profilePicture = path.basename(req.file.path);
@@ -537,7 +539,8 @@ exports.addAddress = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error adding address",
-      details: process.env.NODE_ENV === "development" ? error.message : undefined,
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -686,4 +689,3 @@ exports.getUserDetails = async (req, res) => {
     });
   }
 };
-
