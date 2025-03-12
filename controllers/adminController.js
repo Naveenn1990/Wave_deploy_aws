@@ -10,6 +10,7 @@ const Service = require("../models/Service");
 const path = require('path');
 const SubCategory = require("../models/SubCategory"); // Assuming SubCategory model is defined in a separate file
 const PartnerProfile = require("../models/PartnerProfile");
+const mongoose = require("mongoose");
 
 // Admin login
 exports.loginAdmin = async (req, res) => {
@@ -273,59 +274,26 @@ exports.getPartnerKYC = async (req, res) => {
 exports.verifyPartnerKYC = async (req, res) => {
   try {
     const { partnerId } = req.params;
-    const { status, remarks } = req.body;
+    console.log("Received Partner ID:", partnerId);
 
-    if (!status || !['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status. Must be either 'approved' or 'rejected'"
-      });
+    if (!mongoose.Types.ObjectId.isValid(partnerId)) {
+      return res.status(400).json({ success: false, message: "Invalid Partner ID format" });
     }
 
     const partner = await Partner.findById(partnerId);
+    console.log("Fetched Partner:", partner);
+
     if (!partner) {
-      return res.status(404).json({ 
-        success: false,
-        message: "Partner not found" 
-      });
+      return res.status(404).json({ success: false, message: "Partner not found" });
     }
 
-    // Update only the verification status and remarks
-    const updateData = {
-      $set: {
-        kycStatus: status === 'approved' ? 'verified' : 'rejected',
-        'kycDetails.isVerified': status === 'approved',
-        'kycDetails.verificationRemarks': remarks || '',
-        'kycDetails.verifiedAt': new Date(),
-        'kycDetails.verifiedBy': req.admin._id
-      }
-    };
-
-    const updatedPartner = await Partner.findByIdAndUpdate(
-      partnerId,
-      updateData,
-      { new: true, runValidators: true }
-    );
-
-    res.json({
-      success: true,
-      message: `Partner KYC ${status} successfully`,
-      data: {
-        partnerId: updatedPartner._id,
-        status: updatedPartner.kycStatus,
-        isVerified: updatedPartner.kycDetails.isVerified,
-        verifiedAt: updatedPartner.kycDetails.verifiedAt,
-        remarks: updatedPartner.kycDetails.verificationRemarks
-      }
-    });
+    res.json({ success: true, message: "Partner found", partner });
   } catch (error) {
-    console.error("KYC Verification Error:", error);
-    res.status(500).json({ 
-      success: false,
-      message: "Error verifying KYC" 
-    });
+    console.error("Error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
 
 // Get all partners
 // Get all partners
@@ -417,7 +385,9 @@ exports.getPartnerDetails = async (req, res) => {
   try {
     const { partnerId } = req.params;
 
-    const partner = await Partner.findById(partnerId).select("-tempOTP");
+    const partner = await Partner.findById(partnerId)
+      .select("-tempOTP")
+      .populate("bookings"); // Populate bookings
 
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
