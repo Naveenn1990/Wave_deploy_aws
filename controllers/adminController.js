@@ -10,6 +10,7 @@ const Service = require("../models/Service");
 const path = require('path');
 const SubCategory = require("../models/SubCategory"); // Assuming SubCategory model is defined in a separate file
 const PartnerProfile = require("../models/PartnerProfile");
+const mongoose = require("mongoose");
 
 // Admin login
 exports.loginAdmin = async (req, res) => {
@@ -290,14 +291,11 @@ exports.verifyPartnerKYC = async (req, res) => {
       });
     }
 
-    // Update only the verification status and remarks
+    // Update KYC fields correctly
     const updateData = {
       $set: {
-        kycStatus: status === 'approved' ? 'verified' : 'rejected',
-        'kycDetails.isVerified': status === 'approved',
-        'kycDetails.verificationRemarks': remarks || '',
-        'kycDetails.verifiedAt': new Date(),
-        'kycDetails.verifiedBy': req.admin._id
+        'kyc.status': status === 'approved' ? 'approved' : 'rejected',
+        'kyc.remarks': remarks || ''
       }
     };
 
@@ -312,10 +310,8 @@ exports.verifyPartnerKYC = async (req, res) => {
       message: `Partner KYC ${status} successfully`,
       data: {
         partnerId: updatedPartner._id,
-        status: updatedPartner.kycStatus,
-        isVerified: updatedPartner.kycDetails.isVerified,
-        verifiedAt: updatedPartner.kycDetails.verifiedAt,
-        remarks: updatedPartner.kycDetails.verificationRemarks
+        status: updatedPartner.kyc.status,
+        remarks: updatedPartner.kyc.remarks
       }
     });
   } catch (error) {
@@ -326,6 +322,7 @@ exports.verifyPartnerKYC = async (req, res) => {
     });
   }
 };
+
 
 // Get all partners
 // Get all partners
