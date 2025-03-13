@@ -102,6 +102,7 @@ exports.verifyOTP = async (req, res) => {
         email: user.email,
         phone: user.phone,
         isVerified: user.isVerified,
+        isProfileComplete: user.isProfileComplete,
       },
     });
   } catch (error) {

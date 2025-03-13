@@ -206,6 +206,7 @@ exports.sendLoginOTP = async (req, res) => {
 };
 
 // Verify OTP and login
+// Verify OTP and login
 exports.verifyLoginOTP = async (req, res) => {
   try {
     const { phone, otp } = req.body;
@@ -216,7 +217,7 @@ exports.verifyLoginOTP = async (req, res) => {
       phone,
       tempOTP: otp,
       tempOTPExpiry: { $gt: new Date() },
-    }).select("+name +email +isVerified"); // Explicitly selecting fields
+    }).select("+name +email +isVerified +isProfileComplete"); // Explicitly selecting fields
 
     if (!user) {
       console.log("User not found or OTP mismatch"); // Debugging
@@ -247,16 +248,7 @@ exports.verifyLoginOTP = async (req, res) => {
 
     res.json({
       success: true,
-      user: user,
-      isProfileComplete: user.isProfileComplete,
-      // {
-      //   token,
-      //   _id: user._id,
-      //   name: user.name,
-      //   email: user.email,
-      //   phone: user.phone,
-      //   isVerified: user.isVerified,
-      // },
+      isProfileComplete: user.isProfileComplete, // Only sending isProfileComplete status
     });
   } catch (error) {
     console.error("OTP Verification Error:", error);
@@ -266,6 +258,7 @@ exports.verifyLoginOTP = async (req, res) => {
     });
   }
 };
+
 
 // Send OTP for forgot password
 exports.sendForgotPasswordOTP = async (req, res) => {
@@ -556,27 +549,8 @@ exports.addAddress = async (req, res) => {
 // Update address
 exports.updateAddress = async (req, res) => {
   try {
-    const { addressLine1, addressLine2, city, state, postalCode, country } =
-      req.body;
-
-    // Construct full address
-    const fullAddress = [
-      addressLine1,
-      addressLine2,
-      city,
-      state,
-      postalCode,
-      country,
-    ]
-      .filter(Boolean)
-      .join(", ");
-
-    if (!fullAddress) {
-      return res.status(400).json({
-        success: false,
-        message: "At least one address field is required",
-      });
-    }
+    const { address, landmark, addressType } = req.body;
+    const { addressId } = req.params; // Get address ID from params
 
     const user = await User.findById(req.user._id);
     if (!user) {
@@ -586,18 +560,26 @@ exports.updateAddress = async (req, res) => {
       });
     }
 
-    // Update user's address
-    user.address = fullAddress;
+    // Find the address by ID
+    const addressIndex = user.addresses.findIndex((addr) => addr._id.toString() === addressId);
+    if (addressIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Address not found",
+      });
+    }
+
+    // Update only provided fields
+    if (address !== undefined) user.addresses[addressIndex].address = address;
+    if (landmark !== undefined) user.addresses[addressIndex].landmark = landmark;
+    if (addressType !== undefined) user.addresses[addressIndex].addressType = addressType;
 
     await user.save();
 
     res.json({
       success: true,
-      address: {
-        address: user.address,
-        landmark: user.landmark,
-        addressType: user.addressType,
-      },
+      message: "Address updated successfully",
+      addresses: user.addresses, // Return updated addresses array
     });
   } catch (error) {
     console.error("Update Address Error:", error);
@@ -613,6 +595,8 @@ exports.updateAddress = async (req, res) => {
 // Delete address
 exports.deleteAddress = async (req, res) => {
   try {
+    const { addressId } = req.params; // Get address ID from params
+
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({
@@ -621,16 +605,23 @@ exports.deleteAddress = async (req, res) => {
       });
     }
 
-    // Clear address fields
-    user.address = "";
-    user.landmark = "";
-    user.addressType = "home"; // Reset to default
+    // Filter out the address to be deleted
+    const updatedAddresses = user.addresses.filter((addr) => addr._id.toString() !== addressId);
 
+    if (updatedAddresses.length === user.addresses.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Address not found",
+      });
+    }
+
+    user.addresses = updatedAddresses;
     await user.save();
 
     res.json({
       success: true,
       message: "Address deleted successfully",
+      addresses: user.addresses, // Return updated addresses array
     });
   } catch (error) {
     console.error("Delete Address Error:", error);
