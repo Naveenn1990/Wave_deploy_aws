@@ -9,6 +9,7 @@ const mongoose = require("mongoose");
 const Product = require("../models/product");
 const User = require("../models/User");
 
+
 // Get all available services for partners
 exports.getAvailableServices = async (req, res) => {
   try {
@@ -476,7 +477,10 @@ exports.acceptBooking = async (req, res) => {
     if (["accepted", "cancelled"].includes(booking.status) || booking.partner) {
       return res
         .status(400)
-        .json({ success: false, message: "This booking has already been accepted or cancelled" });
+        .json({
+          success: false,
+          message: "This booking has already been accepted or cancelled",
+        });
     }
 
     // Update Booking: Assign partner and change status to 'accepted'
@@ -528,7 +532,6 @@ exports.acceptBooking = async (req, res) => {
     });
   }
 };
-
 
 // Get completed bookings
 exports.getCompletedBookings = async (req, res) => {
@@ -1291,98 +1294,118 @@ exports.getUserReviews = async (req, res) => {
   }
 };
 
-
 // Review partner
 exports.reviewUser = async (req, res) => {
   try {
-      const { bookingId, userId, rating, comment } = req.body;
-      const partnerId = req.partner._id;
+    const { bookingId, userId, rating, comment } = req.body;
+    const partnerId = req.partner._id;
 
-      // Check if the booking exists and belongs to the partner
-      const booking = await Booking.findOne({
-          _id: bookingId,
-          user: userId,
-          partner: partnerId,
-          status: "completed"
+    // Check if the booking exists and belongs to the partner
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      user: userId,
+      partner: partnerId,
+      status: "completed",
+    });
+
+    if (!booking) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Invalid booking or booking not completed.",
+        });
+    }
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    // Check if the user has already reviewed this partner
+    const existingReview = user.reviews.find(
+      (review) => review.partner?.toString() === partnerId?.toString()
+    );
+
+    if (existingReview) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already submitted a review for this partner.",
       });
+    }
 
-      if (!booking) {
-          return res.status(400).json({ success: false, message: "Invalid booking or booking not completed." });
-      }
+    // Create review object
+    const review = {
+      user: userId,
+      booking: bookingId,
+      rating,
+      comment,
+      createdAt: new Date(),
+    };
 
-      // Find the user
-      const user = await User.findById(userId);
-      if (!user) {
-          return res.status(404).json({ success: false, message: "User not found." });
-      }
+    // Push review into the user's reviews array
+    user.reviews.push(review);
+    await user.save();
 
-      // Check if the user has already reviewed this partner
-      const existingReview = user.reviews.find(
-          (review) => review.partner.toString() === partnerId.toString()
-      );
-
-      if (existingReview) {
-          return res.status(400).json({
-              success: false,
-              message: "You have already submitted a review for this partner."
-          });
-      }
-
-      // Create review object
-      const review = {
-          user: userId,
-          booking: bookingId,
-          rating,
-          comment,
-          createdAt: new Date()
-      };
-
-      // Push review into the user's reviews array
-      user.reviews.push(review);
-      await user.save();
-
-      res.status(201).json({ success: true, message: "Review submitted successfully!", review });
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "Review submitted successfully!",
+        review,
+      });
   } catch (error) {
-      console.error(error);
-      res.status(500).json({ success: false, message: "Server error. Please try again later." });
+    console.error(error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Server error. Please try again later.",
+      });
   }
 };
 
 
+exports.topUpPartnerWallet = async (req, res) => {
+  try {
+    const { partnerId, amount, type } = req.body;
 
+    // Validate input
+    if (!partnerId || !amount || !type) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
 
+    // Find or create partner wallet
+    let wallet = await PartnerWallet.findOne({ partnerId });
+    if (!wallet) {
+      wallet = new PartnerWallet({ partnerId, balance: 0, transactions: [] });
+    }
 
+    // Check for sufficient balance on debit
+    if (type === 'Debit' && wallet.balance < amount) {
+      return res.status(400).json({ message: 'Insufficient balance' });
+    }
 
+    // Create new transaction
+    const newTransaction = {
+      transactionId: uuidv4(),
+      amount,
+      type,
+      date: new Date(),
+    };
 
+    // Update wallet balance and transactions
+    wallet.transactions.push(newTransaction);
+    wallet.balance += type === 'Credit' ? amount : -amount;
 
+    // Save wallet
+    await wallet.save();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    res.status(201).json({ message: 'Transaction successful', wallet });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

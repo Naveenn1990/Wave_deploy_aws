@@ -108,4 +108,8 @@ router.delete('/products/:id', adminAuth, adminServiceController.deleteProduct);
 //change the status of partner 
 router.put('/partner/:partnerId/status', adminAuth, adminServiceController.updatePartnerStatus);
 
+
+//get partner earnings
+router.get('/partner/:partnerId/earnings', adminAuth, adminServiceController.getPartnerEarnings);
+
 module.exports = router;

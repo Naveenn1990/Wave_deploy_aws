@@ -439,11 +439,11 @@ router.get("/reviews", getAllReviews);
 router.post("/reviews", ReviewController.submitReview);
 
 // Route to fetch reviews for a specific subservice
-router.get('/subservices/:subServiceId/reviews', ReviewController.getReviews);
+router.get("/subservices/:subServiceId/reviews", ReviewController.getReviews);
 
-router.get('/wallet/topup/:userId', ReviewController.topUpWallet);
-router.post('/wallet/transactions', ReviewController.transactionsWallet);
-router.get('/offers', getAllOffers);
+router.get("/wallet/topup/:userId", ReviewController.topUpWallet);
+router.post("/wallet/transactions", ReviewController.transactionsWallet);
+router.get("/offers", getAllOffers);
 
 router.get("/wallet/topup/:userId", ReviewController.topUpWallet);
 router.post("/wallet/transactions", ReviewController.transactionsWallet);
@@ -468,12 +468,9 @@ router.post("/review/partner", auth, ReviewController.reviewPartner);
 
 router.post("/contactus", auth, ReviewController.ContactUs);
 router.get("/contactus", auth, ReviewController.getAllContactUs);
-//get all completed booking in system 
-router.get('/completed-bookings', userServiceController.getAllCompletedBookingsinsystem);
-
-
-
-
-
-
-module.exports = router; 
+//get all completed booking in system
+router.get(
+  "/completed-bookings",
+  userServiceController.getAllCompletedBookingsinsystem
+);
+module.exports = router;

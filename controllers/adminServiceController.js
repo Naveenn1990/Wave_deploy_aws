@@ -1253,3 +1253,57 @@ exports.updatePartnerStatus = async (req, res) => {
       });
   }
 };
+
+
+//get partner earnings 
+// Fetch partner's transactions and earnings
+exports.getPartnerEarnings = async (req, res) => {
+    try {
+        const { partnerId } = req.params;
+
+        // Fetch all completed bookings for the partner
+        const bookings = await Booking.find({ partner: partnerId, status: "completed" })
+            .populate("user", "name email")
+            .populate("subService", "name price commission")
+            .populate("service", "name")
+            .populate("subCategory", "name")
+            .populate("category", "name")
+            .populate("partner", "profile.name profile.email");
+
+        if (!bookings.length) {
+            return res.status(404).json({ message: "No completed bookings found for this partner." });
+        }
+
+        let totalEarnings = 0;
+        let transactions = bookings.map(booking => {
+            const subService = booking.subService;
+            const totalAmount = booking.amount;
+            const commissionAmount = (subService.commission / 100) * totalAmount;
+            const partnerEarnings = totalAmount - commissionAmount;
+            totalEarnings += partnerEarnings;
+
+            return {
+                bookingId: booking._id,
+                user: booking.user,
+                subService: subService.name,
+                service: booking.service?.name,
+                subCategory: booking.subCategory?.name,
+                category: booking.category?.name,
+                totalAmount,
+                commissionPercentage: subService.commission,
+                commissionAmount,
+                partnerEarnings,
+                paymentMode: booking.paymentMode,
+                status: booking.status,
+                completedAt: booking.completedAt,
+            };
+        });
+
+        res.json({ partnerId, totalEarnings, transactions });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
