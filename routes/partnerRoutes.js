@@ -9,6 +9,7 @@ const crypto = require("crypto");
 const partnerServiceController = require("../controllers/partnerServiceController");
 const partnerAuthController = require("../controllers/partnerAuthController");
 const partnerWalletController = require("../controllers/partnerWalletController");
+const PartnerWallet = require("../models/PartnerWallet");
 
 // Create upload directories if they don't exist
 const uploadDir = path.join(__dirname, "..", "uploads");
@@ -284,13 +285,13 @@ router.post(
 
 // Route to top up wallet
 router.post(
-  "/wallet/topup/:partnerId",
+  "/partner/wallet/topup",
   auth,
-  partnerWalletController.topUpWallet
+  partnerWalletController.topUpPartnerWallet
 );
 // Route to get wallet transactions
 router.get(
-  "/wallet/transactions",
+  "/partner/:partnerId/transactions",
   auth,
   partnerWalletController.transactionsWallet
 );

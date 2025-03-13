@@ -1,63 +1,70 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const transactionSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: ["credit", "debit"],
-    required: true
+// Define the Transaction Schema
+const transactionSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ["credit", "debit"], // Ensure enum values are in lowercase
+      required: true,
+    },
+    amount: {
+      type: Number,
+      required: true,
+    },
+    description: String,
+    reference: {
+      type: String,
+      required: true,
+    },
+    balance: {
+      type: Number,
+      required: true,
+    },
   },
-  amount: {
-    type: Number,
-    required: true
-  },
-  description: String,
-  reference: {
-    type: String,
-    required: true
-  },
-  balance: {
-    type: Number,
-    required: true
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true
-});
-
-const partnerWalletSchema = new mongoose.Schema({
-  partner: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Partner",
-    required: true
+);
+ 
+const partnerWalletSchema = new mongoose.Schema(
+  {
+    partner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Partner",
+      required: true,
+    },
+    balance: {
+      type: Number,
+      default: 0,
+    },
+    transactions: [transactionSchema],
+    status: {
+      type: String,
+      enum: ["active", "blocked"],
+      default: "active",
+    },
   },
-  balance: {
-    type: Number,
-    default: 0
-  },
-  transactions: [transactionSchema],
-  status: {
-    type: String,
-    enum: ["active", "blocked"],
-    default: "active"
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true
-});
+);
 
 // Methods for wallet operations
-partnerWalletSchema.methods.credit = async function(amount, description, reference) {
+partnerWalletSchema.methods.credit = async function (amount, description, reference) {
   this.balance += amount;
   this.transactions.push({
     type: "credit",
     amount,
     description,
     reference,
-    balance: this.balance
+    balance: this.balance,
   });
   await this.save();
   return this;
 };
 
-partnerWalletSchema.methods.debit = async function(amount, description, reference) {
+partnerWalletSchema.methods.debit = async function (amount, description, reference) {
   if (this.balance < amount) {
     throw new Error("Insufficient balance");
   }
@@ -67,7 +74,7 @@ partnerWalletSchema.methods.debit = async function(amount, description, referenc
     amount,
     description,
     reference,
-    balance: this.balance
+    balance: this.balance,
   });
   await this.save();
   return this;

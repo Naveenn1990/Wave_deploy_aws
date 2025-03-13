@@ -387,7 +387,31 @@ exports.getPartnerDetails = async (req, res) => {
 
     const partner = await Partner.findById(partnerId)
       .select("-tempOTP")
-      .populate("bookings"); // Populate bookings
+      .populate({
+        path: "bookings", // Populate bookings
+        populate: [
+          {
+            path: "subService", // Populate subService inside bookings
+            model: "SubService",
+            select: "name price duration description", // Select relevant fields
+          },
+          {
+            path: "user", // Populate user inside bookings
+            model: "User",
+            select: "name phone email", // Select relevant fields
+          },
+        ],
+      })
+      .populate({
+        path: "user", // Populate partner's associated user
+        select: "name phone email",
+      })
+      .populate({
+        path: "subService", // Populate partner's subService directly
+        select: "name price duration description",
+      })
+      .select("-__v")
+      .sort({ scheduledDate: 1, scheduledTime: 1 });
 
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -399,6 +423,8 @@ exports.getPartnerDetails = async (req, res) => {
     res.status(500).json({ message: "Error fetching partner details" });
   }
 };
+
+
 
 // Update Partner Status
 exports.updatePartnerStatus = async (req, res) => {

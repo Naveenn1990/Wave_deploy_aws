@@ -6,6 +6,7 @@ const Booking = require("../models/booking"); // Ensure the correct model is imp
 const SubService = require("../models/SubService");
 
 // Register new user
+// Register new user
 exports.register = async (req, res) => {
   try {
     const { name, email, phone, password, confirmPassword } = req.body;
@@ -42,6 +43,9 @@ exports.register = async (req, res) => {
       user.name = name;
       user.email = email;
       user.password = password;
+      
+      // Mark profile as complete since required fields are provided
+      user.isProfileComplete = true;
 
       await user.save();
     } else {
@@ -51,6 +55,7 @@ exports.register = async (req, res) => {
         phone,
         password,
         isVerified: true,
+        isProfileComplete: true, // Set to true on successful profile completion
       });
 
       await user.save();
@@ -71,6 +76,7 @@ exports.register = async (req, res) => {
         email: user.email,
         phone: user.phone,
         isVerified: user.isVerified,
+        isProfileComplete: user.isProfileComplete,
       },
     });
   } catch (error) {
@@ -83,6 +89,7 @@ exports.register = async (req, res) => {
     });
   }
 };
+
 
 // Login with password
 exports.loginWithPassword = async (req, res) => {

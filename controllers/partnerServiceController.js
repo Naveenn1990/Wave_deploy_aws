@@ -9,6 +9,7 @@ const mongoose = require("mongoose");
 const Product = require("../models/product");
 const User = require("../models/User");
 
+
 // Get all available services for partners
 exports.getAvailableServices = async (req, res) => {
   try {
@@ -1364,5 +1365,47 @@ exports.reviewUser = async (req, res) => {
         success: false,
         message: "Server error. Please try again later.",
       });
+  }
+};
+
+
+exports.topUpPartnerWallet = async (req, res) => {
+  try {
+    const { partnerId, amount, type } = req.body;
+
+    // Validate input
+    if (!partnerId || !amount || !type) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Find or create partner wallet
+    let wallet = await PartnerWallet.findOne({ partnerId });
+    if (!wallet) {
+      wallet = new PartnerWallet({ partnerId, balance: 0, transactions: [] });
+    }
+
+    // Check for sufficient balance on debit
+    if (type === 'Debit' && wallet.balance < amount) {
+      return res.status(400).json({ message: 'Insufficient balance' });
+    }
+
+    // Create new transaction
+    const newTransaction = {
+      transactionId: uuidv4(),
+      amount,
+      type,
+      date: new Date(),
+    };
+
+    // Update wallet balance and transactions
+    wallet.transactions.push(newTransaction);
+    wallet.balance += type === 'Credit' ? amount : -amount;
+
+    // Save wallet
+    await wallet.save();
+
+    res.status(201).json({ message: 'Transaction successful', wallet });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };

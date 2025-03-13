@@ -7,6 +7,14 @@ const partnerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Booking",
     }],
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    subService: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubService",
+    },
 
     kyc: {
       panCard: String,
