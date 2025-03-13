@@ -283,18 +283,18 @@ router.post(
   partnerServiceController.resumeBooking
 );
 
-// Route to top up wallet
-router.post(
-  "/partner/wallet/topup",
-  auth,
-  partnerWalletController.topUpPartnerWallet
-);
-// Route to get wallet transactions
-router.get(
-  "/partner/:partnerId/transactions",
-  auth,
-  partnerWalletController.transactionsWallet
-);
+// // Route to top up wallet
+// router.post(
+//   "/partner/wallet/topup",
+//   auth,
+//   partnerWalletController.topUpPartnerWallet
+// );
+// // Route to get wallet transactions
+// router.get(
+//   "/partner/:partnerId/transactions",
+//   auth,
+//   partnerWalletController.transactionsWallet
+// );
 
 router.get(
   "/products/:category",

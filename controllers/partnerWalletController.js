@@ -1,22 +1,21 @@
-const Partner = require('../models/Partner');
-const Booking = require('../models/booking');
-const SubService = require('../models/SubService');
-const PartnerWallet = require("../models/PartnerWallet");
+const Partner = require("../models/Partner");
+const Booking = require("../models/booking");
+const SubService = require("../models/SubService");
+const Wallet = require("../models/Wallet");
 const { v4: uuidv4 } = require("uuid");
 
-
-
-exports.topUpPartnerWallet = async (req, res) => {
+exports.topUpWallet = async (req, res) => {
   try {
-    const { partnerId, amount, type } = req.body;
-
-    // Validate input
-    if (!partnerId || !amount || !type) {
-      return res.status(400).json({ message: 'Missing required fields' });
+    const { partnerId } = req.params;
+    const { amount } = req.body;
+    console.log("req params", req.params);
+    console.log("req body", req.body);
+    if (!partnerId || !amount) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Find or create partner wallet
-    let wallet = await PartnerWallet.findOne({ partnerId });
+    let wallet = await Wallet.findOne({ partnerId });
+
     if (!wallet) {
       wallet = new PartnerWallet({ partnerId, balance: 0, transactions: [] });
     }
@@ -47,14 +46,12 @@ exports.topUpPartnerWallet = async (req, res) => {
   }
 };
 
-
 exports.transactionsWallet = async (req, res) => {
   try {
-    const { partnerId } = req.params;
-
-    // Validate input
-    if (!partnerId) {
-      return res.status(400).json({ message: 'Partner ID is required' });
+    const { partnerId, amount, type } = req.body;
+    console.log("req body", partnerId, amount, type);
+    if (!partnerId || !amount || !type) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
     // Retrieve partner wallet
