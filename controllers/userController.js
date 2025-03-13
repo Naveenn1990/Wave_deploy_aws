@@ -248,6 +248,7 @@ exports.verifyLoginOTP = async (req, res) => {
     res.json({
       success: true,
       user: user,
+      isProfileComplete: user.isProfileComplete,
       // {
       //   token,
       //   _id: user._id,
