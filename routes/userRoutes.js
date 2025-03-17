@@ -15,7 +15,7 @@ const {
   deleteAddress,
   sendForgotPasswordOTP,
   resetPassword,
-  getUserDetails
+  getUserDetails,
 } = require("../controllers/userController");
 const authController = require("../controllers/authController");
 const userServiceController = require("../controllers/userServiceController");
@@ -438,12 +438,7 @@ router.get("/profile", auth, getProfile);
  *       500:
  *         description: Server error
  */
-router.put(
-  "/profile",
-  auth,
-  upload.single("profilePicture"),
-  updateProfile
-);
+router.put("/profile", auth, upload.single("profilePicture"), updateProfile);
 
 // Get user details route
 router.get("/details/:userId", auth, getUserDetails);
@@ -535,7 +530,7 @@ router.post("/address", auth, addAddress);
  *       500:
  *         description: Server error
  */
-router.put("/address", auth, updateAddress);
+router.put("/address/:addressId", auth, updateAddress);
 
 /**
  * @swagger
@@ -553,7 +548,7 @@ router.put("/address", auth, updateAddress);
  *       500:
  *         description: Server error
  */
-router.delete("/address", auth, deleteAddress);
+router.delete("/address/:addressId", auth, deleteAddress);
 
 // Public routes for services
 /**
@@ -750,7 +745,11 @@ router.get("/services/popular", userServiceController.getPopularServices);
 router.get("/banners", bannerController.getActiveBanners);
 
 // Booking routes
-router.get('/api/user/bookings/all', auth, bookingController.getAllUserBookings);
+router.get(
+  "/api/user/bookings/all",
+  auth,
+  bookingController.getAllUserBookings
+);
 
 /**
  * @swagger
@@ -788,6 +787,6 @@ router.get('/api/user/bookings/all', auth, bookingController.getAllUserBookings)
  *       500:
  *         description: Server error
  */
-router.get('/api/user/bookings', auth, bookingController.getAllUserBookings);
+router.get("/api/user/bookings", auth, bookingController.getAllUserBookings);
 
 module.exports = router;
