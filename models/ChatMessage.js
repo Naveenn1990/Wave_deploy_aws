@@ -21,6 +21,11 @@ const chatMessageSchema = new mongoose.Schema({
     required: true,
     enum: ['User', 'Partner']
   },
+  bookingId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Booking',
+    required: true
+  },
   message: {
     type: String,
     required: true
