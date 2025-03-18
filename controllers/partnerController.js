@@ -50,6 +50,7 @@ const sendLoginOTP = async (req, res) => {
 };
 
 const verifyOTP = async (req, res) => {
+  console.log("Verification attempt:", req.body);
   try {
     const { phone, otp } = req.body;
 
@@ -59,7 +60,7 @@ const verifyOTP = async (req, res) => {
     const partner = await Partner.findOne({ phone });
 
     // Log found partner
-    console.log("Found partner:", partner);
+    console.log("Found 54567654567898765 000partner:", partner);
 
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -96,6 +97,7 @@ const verifyOTP = async (req, res) => {
       token,
       isProfileCompleted: partner.profileCompleted,
       partnerId: partner._id,
+      status: partner.kycStatus,
     });
   } catch (error) {
     console.error("OTP Verification Error:", error);

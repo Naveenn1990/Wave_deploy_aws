@@ -530,7 +530,9 @@ exports.acceptBooking = async (req, res) => {
   }
 };
 
-// // Get completed bookings
+// Get completed bookings
+// Get completed bookings
+// Get completed bookings
 // exports.getCompletedBookings = async (req, res) => {
 //   try {
 //     const completedBookings = await Booking.find({
@@ -539,20 +541,15 @@ exports.acceptBooking = async (req, res) => {
 //     })
 //       .populate({
 //         path: "user",
-//         select: "name email phone profilePhoto address",
+//         select: "profilePhoto",
 //       })
 //       .populate({
 //         path: "subService",
-//         select: "name price photo description duration",
-//       })
-//       .populate({
-//         path: "service",
-//         select: "name description",
+//         select: "photo",
 //       })
 //       .populate({
 //         path: "partner",
-//         select:
-//           "name email phone profilePicture address experience qualification profile",
+//         select: "profilePicture",
 //       })
 //       .sort({ completedAt: -1 });
 
@@ -564,10 +561,16 @@ exports.acceptBooking = async (req, res) => {
 //       });
 //     }
 
+//     // Extract only filenames from photos and videos
+//     const formattedBookings = completedBookings.map((booking) => ({
+//       photoUrls: booking.photos?.map((photo) => photo.split("\\").pop()) || [],
+//       videoUrls: booking.videos?.map((video) => video.split("\\").pop()) || [],
+//     }));
+
 //     res.status(200).json({
 //       success: true,
 //       message: "Completed bookings fetched successfully",
-//       data: completedBookings,
+//       data: formattedBookings,
 //     });
 //   } catch (error) {
 //     console.error("Error fetching completed bookings:", error);
@@ -714,42 +717,7 @@ exports.completeBooking = async (req, res) => {
 };
 
 // Get completed bookings
-// exports.getCompletedBookings = async (req, res) => {
-//   try {
-//     // Find completed bookings for the partner
-//     const completedBookings = await Booking.find({
-//       partner: req.partner._id, // Using req.partner._id instead of decoded token
-//       status: "completed",
-//     })
-//       .populate("user", "name email phone") // Populate user details
-//       .populate("service", "name") // Populate service details
-//       .populate("subService", "name") // Populate subService details
-//       .select("-__v") // Exclude version key
-//       .sort({ completedAt: -1 }); // Sort by completion date, newest first
-
-//     if (!completedBookings.length) {
-//       return res.status(200).json({
-//         success: true,
-//         message: "No completed bookings found",
-//         bookings: [],
-//       });
-//     }
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Completed bookings fetched successfully",
-//       bookings: completedBookings,
-//     });
-//   } catch (error) {
-//     console.error("Error fetching completed bookings:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: "Error fetching completed bookings",
-//       error: error.message || "Unknown error",
-//     });
-//   }
-// };
-
+// Get completed bookings
 exports.getCompletedBookings = async (req, res) => {
   try {
     // Find completed bookings for the partner
@@ -804,6 +772,7 @@ exports.getCompletedBookings = async (req, res) => {
   }
 };
 
+// Get pending bookings
 exports.getPendingBookings = async (req, res) => {
   try {
     const token = req.headers.authorization.split(" ")[1]; // Get the token from the header

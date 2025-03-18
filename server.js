@@ -10,8 +10,83 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 require("dotenv").config();
 const bodyParser = require('body-parser');
+const socketIo = require("socket.io");
+const http = require("http");
+const Booking = require("./models/booking");  
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  }
+});
+
+ 
+
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  // Handle sending messages
+  socket.on("chat message", async (message) => {
+    console.log("Message received:", message);
+
+    try {
+      let chat = await Booking.findById(message?.data?.bookingId);
+
+      if (!chat) {
+        return socket.emit("error", "Booking not found.");
+      }
+
+      chat.chat.push(message);
+      await chat.save();
+
+      // Emit event to the sender
+      socket.emit("message received", {
+        bookingId: chat._id,
+        message: message.data
+      });
+
+      // Broadcast to all clients
+      io.emit("receive message", {
+        bookingId: chat._id,
+        messages: chat.chat
+      });
+    } catch (error) {
+      console.error("Error saving chat message:", error);
+      socket.emit("error", "Server error occurred.");
+    }
+  });
+
+  // Handle retrieving messages
+  socket.on("receive message", async (data) => {
+    console.log("Fetching messages for booking ID:", data.data?.bookingId);
+
+    try {
+      let chat = await Booking.findById(data.data?.bookingId);
+
+      if (!chat) {
+        return socket.emit("error", "No chat found for this booking ID.");
+      }
+
+      socket.emit("receive message", {
+        bookingId: chat._id,
+        messages: chat.chat
+      });
+    } catch (error) {
+      console.error("Error retrieving chat messages:", error);
+      socket.emit("error", "Error retrieving chat messages.");
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+ 
 
 // Connect to MongoDB first
 connectDB()
@@ -29,7 +104,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: "*", // Allow all origins for development
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -88,7 +163,6 @@ const userBookingRoutes = require("./routes/userBookingRoutes");
 const userAccountRoutes = require("./routes/userAccountRoutes");
 const partnerRoutes = require("./routes/partnerRoutes");
 const adminRoutes = require("./routes/adminRoutes");
-// const partnersRoutes = require("./routes/partnerRoutes");
 const adminServiceRoutes = require("./routes/adminServiceRoutes");
 const bannerRoutes = require("./routes/bannerRoutes");
 const serviceHierarchyRoutes = require("./routes/serviceHierarchyRoutes");
@@ -96,7 +170,7 @@ const adminBannerRoutes = require("./routes/adminBannerRoutes");
 const userBannerRoutes = require("./routes/userBannerRoutes");
 const adminBookingRoutes = require("./routes/adminBookingRoutes");
 const adminBookingController = require('./controllers/adminBookingController');
-
+ 
 // Routes
 app.use("/api/user", userRoutes);
 app.use("/api/user", userServiceRoutes);
@@ -104,7 +178,6 @@ app.use("/api/user", userBookingRoutes);
 app.use("/api/user/account", userAccountRoutes);
 app.use("/api/partner", partnerRoutes);
 app.use("/api/admin", adminRoutes);
-// app.use("/api/admin/partners", partnersRoutes);
 app.use("/api/admin/services", adminServiceRoutes);
 app.use("/api/banners", bannerRoutes);
 app.use("/api/public", serviceHierarchyRoutes);
@@ -112,14 +185,16 @@ app.use("/api/admin/banners", adminBannerRoutes);
 app.use("/api/user/banners", userBannerRoutes);
 app.use("/api/admin/bookings", adminBookingRoutes);
 
-// Add this console.log
-console.log('Registering admin routes...');
+// Root route for WebSocket server
+app.get('/', (req, res) => {
+  res.send("WebSocket Server is Running");
+});
 
 app.get('/admin/bookings', adminBookingController.getAllBookings);
 
-// Keep only this 404 handler
+// 404 handler
 app.use((req, res, next) => {
-  console.log(`404 - Route not found: ${req.method} ${req.originalUrl}`);  // Added logging
+  console.log(`404 - Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     success: false,
     message: `Route ${req.method} ${req.path} not found`,
@@ -136,50 +211,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server with better port handling
-async function startServer(port) {
-  const http = require("http");
-  const server = http.createServer(app);
-
-  function onError(error) {
-    if (error.syscall !== "listen") throw error;
-
-    const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
-
-    // handle specific listen errors with friendly messages
-    switch (error.code) {
-      case "EACCES":
-        console.error(bind + " requires elevated privileges");
-        process.exit(1);
-        break;
-      case "EADDRINUSE":
-        console.error(bind + " is already in use");
-        process.exit(1);
-        break;
-      default:
-        throw error;
-    }
-  }
-
-  function onListening() {
-    const addr = server.address();
-    const bind =
-      typeof addr === "string" ? "pipe " + addr : "port " + addr.port;
-    console.log("Server is running on " + bind);
-  }
-
-  server.on("error", onError);
-  server.on("listening", onListening);
-
-  try {
-    await server.listen(port);
-    console.log(`Server started successfully on port ${port}`);
-  } catch (error) {
-    console.error("Failed to start server:", error);
-    process.exit(1);
-  }
-}
-
-// Use port from environment variable or default to 3000
+// Start server
 const PORT = process.env.PORT || 9000;
-startServer(PORT);
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
