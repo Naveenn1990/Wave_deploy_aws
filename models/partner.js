@@ -3,10 +3,12 @@ const mongoose = require("mongoose");
 // Partner Model
 const partnerSchema = new mongoose.Schema(
   {
-    bookings: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Booking",
-    }],
+    bookings: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Booking",
+      },
+    ],
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -22,10 +24,10 @@ const partnerSchema = new mongoose.Schema(
       chequeImage: String,
       status: {
         type: String,
-        enum: ['pending', 'approved', 'rejected'],
-        default: 'pending'
+        enum: ["pending", "approved", "rejected"],
+        default: "pending",
       },
-      remarks: String // For admin to provide feedback if rejected
+      remarks: String,
     },
     bankDetails: {
       accountNumber: String,
@@ -79,7 +81,7 @@ const partnerSchema = new mongoose.Schema(
     profileStatus: {
       type: String,
       enum: ["active", "inactive"],
-      default: "active"
+      default: "active",
     },
     profile: {
       name: {
@@ -101,19 +103,19 @@ const partnerSchema = new mongoose.Schema(
         type: String,
         required: function () {
           return this.profileCompleted;
-        }
+        },
       },
       landmark: {
         type: String,
         required: function () {
           return this.profileCompleted;
-        }
+        },
       },
       pincode: {
         type: String,
         required: function () {
           return this.profileCompleted;
-        }
+        },
       },
     },
     profilePicture: String,
@@ -135,12 +137,12 @@ const partnerSchema = new mongoose.Schema(
         booking: { type: mongoose.Schema.Types.ObjectId, ref: "Booking" },
         rating: { type: Number, required: true },
         comment: { type: String, required: true },
-        createdAt: { type: Date, default: Date.now }
-      }
-    ]
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );
 
-const Partner  = mongoose.model("Partner", partnerSchema);
+const Partner = mongoose.model("Partner", partnerSchema);
 module.exports = Partner;

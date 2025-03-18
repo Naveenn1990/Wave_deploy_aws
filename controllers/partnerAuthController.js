@@ -153,17 +153,16 @@ exports.verifyLoginOTP = async (req, res) => {
         profile: partner.profile,
         token,
         profilePicture: partner.profilePicture,
+        kycStatus: partner.kyc,
       },
     });
   } catch (error) {
     console.error("Login Error:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error during login",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error during login",
+      error: error.message,
+    });
   }
 };
 
@@ -221,11 +220,13 @@ exports.resendOTP = async (req, res) => {
 };
 
 // Complete partner profile
-
 exports.completeProfile = async (req, res) => {
   try {
     console.log("Received request body:", req.body);
-    console.log("Received file:", req.file);
+    console.log(
+      "Received file:",
+      req.file ? req.file.filename : "No file uploaded"
+    );
 
     const {
       name,
@@ -245,59 +246,42 @@ exports.completeProfile = async (req, res) => {
         .json({ success: false, message: "Name and Email are required" });
     }
 
-    // 📂 Handle file upload
-    const profilePicturePath = req.file ? req.file.path.split("/").pop() : null;
+    // ✅ Fix: Correctly extract the filename
+    const profilePicturePath = req.file ? req.file.filename : null;
 
-    // 🆕 Create the new Partner (without requiring category, subcategory, etc.)
-    // const newPartner = new Partner({
-    //   // phone: contactNumber,
-    //   profileCompleted: false, // Will be updated in another API
-    //   profile: { name, email },
-    //   whatsappNumber,
-    //   qualification,
-    //   experience,
-    //   profilePicture: profilePicturePath,
-    // });
     const updatedPartner = await Partner.findOneAndUpdate(
-      { phone: contactNumber }, // Find by phone number
+      { phone: contactNumber },
       {
         $set: {
-          profileCompleted: false, // Will be updated in another API
+          profileCompleted: false,
           profile: { name, email, address, landmark, pincode },
           whatsappNumber,
           qualification,
           experience,
-          profilePicture: profilePicturePath,
+          profilePicture: profilePicturePath, // ✅ Save only the filename
         },
       },
-      { new: true, upsert: false } // Return updated document, don't create a new one
+      { new: true, upsert: false }
     );
 
-    // await newPartner.save();
     if (!updatedPartner) {
       return res
         .status(404)
         .json({ success: false, message: "Partner not found" });
     }
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Partner updated successfully",
-        data: updatedPartner,
-      });
-
-    // return res.status(201).json({ success: true, message: "Profile created successfully", data: newPartner });
+    return res.status(200).json({
+      success: true,
+      message: "Partner updated successfully",
+      data: updatedPartner,
+    });
   } catch (error) {
     console.error("Complete Profile Error:", error.message);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal Server Error",
-        error: error.message,
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
 
@@ -377,22 +361,18 @@ exports.selectCategoryAndServices = async (req, res) => {
         .json({ success: false, message: "Partner not found" });
     }
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Profile updated successfully",
-        data: updatedPartner,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: updatedPartner,
+    });
   } catch (error) {
     console.error("Update Profile Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal Server Error",
-        error: error.message,
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
 

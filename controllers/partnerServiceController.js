@@ -9,7 +9,6 @@ const mongoose = require("mongoose");
 const Product = require("../models/product");
 const User = require("../models/User");
 
-
 // Get all available services for partners
 exports.getAvailableServices = async (req, res) => {
   try {
@@ -475,12 +474,10 @@ exports.acceptBooking = async (req, res) => {
 
     // Check if booking is already accepted or canceled
     if (["accepted", "cancelled"].includes(booking.status) || booking.partner) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "This booking has already been accepted or cancelled",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "This booking has already been accepted or cancelled",
+      });
     }
 
     // Update Booking: Assign partner and change status to 'accepted'
@@ -533,54 +530,54 @@ exports.acceptBooking = async (req, res) => {
   }
 };
 
-// Get completed bookings
-exports.getCompletedBookings = async (req, res) => {
-  try {
-    const completedBookings = await Booking.find({
-      partner: req.partner._id,
-      status: "completed",
-    })
-      .populate({
-        path: "user",
-        select: "name email phone profilePhoto address",
-      })
-      .populate({
-        path: "subService",
-        select: "name price photo description duration",
-      })
-      .populate({
-        path: "service",
-        select: "name description",
-      })
-      .populate({
-        path: "partner",
-        select:
-          "name email phone profilePicture address experience qualification profile",
-      })
-      .sort({ completedAt: -1 });
+// // Get completed bookings
+// exports.getCompletedBookings = async (req, res) => {
+//   try {
+//     const completedBookings = await Booking.find({
+//       partner: req.partner._id,
+//       status: "completed",
+//     })
+//       .populate({
+//         path: "user",
+//         select: "name email phone profilePhoto address",
+//       })
+//       .populate({
+//         path: "subService",
+//         select: "name price photo description duration",
+//       })
+//       .populate({
+//         path: "service",
+//         select: "name description",
+//       })
+//       .populate({
+//         path: "partner",
+//         select:
+//           "name email phone profilePicture address experience qualification profile",
+//       })
+//       .sort({ completedAt: -1 });
 
-    if (!completedBookings.length) {
-      return res.status(200).json({
-        success: true,
-        message: "No completed bookings found",
-        data: [],
-      });
-    }
+//     if (!completedBookings.length) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "No completed bookings found",
+//         data: [],
+//       });
+//     }
 
-    res.status(200).json({
-      success: true,
-      message: "Completed bookings fetched successfully",
-      data: completedBookings,
-    });
-  } catch (error) {
-    console.error("Error fetching completed bookings:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error fetching completed bookings",
-      error: error.message,
-    });
-  }
-};
+//     res.status(200).json({
+//       success: true,
+//       message: "Completed bookings fetched successfully",
+//       data: completedBookings,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching completed bookings:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error fetching completed bookings",
+//       error: error.message,
+//     });
+//   }
+// };
 
 // Get rejected bookings
 // Get rejected bookings for the logged-in partner
@@ -717,11 +714,47 @@ exports.completeBooking = async (req, res) => {
 };
 
 // Get completed bookings
+// exports.getCompletedBookings = async (req, res) => {
+//   try {
+//     // Find completed bookings for the partner
+//     const completedBookings = await Booking.find({
+//       partner: req.partner._id, // Using req.partner._id instead of decoded token
+//       status: "completed",
+//     })
+//       .populate("user", "name email phone") // Populate user details
+//       .populate("service", "name") // Populate service details
+//       .populate("subService", "name") // Populate subService details
+//       .select("-__v") // Exclude version key
+//       .sort({ completedAt: -1 }); // Sort by completion date, newest first
+
+//     if (!completedBookings.length) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "No completed bookings found",
+//         bookings: [],
+//       });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Completed bookings fetched successfully",
+//       bookings: completedBookings,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching completed bookings:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error fetching completed bookings",
+//       error: error.message || "Unknown error",
+//     });
+//   }
+// };
+
 exports.getCompletedBookings = async (req, res) => {
   try {
     // Find completed bookings for the partner
     const completedBookings = await Booking.find({
-      partner: req.partner._id, // Using req.partner._id instead of decoded token
+      partner: req.partner._id,
       status: "completed",
     })
       .populate("user", "name email phone") // Populate user details
@@ -738,10 +771,28 @@ exports.getCompletedBookings = async (req, res) => {
       });
     }
 
+    // Format response with additional booking details
+    const formattedBookings = completedBookings.map((booking) => ({
+      _id: booking._id,
+      user: booking.user,
+      service: booking.service,
+      subService: booking.subService,
+      scheduledDate: booking.scheduledDate,
+      scheduledTime: booking.scheduledTime,
+      location: booking.location,
+      amount: booking.amount,
+      paymentMode: booking.paymentMode,
+      status: booking.status,
+      paymentStatus: booking.paymentStatus,
+      completedAt: booking.completedAt,
+      photoUrls: booking.photos?.map((photo) => photo.split("\\").pop()) || [],
+      videoUrls: booking.videos?.map((video) => video.split("\\").pop()) || [],
+    }));
+
     res.status(200).json({
       success: true,
       message: "Completed bookings fetched successfully",
-      bookings: completedBookings,
+      bookings: formattedBookings,
     });
   } catch (error) {
     console.error("Error fetching completed bookings:", error);
@@ -1309,12 +1360,10 @@ exports.reviewUser = async (req, res) => {
     });
 
     if (!booking) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Invalid booking or booking not completed.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking or booking not completed.",
+      });
     }
 
     // Find the user
@@ -1350,24 +1399,19 @@ exports.reviewUser = async (req, res) => {
     user.reviews.push(review);
     await user.save();
 
-    res
-      .status(201)
-      .json({
-        success: true,
-        message: "Review submitted successfully!",
-        review,
-      });
+    res.status(201).json({
+      success: true,
+      message: "Review submitted successfully!",
+      review,
+    });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Server error. Please try again later.",
-      });
+    res.status(500).json({
+      success: false,
+      message: "Server error. Please try again later.",
+    });
   }
 };
-
 
 exports.topUpPartnerWallet = async (req, res) => {
   try {
@@ -1375,7 +1419,7 @@ exports.topUpPartnerWallet = async (req, res) => {
 
     // Validate input
     if (!partnerId || !amount || !type) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
     // Find or create partner wallet
@@ -1385,8 +1429,8 @@ exports.topUpPartnerWallet = async (req, res) => {
     }
 
     // Check for sufficient balance on debit
-    if (type === 'Debit' && wallet.balance < amount) {
-      return res.status(400).json({ message: 'Insufficient balance' });
+    if (type === "Debit" && wallet.balance < amount) {
+      return res.status(400).json({ message: "Insufficient balance" });
     }
 
     // Create new transaction
@@ -1399,12 +1443,12 @@ exports.topUpPartnerWallet = async (req, res) => {
 
     // Update wallet balance and transactions
     wallet.transactions.push(newTransaction);
-    wallet.balance += type === 'Credit' ? amount : -amount;
+    wallet.balance += type === "Credit" ? amount : -amount;
 
     // Save wallet
     await wallet.save();
 
-    res.status(201).json({ message: 'Transaction successful', wallet });
+    res.status(201).json({ message: "Transaction successful", wallet });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

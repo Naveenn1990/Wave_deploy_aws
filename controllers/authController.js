@@ -36,13 +36,12 @@ exports.sendOTP = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      otp : otp,
+      otp: otp,
       message: "OTP sent successfully",
     });
   } catch (error) {
     console.error("Error in sendOTP:", error);
     res.status(500).json({
-      
       success: false,
       message: "Failed to send OTP",
     });
@@ -73,7 +72,10 @@ exports.verifyOTP = async (req, res) => {
 
     if (!user) {
       // If OTP is incorrect/expired, remove it to prevent conflicts
-      await User.updateOne({ phone }, { $unset: { tempOTP: 1, tempOTPExpiry: 1 } });
+      await User.updateOne(
+        { phone },
+        { $unset: { tempOTP: 1, tempOTPExpiry: 1 } }
+      );
 
       return res.status(400).json({
         success: false,
@@ -102,6 +104,7 @@ exports.verifyOTP = async (req, res) => {
         email: user.email,
         phone: user.phone,
         isVerified: user.isVerified,
+        isProfileComplete: user.isProfileComplete,
       },
     });
   } catch (error) {
@@ -112,7 +115,6 @@ exports.verifyOTP = async (req, res) => {
     });
   }
 };
-
 
 // Resend OTP
 exports.resendOTP = async (req, res) => {
@@ -260,6 +262,3 @@ exports.verifyPasswordResetOTP = async (req, res) => {
     });
   }
 };
-
-
-
