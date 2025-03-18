@@ -307,72 +307,102 @@ exports.getAllPartners = async (req, res) => {
       .populate("subcategory")
       .populate("service")
       .populate("kyc")
-      .populate("reviews.user", "name email") // Fetch user name & email in reviews
-      .populate("reviews.booking") // Fetch booking details in reviews
-      .select("-tempOTP") // Exclude tempOTP from the response
+      .populate("reviews.user", "name email")
+      .populate("reviews.booking")
+      .select("-tempOTP")
       .sort({ createdAt: -1 });
 
-
-      // Generate month-wise booking count
-    const formattedPartners = await Promise.all(partners.map(async (partner) => {
-      const bookingCounts = await booking.aggregate([
-        {
-          $match: { partner: partner._id } // Filter bookings for the current partner
-        },
-        {
-          $group: {
-            _id: { 
-              year: { $year: "$createdAt" }, 
-              month: { $month: "$createdAt" }
+    // Process each partner
+    const formattedPartners = await Promise.all(
+      partners.map(async (partner) => {
+        // Month-wise booking count
+        const bookingCounts = await booking.aggregate([
+          { $match: { partner: partner._id } },
+          {
+            $group: {
+              _id: {
+                year: { $year: "$createdAt" },
+                month: { $month: "$createdAt" },
+              },
+              count: { $sum: 1 },
             },
-            count: { $sum: 1 }
-          }
-        },
-        { 
-          $sort: { "_id.year": 1, "_id.month": 1 } 
-        }
-      ]);
+          },
+          { $sort: { "_id.year": 1, "_id.month": 1 } },
+        ]);
 
-      // Convert bookingCounts into a structured object
-      const monthWiseBookings = {};
-      bookingCounts.forEach(entry => {
-        const monthName = new Date(entry._id.year, entry._id.month - 1).toLocaleString('default', { month: 'long' });
-        monthWiseBookings[monthName] = entry.count;
-      });
+        const monthWiseBookings = {};
+        bookingCounts.forEach((entry) => {
+          const monthName = new Date(entry._id.year, entry._id.month - 1).toLocaleString("default", { month: "long" });
+          monthWiseBookings[monthName] = entry.count;
+        });
 
-      return {
-        Profile: {
-          id: partner._id,
-          name: partner.profile?.name || "N/A",
-        email: partner.profile?.email || "N/A",
-        phone: partner.phone,
-        address: partner.profile?.address || "N/A",
-        landmark: partner.profile?.landmark || "N/A",
-        pincode: partner.profile?.pincode || "N/A",
-        experience: partner.experience || "N/A",
-        qualification: partner.qualification || "N/A",
-        modeOfService: partner.modeOfService || "N/A",
-        profileCompleted: partner.profileCompleted,
-        profilePicture: partner.profilePicture || "N/A",
-        createdAt: partner.createdAt,
-        updatedAt: partner.updatedAt,
-        KYC: {
-          status: partner.kyc?.status || "Pending",
-          panCard: partner.kyc?.panCard ? `/uploads/kyc/${partner.kyc.panCard}` : "Not Uploaded",
-          aadhaar: partner.kyc?.aadhaar ? `/uploads/kyc/${partner.kyc.aadhaar}` : "Not Uploaded",
-        },
-      },
-      Bookings: partner.bookings.length > 0 ? partner.bookings : "No bookings",
-      Reviews: partner.reviews.length > 0 ? partner.reviews : "No reviews",
-      Services: partner.service.length > 0 ? partner.service : "No services",
-      MonthWiseBookingCount: monthWiseBookings
-    };
-        }));
+        // Calculate earnings from completed bookings
+        const completedBookings = await booking.find({
+          partner: partner._id,
+          status: "completed",
+        }).populate({
+          path: "subService",
+          select: "name price duration description commission",
+        });
 
-    res.json({
-      partners: formattedPartners,
-      total: partners.length,
-    });
+        let totalEarnings = 0;
+        let transactions = completedBookings.map((booking) => {
+          const subService = booking.subService;
+
+          const totalAmount = booking.amount || 0;
+          const commissionPercentage = subService ? subService.commission || 0 : 0;
+          const commissionAmount = (commissionPercentage / 100) * totalAmount;
+          const partnerEarnings = totalAmount - commissionAmount;
+          totalEarnings += partnerEarnings;
+
+          return {
+            bookingId: booking._id,
+            subService: subService?.name || "N/A",
+            totalAmount,
+            commissionPercentage,
+            commissionAmount,
+            partnerEarnings,
+            paymentMode: booking.paymentMode,
+            status: booking.status,
+            completedAt: booking.completedAt,
+          };
+        });
+
+        return {
+          Profile: {
+            id: partner._id,
+            name: partner.profile?.name || "N/A",
+            email: partner.profile?.email || "N/A",
+            phone: partner.phone,
+            address: partner.profile?.address || "N/A",
+            landmark: partner.profile?.landmark || "N/A",
+            pincode: partner.profile?.pincode || "N/A",
+            experience: partner.experience || "N/A",
+            qualification: partner.qualification || "N/A",
+            modeOfService: partner.modeOfService || "N/A",
+            profileCompleted: partner.profileCompleted,
+            profilePicture: partner.profilePicture || "N/A",
+            createdAt: partner.createdAt,
+            updatedAt: partner.updatedAt,
+            KYC: {
+              status: partner.kyc?.status || "Pending",
+              panCard: partner.kyc?.panCard ? `/uploads/kyc/${partner.kyc.panCard}` : "Not Uploaded",
+              aadhaar: partner.kyc?.aadhaar ? `/uploads/kyc/${partner.kyc.aadhaar}` : "Not Uploaded",
+            },
+          },
+          Bookings: partner.bookings.length > 0 ? partner.bookings : "No bookings",
+          Reviews: partner.reviews.length > 0 ? partner.reviews : "No reviews",
+          Services: partner.service.length > 0 ? partner.service : "No services",
+          MonthWiseBookingCount: monthWiseBookings,
+          Earnings: {
+            totalEarnings,
+            transactions,
+          },
+        };
+      })
+    );
+
+    res.json({ partners: formattedPartners, total: partners.length });
   } catch (error) {
     console.error("Get Partners Error:", error);
     res.status(500).json({ message: "Error fetching partners" });
@@ -381,48 +411,92 @@ exports.getAllPartners = async (req, res) => {
 
 
 // Get partner details
+// Get partner details along with earnings and transactions
 exports.getPartnerDetails = async (req, res) => {
   try {
     const { partnerId } = req.params;
 
+    // Fetch partner details
     const partner = await Partner.findById(partnerId)
       .select("-tempOTP")
       .populate({
-        path: "bookings", // Populate bookings
+        path: "bookings",
         populate: [
           {
-            path: "subService", // Populate subService inside bookings
+            path: "subService",
             model: "SubService",
-            select: "name price duration description", // Select relevant fields
+            select: "name price duration description commission",
           },
           {
-            path: "user", // Populate user inside bookings
+            path: "user",
             model: "User",
-            select: "name phone email", // Select relevant fields
+            select: "name phone email",
+          },
+          {
+            path: "service",
+            select: "name",
+          },
+          {
+            path: "subCategory",
+            select: "name",
+          },
+          {
+            path: "category",
+            select: "name",
           },
         ],
       })
       .populate({
-        path: "user", // Populate partner's associated user
+        path: "user",
         select: "name phone email",
       })
       .populate({
-        path: "subService", // Populate partner's subService directly
+        path: "subService",
         select: "name price duration description",
       })
-      .select("-__v")
-      .sort({ scheduledDate: 1, scheduledTime: 1 });
+      .select("-__v");
 
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
     }
 
-    res.json({ partner });
+    // Fetch completed bookings for earnings
+    const completedBookings = partner.bookings.filter(
+      (booking) => booking.status === "completed"
+    );
+
+    let totalEarnings = 0;
+    let transactions = completedBookings.map((booking) => {
+      const subService = booking.subService;
+      const totalAmount = booking.amount;
+      const commissionAmount = (subService.commission / 100) * totalAmount;
+      const partnerEarnings = totalAmount - commissionAmount;
+      totalEarnings += partnerEarnings;
+
+      return {
+        bookingId: booking._id,
+        user: booking.user,
+        subService: subService.name,
+        service: booking.service?.name,
+        subCategory: booking.subCategory?.name,
+        category: booking.category?.name,
+        totalAmount,
+        commissionPercentage: subService.commission,
+        commissionAmount,
+        partnerEarnings,
+        paymentMode: booking.paymentMode,
+        status: booking.status,
+        completedAt: booking.completedAt,
+      };
+    });
+
+    res.json({ partner, totalEarnings, transactions });
   } catch (error) {
     console.error("Get Partner Details Error:", error);
     res.status(500).json({ message: "Error fetching partner details" });
   }
 };
+
 
 
 

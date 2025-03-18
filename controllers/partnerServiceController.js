@@ -534,53 +534,58 @@ exports.acceptBooking = async (req, res) => {
 };
 
 // Get completed bookings
-exports.getCompletedBookings = async (req, res) => {
-  try {
-    const completedBookings = await Booking.find({
-      partner: req.partner._id,
-      status: "completed",
-    })
-      .populate({
-        path: "user",
-        select: "name email phone profilePhoto address",
-      })
-      .populate({
-        path: "subService",
-        select: "name price photo description duration",
-      })
-      .populate({
-        path: "service",
-        select: "name description",
-      })
-      .populate({
-        path: "partner",
-        select:
-          "name email phone profilePicture address experience qualification profile",
-      })
-      .sort({ completedAt: -1 });
+// Get completed bookings
+// Get completed bookings
+// exports.getCompletedBookings = async (req, res) => {
+//   try {
+//     const completedBookings = await Booking.find({
+//       partner: req.partner._id,
+//       status: "completed",
+//     })
+//       .populate({
+//         path: "user",
+//         select: "profilePhoto",
+//       })
+//       .populate({
+//         path: "subService",
+//         select: "photo",
+//       })
+//       .populate({
+//         path: "partner",
+//         select: "profilePicture",
+//       })
+//       .sort({ completedAt: -1 });
 
-    if (!completedBookings.length) {
-      return res.status(200).json({
-        success: true,
-        message: "No completed bookings found",
-        data: [],
-      });
-    }
+//     if (!completedBookings.length) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "No completed bookings found",
+//         data: [],
+//       });
+//     }
 
-    res.status(200).json({
-      success: true,
-      message: "Completed bookings fetched successfully",
-      data: completedBookings,
-    });
-  } catch (error) {
-    console.error("Error fetching completed bookings:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error fetching completed bookings",
-      error: error.message,
-    });
-  }
-};
+//     // Extract only filenames from photos and videos
+//     const formattedBookings = completedBookings.map((booking) => ({
+//       photoUrls: booking.photos?.map((photo) => photo.split("\\").pop()) || [],
+//       videoUrls: booking.videos?.map((video) => video.split("\\").pop()) || [],
+//     }));
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Completed bookings fetched successfully",
+//       data: formattedBookings,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching completed bookings:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error fetching completed bookings",
+//       error: error.message,
+//     });
+//   }
+// };
+
+
 
 // Get rejected bookings
 // Get rejected bookings for the logged-in partner
@@ -717,11 +722,12 @@ exports.completeBooking = async (req, res) => {
 };
 
 // Get completed bookings
+// Get completed bookings
 exports.getCompletedBookings = async (req, res) => {
   try {
     // Find completed bookings for the partner
     const completedBookings = await Booking.find({
-      partner: req.partner._id, // Using req.partner._id instead of decoded token
+      partner: req.partner._id,
       status: "completed",
     })
       .populate("user", "name email phone") // Populate user details
@@ -738,10 +744,28 @@ exports.getCompletedBookings = async (req, res) => {
       });
     }
 
+    // Format response with additional booking details
+    const formattedBookings = completedBookings.map((booking) => ({
+      _id: booking._id,
+      user: booking.user,
+      service: booking.service,
+      subService: booking.subService,
+      scheduledDate: booking.scheduledDate,
+      scheduledTime: booking.scheduledTime,
+      location: booking.location,
+      amount: booking.amount,
+      paymentMode: booking.paymentMode,
+      status: booking.status,
+      paymentStatus: booking.paymentStatus,
+      completedAt: booking.completedAt,
+      photoUrls: booking.photos?.map((photo) => photo.split("\\").pop()) || [],
+      videoUrls: booking.videos?.map((video) => video.split("\\").pop()) || [],
+    }));
+
     res.status(200).json({
       success: true,
       message: "Completed bookings fetched successfully",
-      bookings: completedBookings,
+      bookings: formattedBookings,
     });
   } catch (error) {
     console.error("Error fetching completed bookings:", error);
@@ -753,6 +777,7 @@ exports.getCompletedBookings = async (req, res) => {
   }
 };
 
+// Get pending bookings
 exports.getPendingBookings = async (req, res) => {
   try {
     const token = req.headers.authorization.split(" ")[1]; // Get the token from the header
