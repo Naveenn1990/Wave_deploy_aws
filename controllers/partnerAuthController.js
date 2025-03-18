@@ -153,6 +153,7 @@ exports.verifyLoginOTP = async (req, res) => {
         profile: partner.profile,
         token,
         profilePicture: partner.profilePicture,
+        kycStatus: partner.kyc 
       },
     });
   } catch (error) {

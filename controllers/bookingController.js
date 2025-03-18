@@ -360,75 +360,8 @@ exports.updateBooking = async (req, res) => {
 
 
 // Cancel booking
-// exports.cancelBooking = async (req, res) => {
-//     try {
-//         const { bookingId } = req.params;
-//         const { cancellationReason } = req.body;
-
-//         const booking = await Booking.findOne({
-//             _id: bookingId,
-//             user: req.user._id,
-//         });
-
-//         if (!booking) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Booking not found",
-//             });
-//         }
-
-//         if (booking.status === "cancelled") {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Booking is already cancelled",
-//             });
-//         }
-
-//         if (["completed", "in_progress"].includes(booking.status)) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Cannot cancel a completed or in-progress booking",
-//             });
-//         }
-
-//         booking.status = "cancelled";
-//         booking.cancellationReason = cancellationReason;
-//         booking.cancellationTime = new Date();
-
-//         await booking.save();
-
-//         // Correcting the population hierarchy
-//         await booking.populate({
-//             path: 'subService',
-//             populate: {
-//                 path: 'service', // SubService -> Service
-//                 populate: {
-//                     path: 'subCategory', // Service -> SubCategory
-//                     populate: {
-//                         path: 'category', // SubCategory -> Category
-//                         select: 'name'
-//                     }
-//                 }
-//             }
-//         });
-
-//         res.status(200).json({
-//             success: true,
-//             message: "Booking cancelled successfully",
-//             data: booking,
-//         });
-//     } catch (error) {
-//         console.error("Error in cancelBooking:", error);
-//         res.status(500).json({
-//             success: false,
-//             message: "Error cancelling booking",
-//             error: error.message,
-//         });
-//     }
-// };
-
+// Cancel booking
 exports.cancelBooking = async (req, res) => {
-    console.log("Req Body : " , req.body)
     try {
         console.log("Cancel Booking - Request Params:", req.params);
         console.log("Cancel Booking - Request Body:", req.body);
