@@ -24,18 +24,82 @@ const io = socketIo(server, {
   }
 });
 
+ // Middleware
+app.use(morgan("dev"));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
  
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = "uploads/booking-chat/";
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, "chat-" + uniqueSuffix + path.extname(file.originalname));
+  },
+});
 
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Please upload an image file"));
+    }
+  },
+});
+
+app.post("/upload-image", upload.single("image"), async (req, res) => {
+  try {
+    let chat = await Booking.findById(req.body.bookingId);
+    if (!chat) {
+      return res.status(404).json({ error: "Booking not found." });
+    }
+
+    const imageUrl = `${req.file.filename}`;
+    const imageMessage = {
+      event: "chat image",
+      data: {
+        bookingId: req.body.bookingId,
+        senderId: req.body.senderId,
+        image: imageUrl,
+      },
+    };
+
+    chat.chat.push(imageMessage);
+    await chat.save();
+
+    // Emit the event
+    io.emit("receive message", { bookingId: chat._id, messages: chat.chat });
+
+    res.json({ success: true, imageUrl });
+  } catch (error) {
+    console.error("Error saving chat image:", error);
+    res.status(500).json({ error: "Server error occurred." });
+  }
+});
+ 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  // Handle sending messages
+  // Handle text and image messages
   socket.on("chat message", async (message) => {
     console.log("Message received:", message);
-
     try {
       let chat = await Booking.findById(message?.data?.bookingId);
-
       if (!chat) {
         return socket.emit("error", "Booking not found.");
       }
@@ -46,13 +110,13 @@ io.on("connection", (socket) => {
       // Emit event to the sender
       socket.emit("message received", {
         bookingId: chat._id,
-        message: message.data
+        message: message.data,
       });
 
       // Broadcast to all clients
       io.emit("receive message", {
         bookingId: chat._id,
-        messages: chat.chat
+        messages: chat.chat,
       });
     } catch (error) {
       console.error("Error saving chat message:", error);
@@ -60,20 +124,57 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Handle image upload
+  socket.on("chat image", async (data, callback) => {
+    console.log("data :", data )
+    try {
+      upload.single("image")(data.req, data.res, async (err) => {
+        if (err) {
+          return callback({ error: err.message });
+        }
+
+        let chat = await Booking.findById(data.bookingId);
+        if (!chat) {
+          return callback({ error: "Booking not found." });
+        }
+ 
+        const imageUrl = `${data.req.file.filename}`;
+        const imageMessage = {
+          event: "chat image",
+          data: {
+            bookingId: data.bookingId,
+            senderId: data.senderId,
+            image: imageUrl,
+          },
+        }; 
+
+        console.log("imageMessage :" , imageMessage)
+
+        chat.chat.push(imageMessage);
+        await chat.save();
+
+        // Send image message to sender and other clients
+        socket.emit("message received", imageMessage);
+        io.emit("receive message", { bookingId: chat._id, messages: chat.chat });
+        callback({ success: true, imageUrl });
+      });
+    } catch (error) {
+      console.error("Error saving chat image:", error);
+      callback({ error: "Server error occurred." });
+    }
+  });
+
   // Handle retrieving messages
   socket.on("receive message", async (data) => {
     console.log("Fetching messages for booking ID:", data.data?.bookingId);
-
     try {
       let chat = await Booking.findById(data.data?.bookingId);
-
       if (!chat) {
         return socket.emit("error", "No chat found for this booking ID.");
       }
-
       socket.emit("receive message", {
         bookingId: chat._id,
-        messages: chat.chat
+        messages: chat.chat,
       });
     } catch (error) {
       console.error("Error retrieving chat messages:", error);
@@ -86,9 +187,6 @@ io.on("connection", (socket) => {
   });
 });
 
- 
-
-// Connect to MongoDB first
 connectDB()
   .then(() => {
     console.log("Database connected successfully");
@@ -98,17 +196,7 @@ connectDB()
     process.exit(1);
   });
 
-// Middleware
-app.use(morgan("dev"));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+
 
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
