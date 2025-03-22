@@ -126,6 +126,10 @@ const subServiceSchema = new mongoose.Schema({
         type: Number, 
         default: 0
     },
+    city: [{
+        type: String,
+        required: true 
+    }],
     
 });  
 

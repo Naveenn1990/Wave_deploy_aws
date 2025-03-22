@@ -46,6 +46,7 @@ const userSchema = new mongoose.Schema({
     enum: ['active', 'blocked'],
     default: 'active'
   },
+  notifications:[],
   reviews: [
     {
       partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner" },

@@ -91,6 +91,8 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
     res.status(500).json({ error: "Server error occurred." });
   }
 });
+
+const userSockets = {}; // Store userId → socketId mapping
  
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
@@ -182,10 +184,52 @@ io.on("connection", (socket) => {
     }
   });
 
+  // socket.on("join", (userId) => {
+  //   socket.join(userId); // Make user join their own room
+  //   userSockets[userId] = socket.id;
+  //   console.log(`User ${userId} joined room ${userId} with socket ${socket.id}`);
+  // }); 
+  
+  //   // **Handle disconnection**
+  //   socket.on("disconnect", () => {
+  //     Object.keys(userSockets).forEach((userId) => {
+  //       if (userSockets[userId] === socket.id) {
+  //         delete userSockets[userId];
+  //       }
+  //     });
+  //     console.log("Client disconnected:", socket.id);
+  //   }); 
+
+  socket.on("join", (userId) => {
+    console.log(`Received join event from user ${userId}`);
+    socket.join(userId); // Join the user-specific room
+
+    if (!userSockets[userId]) {
+      userSockets[userId] = [];
+    }
+    userSockets[userId].push(socket.id);
+
+    console.log(`User ${userId} joined with socket ${socket.id}`);
+  });
+
+  // Handle Disconnection Properly
+  // socket.on("disconnect", () => {
+  //   Object.keys(userSockets).forEach((userId) => {
+  //     userSockets[userId] = userSockets[userId].filter((id) => id !== socket.id);
+  //     if (userSockets[userId].length === 0) {
+  //       delete userSockets[userId]; // Remove user entry if no sockets left
+  //     }
+  //   });
+  // })
+
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
   });
 });
+
+console.log("userSockets : " , userSockets)
+
+global.io = io; // Make socket available globally
 
 connectDB()
   .then(() => {

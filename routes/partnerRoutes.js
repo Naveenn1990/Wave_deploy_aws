@@ -267,7 +267,7 @@ router.get(
 // Route to pause a booking
 router.post(
   "/bookings/:bookingId/pause",
-  auth,
+ 
   partnerServiceController.pauseBooking
 );
 

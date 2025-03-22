@@ -9,7 +9,7 @@ const SubService = require("../models/SubService");
 // Create a new booking
 exports.createBooking = async (req, res) => {
   try {
-    console.log("Create Booking - Request Body:", req.body);
+    // console.log("Create Booking - Request Body:", req.body);
 
     const { 
       subServiceId,
@@ -66,7 +66,23 @@ exports.createBooking = async (req, res) => {
     // Populate the booking with sub-service and user details
     const populatedBooking = await Booking.findById(booking._id)
       .populate('subService')
-      .populate('user');
+      .populate('user');  
+
+    // **✅ Emit event for real-time notification**
+    io.to(userId).emit("booking confirmed", {
+        message: `Your booking for ${subService.name} has been Confirmed!`,
+        booking: populatedBooking,
+      });
+      console.log(`Emitted 'booking confirmed' event to user ${userId}`);
+    const user = await User.findById(userId);
+    user.notifications.push({
+        message: `Your booking for ${subService.name} has been confirmed!`,
+        booking: populatedBooking,
+        seen: false,
+        date: new Date()
+      })
+
+      user.save()
 
     res.status(201).json({ message: "Booking created successfully", booking: populatedBooking });
   } catch (error) {
@@ -412,6 +428,21 @@ exports.cancelBooking = async (req, res) => {
         const populatedBooking = await Booking.findById(booking._id)
             .populate('subService', 'name description price')
             .populate('user', 'name email phone');
+        
+            io.to(userId).emit("booking cancelled", {
+                message: `Your booking for ${populatedBooking.subService.name} has been Cancelled!`,
+                booking: populatedBooking,
+              });
+              console.log(`Emitted 'booking cancelled' event to user ${userId}`);
+            const user = await User.findById(userId);
+            user.notifications.push({
+                message: `Your booking for ${populatedBooking.subService.name} has been cancelled!`,
+                booking: populatedBooking,
+                seen: false,
+                date: new Date()
+              })
+        
+              user.save()    
 
         res.status(200).json({
             success: true,

@@ -436,8 +436,7 @@ exports.getMatchingBookings = async (req, res) => {
     });
   }
 };
-
-//accept booking
+ 
 //accept booking
 exports.acceptBooking = async (req, res) => {
   try {
@@ -514,6 +513,29 @@ exports.acceptBooking = async (req, res) => {
       { $addToSet: { bookings: bookingId } },
       { new: true }
     );
+
+    console.log("updatedBooking : " , updatedBooking)
+
+    // io.to(userId).emit("booking confirmed", {
+    //   message: `Your booking for ${subService.name} has been confirmed!`,
+    //   booking: populatedBooking,
+    // });
+
+    io.to(updatedBooking.user._id).emit("booking accepted", {
+      message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
+      booking: updatedBooking,
+    });
+
+     console.log(`Emitted 'booking accepted' event to user ${updatedBooking?.user?._id}`);
+        const user = await User.findById(updatedBooking?.user?._id);
+        user.notifications.push({
+            message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
+            booking: updatedBooking,
+            seen: false,
+            date: new Date()
+          })
+    
+          user.save()
 
     res.status(200).json({
       success: true,
@@ -700,6 +722,22 @@ exports.completeBooking = async (req, res) => {
         message: "Booking not found",
       });
     }
+
+    io.to(booking.user._id).emit("booking completed", {
+      message: `Your booking for ${booking.subService.name} has been Completed!`,
+      booking: booking,
+    });
+
+     console.log(`Emitted 'booking completed' event to user ${booking?.user?._id}`);
+    const user = await User.findById(booking?.user?._id);
+    user.notifications.push({
+        message: `Your booking for ${booking.subService.name} has been Completed!`,
+        booking: booking,
+        seen: false,
+        date: new Date()
+      })
+    
+    user.save()
 
     res.status(200).json({
       success: true,
@@ -923,7 +961,7 @@ exports.pauseBooking = async (req, res) => {
     // Find booking
     const booking = await Booking.findOne({
       _id: bookingId,
-      partner: req.partner._id,
+      // partner: req.partner?._id,
       status: { $in: ["accepted", "in_progress"] },
     });
 
@@ -933,7 +971,7 @@ exports.pauseBooking = async (req, res) => {
         message: "Booking not found or cannot be paused",
       });
     }
-
+  
     // Update booking
     booking.status = "paused";
     booking.pauseDetails = {
@@ -945,6 +983,22 @@ exports.pauseBooking = async (req, res) => {
 
     console.log("booking", booking);
     await booking.save();
+
+    io.to(booking.user._id).emit("booking paused", {
+      message: `Your booking for ${booking.subService.name} has been Paused!`,
+      booking: booking,
+    });
+
+     console.log(`Emitted 'booking paused' event to user ${booking?.user?._id}`);
+    const user = await User.findById(booking?.user?._id);
+    user.notifications.push({
+        message: `Your booking for ${booking.subService.name} has been Paused!`,
+        booking: booking,
+        seen: false,
+        date: new Date()
+      })
+    
+    user.save()
 
     res.status(200).json({
       success: true,

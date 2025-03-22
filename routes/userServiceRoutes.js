@@ -427,7 +427,7 @@ router.post("/bookings", auth, createBooking);
 router.get("/bookings", auth, getUserBookings);
 router.get("/bookings/:bookingId", auth, getBookingDetails);
 router.put("/bookings/:bookingId", auth, updateBooking);
-router.put("/bookings/:bookingId/cancel", auth, cancelBooking);
+router.put("/bookings/:bookingId/cancel", cancelBooking);
 router.post("/bookings/:bookingId/review", auth, addReview);
 
 router.get("/categories", userServiceController.getAllCategories);

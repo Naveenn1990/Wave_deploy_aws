@@ -557,6 +557,9 @@ exports.createSubService = async (req, res) => {
     // Extract file paths
     const imagePaths = req.files.map(file => file.filename); 
 
+    // Ensure city field is an array
+    const cities = Array.isArray(req.body.city) ? req.body.city : req.body.city.split(",");
+
     const subService = new SubService({
       name: req.body.name,
       description: req.body.description,
@@ -567,7 +570,8 @@ exports.createSubService = async (req, res) => {
       commission: req.body.commission,
       icon: imagePaths, // Store array of image filenames
       includes: req.body.includes ? req.body.includes.split(",") : [],
-      excludes: req.body.excludes ? req.body.excludes.split(",") : []
+      excludes: req.body.excludes ? req.body.excludes.split(",") : [],
+      city: cities
     });
 
     const savedSubService = await subService.save();

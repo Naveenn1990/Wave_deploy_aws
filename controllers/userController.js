@@ -385,17 +385,18 @@ exports.getProfile = async (req, res, next) => {
       .lean();
 
     if (!user) {
+      console.log("User : " , user)
       const error = new Error("User not found");
       error.statusCode = 404;
       throw error;
     }
 
-    console.log("Found user profile:", {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-    });
+    // console.log("Found user profile:", {
+    //   id: user._id,
+    //   name: user.name,
+    //   email: user.email,
+    //   phone: user.phone,
+    // });
 
     res.json({
       success: true,
