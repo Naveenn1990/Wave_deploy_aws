@@ -5,26 +5,26 @@ const connectDB = require("./config/database");
 const path = require("path");
 const multer = require("multer");
 const morgan = require("morgan");
-const fs = require("fs"); 
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
+const fs = require("fs");
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./config/swagger");
 require("dotenv").config();
-const bodyParser = require('body-parser');
+const bodyParser = require("body-parser");
 const socketIo = require("socket.io");
 const http = require("http");
-const Booking = require("./models/booking");  
-
+const Booking = require("./models/booking");
+// const Notification = require("./models/Notification");
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  }
+    allowedHeaders: ["Content-Type", "Authorization"],
+  },
 });
 
- // Middleware
+// Middleware
 app.use(morgan("dev"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -35,7 +35,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
- 
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadPath = "uploads/booking-chat/";
@@ -52,7 +52,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 },  
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
@@ -92,10 +92,12 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
   }
 });
 
-const userSockets = {}; 
+const userSockets = {};
 
-const adminSockets = {};  
- 
+const adminSockets = {};
+
+// Notification.injectIO(io);
+
 io.on("connection", (socket) => {
   console.log("User/Admin connected:", socket.id);
 
@@ -114,7 +116,7 @@ io.on("connection", (socket) => {
       // Emit event to the sender
       socket.emit("message received", {
         bookingId: chat._id,
-        message: message.data, 
+        message: message.data,
       });
 
       // Broadcast to all clients
@@ -130,7 +132,7 @@ io.on("connection", (socket) => {
 
   // Handle image upload
   socket.on("chat image", async (data, callback) => {
-    console.log("data :", data )
+    console.log("data :", data);
     try {
       upload.single("image")(data.req, data.res, async (err) => {
         if (err) {
@@ -141,7 +143,7 @@ io.on("connection", (socket) => {
         if (!chat) {
           return callback({ error: "Booking not found." });
         }
- 
+
         const imageUrl = `${data.req.file.filename}`;
         const imageMessage = {
           event: "chat image",
@@ -151,16 +153,19 @@ io.on("connection", (socket) => {
             image: imageUrl,
             timestamp: new Date().toISOString(),
           },
-        }; 
+        };
 
-        console.log("imageMessage :" , imageMessage)
+        console.log("imageMessage :", imageMessage);
 
         chat.chat.push(imageMessage);
         await chat.save();
 
         // Send image message to sender and other clients
         socket.emit("message received", imageMessage);
-        io.emit("receive message", { bookingId: chat._id, messages: chat.chat });
+        io.emit("receive message", {
+          bookingId: chat._id,
+          messages: chat.chat,
+        });
         callback({ success: true, imageUrl });
       });
     } catch (error) {
@@ -186,7 +191,7 @@ io.on("connection", (socket) => {
       socket.emit("error", "Error retrieving chat messages.");
     }
   });
- 
+
   socket.on("join", (userId) => {
     console.log(`Received join event from user ${userId}`);
     socket.join(userId); // Join the user-specific room
@@ -197,7 +202,7 @@ io.on("connection", (socket) => {
     userSockets[userId].push(socket.id);
 
     console.log(`User ${userId} joined with socket ${socket.id}`);
-  }); 
+  });
 
   socket.on("join admin", (adminId) => {
     console.log(`Received join event from admin ${adminId}`);
@@ -209,7 +214,7 @@ io.on("connection", (socket) => {
     adminSockets[adminId].push(socket.id);
 
     console.log(`Admin ${adminId} joined with socket ${socket.id}`);
-  }); 
+  });
 
   // socket.on("disconnect", () => {
   //   console.log("User disconnected:", socket.id);
@@ -238,11 +243,10 @@ io.on("connection", (socket) => {
       }
     }
   });
+});
 
-}); 
-
-console.log("userSockets : " , userSockets)
-console.log("adminSockets : " , adminSockets)
+console.log("userSockets : ", userSockets);
+console.log("adminSockets : ", adminSockets);
 
 global.io = io; // Make socket available globally
 
@@ -255,13 +259,15 @@ connectDB()
     process.exit(1);
   });
 
-
-
 // Swagger Documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: "Wave API Documentation"
-}));
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customCss: ".swagger-ui .topbar { display: none }",
+    customSiteTitle: "Wave API Documentation",
+  })
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -278,10 +284,10 @@ const dirs = [
   path.join(__dirname, "uploads"),
   path.join(__dirname, "uploads", "banners"),
   path.join(__dirname, "uploads", "promotional-banners"),
-  path.join(__dirname, "uploads", "company-banners")
+  path.join(__dirname, "uploads", "company-banners"),
 ];
 
-dirs.forEach(dir => {
+dirs.forEach((dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -289,18 +295,22 @@ dirs.forEach(dir => {
 
 // Serve static files with proper headers
 const staticDirs = [
-  { url: '/uploads', dir: 'uploads' },
-  { url: '/uploads/banners', dir: 'uploads/banners' },
-  { url: '/uploads/promotional-banners', dir: 'uploads/promotional-banners' },
-  { url: '/uploads/company-banners', dir: 'uploads/company-banners' }
+  { url: "/uploads", dir: "uploads" },
+  { url: "/uploads/banners", dir: "uploads/banners" },
+  { url: "/uploads/promotional-banners", dir: "uploads/promotional-banners" },
+  { url: "/uploads/company-banners", dir: "uploads/company-banners" },
 ];
 
 staticDirs.forEach(({ url, dir }) => {
-  app.use(url, (req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    next();
-  }, express.static(path.join(__dirname, dir)));
+  app.use(
+    url,
+    (req, res, next) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      next();
+    },
+    express.static(path.join(__dirname, dir))
+  );
 });
 
 // Import routes
@@ -316,8 +326,8 @@ const serviceHierarchyRoutes = require("./routes/serviceHierarchyRoutes");
 const adminBannerRoutes = require("./routes/adminBannerRoutes");
 const userBannerRoutes = require("./routes/userBannerRoutes");
 const adminBookingRoutes = require("./routes/adminBookingRoutes");
-const adminBookingController = require('./controllers/adminBookingController');
- 
+const adminBookingController = require("./controllers/adminBookingController");
+
 // Routes
 app.use("/api/user", userRoutes);
 app.use("/api/user", userServiceRoutes);
@@ -333,11 +343,11 @@ app.use("/api/user/banners", userBannerRoutes);
 app.use("/api/admin/bookings", adminBookingRoutes);
 
 // Root route for WebSocket server
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.send("WebSocket Server is Running");
 });
 
-app.get('/admin/bookings', adminBookingController.getAllBookings);
+app.get("/admin/bookings", adminBookingController.getAllBookings);
 
 // 404 handler
 app.use((req, res, next) => {
