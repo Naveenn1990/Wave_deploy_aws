@@ -85,7 +85,8 @@ exports.createBooking = async (req, res) => {
 
     await user.save();
 
-    const adminId = "679a7b0cf469c2393c0cd39e";
+    // const adminId = "679a7b0cf469c2393c0cd39e";
+    const adminId = "67e1202dcc9ae239cdb2d9a1";
     io.to(adminId).emit("admin booking confirmed", {
       message: `User (${populatedBooking?.user?._id}) booking for ${subService.name} has been Confirmed!`,
       booking: populatedBooking,

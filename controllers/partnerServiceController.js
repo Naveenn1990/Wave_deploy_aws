@@ -885,6 +885,7 @@ exports.getRejectedBookings = async (req, res) => {
     })
       .populate("service", "name") // Populate service details
       .populate("subService", "name") // Populate subService details
+      .populate("user")  
       .select("-__v") // Exclude version key
       .sort({ rejectedAt: -1 }); // Sort by rejected date, newest first
 
@@ -895,7 +896,7 @@ exports.getRejectedBookings = async (req, res) => {
         bookings: [],
       });
     }
-
+    console.log("rejectedBookings : " , rejectedBookings)
     res.status(200).json({
       success: true,
       message: "Rejected bookings fetched successfully",

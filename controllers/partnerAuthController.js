@@ -720,6 +720,7 @@ exports.updateProfile = async (req, res) => {
       service,
       modeOfService,
     } = req.body;
+    console.log("req.body : " , req.body)
 
     let profile = await Partner.findOne({ _id: req.partner._id });
     if (!profile) {
