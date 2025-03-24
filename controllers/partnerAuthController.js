@@ -209,6 +209,7 @@ exports.resendOTP = async (req, res) => {
       success: true,
       message: "OTP resent successfully",
       phone,
+      otp,
     });
   } catch (error) {
     console.error("Resend Partner OTP Error:", error);
