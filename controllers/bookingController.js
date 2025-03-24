@@ -3,10 +3,30 @@ const Booking = require("../models/booking");
 // const ServiceCategory = require("../models/ServiceCategory");
 const User = require("../models/User");
 const Review = require("../models/Review");
-const mongoose = require("mongoose");
+// const mongoose = require("mongoose");
 const SubService = require("../models/SubService");
 const Admin = require("../models/admin");
+const PartnerModel = require("../models/Partner");
+const Notification = require("../models/Notification");
 
+const createNotification = async (serviceId, name, job) => {
+  try {
+    let data = await PartnerModel.find({ service: serviceId });
+    data.map(async (ele) => {
+      let noti = new Notification({
+        title: "New Booking Alert",
+        userId: ele._id,
+        message: `You have new service booking for ${name} service`,
+      });
+      await noti.save();
+      const userIdString = ele._id.toString();
+      io.to(userIdString).emit("new-job", job);
+    });
+    console.log("Notification created", name);
+  } catch (error) {
+    console.log(error);
+  }
+};
 // Create a new booking
 exports.createBooking = async (req, res) => {
   try {
@@ -68,7 +88,13 @@ exports.createBooking = async (req, res) => {
     const populatedBooking = await Booking.findById(booking._id)
       .populate("subService")
       .populate("user");
-
+    if (populatedBooking) {
+      createNotification(
+        populatedBooking.subService.service,
+        subService.name,
+        populatedBooking
+      );
+    }
     // **✅ Emit event for real-time notification**
     io.to(userId).emit("booking confirmed", {
       message: `Your booking for ${subService.name} has been Confirmed!`,
@@ -101,12 +127,10 @@ exports.createBooking = async (req, res) => {
 
     await admin.save();
 
-    res
-      .status(201)
-      .json({
-        message: "Booking created successfully",
-        booking: populatedBooking,
-      });
+    res.status(201).json({
+      message: "Booking created successfully",
+      booking: populatedBooking,
+    });
   } catch (error) {
     console.error("Error in createBooking:", error);
     res.status(500).json({
