@@ -28,12 +28,7 @@ exports.loginAdmin = async (req, res) => {
 
     res.json({
       token,
-      admin: {
-        name: admin.name,
-        email: admin.email,
-        role: admin.role,
-        permissions: admin.permissions,
-      },
+      admin 
     });
   } catch (error) {
     console.error("Admin Login Error:", error);
@@ -83,6 +78,40 @@ exports.createAdmin = async (req, res) => {
   } catch (error) {
     console.error("Create Admin Error:", error);
     res.status(500).json({ message: "Error creating admin" });
+  }
+};
+
+// Get Admin profile
+exports.getProfile = async (req, res, next) => {
+  try {
+    console.log("Getting profile for admin:", req.admin._id);
+ 
+    if (!req.admin || !req.admin._id) {
+      throw new Error("User not authenticated");
+    }
+
+    const admin = await Admin.findById(req.admin._id)
+      .select("-password -tempOTP -tempOTPExpiry")
+      .lean();
+
+    if (!admin) {
+      console.log("Admin : " , admin)
+      const error = new Error("Admin not found");
+      error.statusCode = 404;
+      throw error;
+    } 
+    res.json({
+      success: true,
+      admin, 
+    });
+  } catch (error) {
+    console.error("Get Profile Error:", {
+      error: error.message,
+      stack: error.stack,
+      // adminId: req.admin?._id,
+    });
+ 
+    next(error);
   }
 };
 

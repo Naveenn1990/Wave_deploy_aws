@@ -52,7 +52,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },  
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
@@ -92,10 +92,12 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
   }
 });
 
-const userSockets = {}; // Store userId → socketId mapping
+const userSockets = {}; 
+
+const adminSockets = {};  
  
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
+  console.log("User/Admin connected:", socket.id);
 
   // Handle text and image messages
   socket.on("chat message", async (message) => {
@@ -112,7 +114,7 @@ io.on("connection", (socket) => {
       // Emit event to the sender
       socket.emit("message received", {
         bookingId: chat._id,
-        message: message.data,
+        message: message.data, 
       });
 
       // Broadcast to all clients
@@ -147,6 +149,7 @@ io.on("connection", (socket) => {
             bookingId: data.bookingId,
             senderId: data.senderId,
             image: imageUrl,
+            timestamp: new Date().toISOString(),
           },
         }; 
 
@@ -168,7 +171,7 @@ io.on("connection", (socket) => {
 
   // Handle retrieving messages
   socket.on("receive message", async (data) => {
-    console.log("Fetching messages for booking ID:", data.data?.bookingId);
+    // console.log("Fetching messages for booking ID:", data.data?.bookingId);
     try {
       let chat = await Booking.findById(data.data?.bookingId);
       if (!chat) {
@@ -183,23 +186,7 @@ io.on("connection", (socket) => {
       socket.emit("error", "Error retrieving chat messages.");
     }
   });
-
-  // socket.on("join", (userId) => {
-  //   socket.join(userId); // Make user join their own room
-  //   userSockets[userId] = socket.id;
-  //   console.log(`User ${userId} joined room ${userId} with socket ${socket.id}`);
-  // }); 
-  
-  //   // **Handle disconnection**
-  //   socket.on("disconnect", () => {
-  //     Object.keys(userSockets).forEach((userId) => {
-  //       if (userSockets[userId] === socket.id) {
-  //         delete userSockets[userId];
-  //       }
-  //     });
-  //     console.log("Client disconnected:", socket.id);
-  //   }); 
-
+ 
   socket.on("join", (userId) => {
     console.log(`Received join event from user ${userId}`);
     socket.join(userId); // Join the user-specific room
@@ -210,24 +197,52 @@ io.on("connection", (socket) => {
     userSockets[userId].push(socket.id);
 
     console.log(`User ${userId} joined with socket ${socket.id}`);
-  });
+  }); 
 
-  // Handle Disconnection Properly
+  socket.on("join admin", (adminId) => {
+    console.log(`Received join event from admin ${adminId}`);
+    socket.join(adminId); // Join the admin-specific room
+
+    if (!adminSockets[adminId]) {
+      adminSockets[adminId] = [];
+    }
+    adminSockets[adminId].push(socket.id);
+
+    console.log(`Admin ${adminId} joined with socket ${socket.id}`);
+  }); 
+
   // socket.on("disconnect", () => {
-  //   Object.keys(userSockets).forEach((userId) => {
-  //     userSockets[userId] = userSockets[userId].filter((id) => id !== socket.id);
-  //     if (userSockets[userId].length === 0) {
-  //       delete userSockets[userId]; // Remove user entry if no sockets left
-  //     }
-  //   });
-  // })
+  //   console.log("User disconnected:", socket.id);
+  // });
 
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    console.log("User/Admin disconnected:", socket.id);
+
+    // Cleanup userSockets
+    for (const userId in userSockets) {
+      userSockets[userId] = userSockets[userId].filter(
+        (id) => id !== socket.id
+      );
+      if (userSockets[userId].length === 0) {
+        delete userSockets[userId];
+      }
+    }
+
+    // Cleanup adminSockets
+    for (const adminId in adminSockets) {
+      adminSockets[adminId] = adminSockets[adminId].filter(
+        (id) => id !== socket.id
+      );
+      if (adminSockets[adminId].length === 0) {
+        delete adminSockets[adminId];
+      }
+    }
   });
-});
+
+}); 
 
 console.log("userSockets : " , userSockets)
+console.log("adminSockets : " , adminSockets)
 
 global.io = io; // Make socket available globally
 

@@ -8,6 +8,7 @@ const SubService = require("../models/SubService");
 const mongoose = require("mongoose");
 const Product = require("../models/product");
 const User = require("../models/User");
+const Admin = require("../models/admin");
 
 // Get all available services for partners
 exports.getAvailableServices = async (req, res) => {
@@ -436,7 +437,7 @@ exports.getMatchingBookings = async (req, res) => {
     });
   }
 };
- 
+
 //accept booking
 exports.acceptBooking = async (req, res) => {
   try {
@@ -514,7 +515,7 @@ exports.acceptBooking = async (req, res) => {
       { new: true }
     );
 
-    console.log("updatedBooking : " , updatedBooking)
+    console.log("updatedBooking : ", updatedBooking);
 
     // io.to(userId).emit("booking confirmed", {
     //   message: `Your booking for ${subService.name} has been confirmed!`,
@@ -526,16 +527,34 @@ exports.acceptBooking = async (req, res) => {
       booking: updatedBooking,
     });
 
-     console.log(`Emitted 'booking accepted' event to user ${updatedBooking?.user?._id}`);
-        const user = await User.findById(updatedBooking?.user?._id);
-        user.notifications.push({
-            message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
-            booking: updatedBooking,
-            seen: false,
-            date: new Date()
-          })
-    
-          user.save()
+    console.log(
+      `Emitted 'booking accepted' event to user ${updatedBooking?.user?._id}`
+    );
+    const user = await User.findById(updatedBooking?.user?._id);
+    user.notifications.push({
+      message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
+      booking: updatedBooking,
+      seen: false,
+      date: new Date(),
+    });
+
+    user.save();
+
+    const adminId = "679a7b0cf469c2393c0cd39e";
+    io.to(adminId).emit("admin booking accepted", {
+      message: `User (${updatedBooking?.user?._id}) booking for ${updatedBooking.subService.name} has been Accepted!`,
+      booking: updatedBooking,
+    });
+    console.log(`Emitted booking Accepted event to admin ${adminId}`);
+    const admin = await Admin.findById(adminId);
+    admin.notifications.push({
+      message: `User (${updatedBooking?.user?._id}) booking for ${updatedBooking.subService.name} has been Accepted!`,
+      booking: updatedBooking,
+      seen: false,
+      date: new Date(),
+    });
+
+    await admin.save();
 
     res.status(200).json({
       success: true,
@@ -728,16 +747,32 @@ exports.completeBooking = async (req, res) => {
       booking: booking,
     });
 
-     console.log(`Emitted 'booking completed' event to user ${booking?.user?._id}`);
+    console.log(
+      `Emitted 'booking completed' event to user ${booking?.user?._id}`
+    );
     const user = await User.findById(booking?.user?._id);
     user.notifications.push({
-        message: `Your booking for ${booking.subService.name} has been Completed!`,
-        booking: booking,
-        seen: false,
-        date: new Date()
-      })
-    
-    user.save()
+      message: `Your booking for ${booking.subService.name} has been Completed!`,
+      booking: booking,
+      seen: false,
+      date: new Date(),
+    });
+
+    user.save();
+
+    const adminId = "679a7b0cf469c2393c0cd39e";
+    io.to(adminId).emit("admin booking completed", {
+      message: `User (${booking?.user?._id}) booking for ${booking.subService.name} has been Completed!`,
+      booking: booking,
+    });
+    console.log(`Emitted booking Completed event to admin ${adminId}`);
+    const admin = await Admin.findById(adminId);
+    admin.notifications.push({
+      message: `User (${booking?.user?._id}) booking for ${booking.subService.name} has been Completed!`,
+      booking: booking,
+      seen: false,
+      date: new Date(),
+    });
 
     res.status(200).json({
       success: true,
@@ -971,7 +1006,7 @@ exports.pauseBooking = async (req, res) => {
         message: "Booking not found or cannot be paused",
       });
     }
-  
+
     // Update booking
     booking.status = "paused";
     booking.pauseDetails = {
@@ -989,16 +1024,32 @@ exports.pauseBooking = async (req, res) => {
       booking: booking,
     });
 
-     console.log(`Emitted 'booking paused' event to user ${booking?.user?._id}`);
+    console.log(`Emitted 'booking paused' event to user ${booking?.user?._id}`);
     const user = await User.findById(booking?.user?._id);
     user.notifications.push({
-        message: `Your booking for ${booking.subService.name} has been Paused!`,
-        booking: booking,
-        seen: false,
-        date: new Date()
-      })
-    
-    user.save()
+      message: `Your booking for ${booking.subService.name} has been Paused!`,
+      booking: booking,
+      seen: false,
+      date: new Date(),
+    });
+
+    user.save();
+
+    const adminId = "679a7b0cf469c2393c0cd39e";
+    io.to(adminId).emit("admin booking paused", {
+      message: `User (${booking?.user?._id}) booking for ${booking.subService.name} has been Paused!`,
+      booking: booking,
+    });
+    console.log(`Emitted booking Paused event to admin ${adminId}`);
+    const admin = await Admin.findById(adminId);
+    admin.notifications.push({
+      message: `User (${booking?.user?._id}) booking for ${booking.subService.name} has been Paused!`,
+      booking: booking,
+      seen: false,
+      date: new Date(),
+    });
+
+    await admin.save();
 
     res.status(200).json({
       success: true,
@@ -1101,7 +1152,7 @@ exports.getPartnerBookings = async (req, res) => {
     })
       .populate({
         path: "user",
-        select: "name email phone profilePhoto address",
+        select: "name email phone profilePicture address",
       })
       .populate({
         path: "subService",
@@ -1263,7 +1314,7 @@ exports.allpartnerBookings = async (req, res) => {
             select: "name subService",
             populate: { path: "subService", select: "name description" },
           },
-          { path: "user", select: "name email phone" },
+          { path: "user", select: "name email phone profilePicture" },
         ],
       })
       .lean(); // Convert to plain JS object for optimization

@@ -14,6 +14,7 @@ const Product = require("../models/product");
 // Auth routes
 router.post("/login", adminController.loginAdmin);
 router.post("/create", adminAuth, adminController.createAdmin);
+router.get("/profile", adminAuth, adminController.getProfile);
 
 // Dashboard and analytics
 router.get("/dashboard", adminAuth, adminController.getDashboardAnalytics);
