@@ -129,11 +129,77 @@ exports.loginAdmin = async (req, res) => {
 //     res.status(500).json({ message: "Error creating admin" });
 //   }
 // };
+  
+exports.createMainAdmin = async (req, res) => {
+  try {
+    // Check if a main admin already exists
+    const existingMainAdmin = await Admin.findOne({ role: "admin" });
+    if (existingMainAdmin) {
+      return res.status(400).json({ message: "Main admin already exists" });
+    }
 
+    // Main admin details
+    const { email, password, name } = req.body;
+
+    // Validate required fields
+    if (!email || !password || !name) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // All permissions set to true
+    const allPermissions = {
+      dashboard: true,
+      subadmin: true,
+      banner: true,
+      categories: true,
+      subCategories: true,
+      services: true,
+      subServices: true,
+      offers: true,
+      productInventory: true,
+      booking: true,
+      refundRequest: true,
+      reviews: true,
+      customer: true,
+      providerVerification: true,
+      verifiedProvider: true,
+      enquiry: true,
+    };
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create main admin
+    const mainAdmin = new Admin({
+      email,
+      password: hashedPassword,
+      name,
+      role: "admin",
+      permissions: allPermissions,
+    });
+
+    await mainAdmin.save();
+
+    res.status(201).json({
+      message: "Main admin created successfully",
+      mainAdmin: {
+        name: mainAdmin.name,
+        email: mainAdmin.email,
+        role: mainAdmin.role,
+        permissions: mainAdmin.permissions,
+      },
+    });
+  } catch (error) {
+    console.error("Create Main Admin Error:", error);
+    res.status(500).json({ message: "Error creating main admin" });
+  }
+};
+ 
 exports.createAdmin = async (req, res) => {
   try {
     // Check if the requester is an admin
-    if (req.admin.role !== "super_admin") {
+    // if (req.admin.role !== "super_admin") {
+    if (req.admin.role !== "admin") {
       return res.status(403).json({ message: "Not authorized" });
     }
 
