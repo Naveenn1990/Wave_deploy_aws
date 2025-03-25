@@ -9,7 +9,7 @@ const mongoose = require("mongoose");
 const Product = require("../models/product");
 const User = require("../models/User");
 const Admin = require("../models/admin");
-
+const NotificationModel = require("../models/Notification");
 // Get all available services for partners
 exports.getAvailableServices = async (req, res) => {
   try {
@@ -521,9 +521,14 @@ exports.acceptBooking = async (req, res) => {
     //   message: `Your booking for ${subService.name} has been confirmed!`,
     //   booking: populatedBooking,
     // });
+    await NotificationModel.create({
+      userId: partnerId,
+      title: "Accepted Booking",
+      message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
+    });
 
     io.to(updatedBooking.user._id).emit("booking accepted", {
-      message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
+      message: `Your booking for ${updatedBooking.subService.name} has been Confirm!`,
       booking: updatedBooking,
     });
 
@@ -674,7 +679,11 @@ exports.rejectBooking = async (req, res) => {
       { status: "rejected", partner: partnerId }, // Added 'partner' field here
       { new: true }
     );
-
+    await NotificationModel.create({
+      userId: partnerId,
+      title: "Rejected Booking",
+      message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
+    });
     res.status(200).json({
       success: true,
       message: "Booking rejected successfully",
