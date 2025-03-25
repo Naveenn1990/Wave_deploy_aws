@@ -327,7 +327,7 @@ const adminBannerRoutes = require("./routes/adminBannerRoutes");
 const userBannerRoutes = require("./routes/userBannerRoutes");
 const adminBookingRoutes = require("./routes/adminBookingRoutes");
 const adminBookingController = require("./controllers/adminBookingController");
-
+const notificatioroute = require("./routes/notificationRoute");
 // Routes
 app.use("/api/user", userRoutes);
 app.use("/api/user", userServiceRoutes);
@@ -341,6 +341,7 @@ app.use("/api/public", serviceHierarchyRoutes);
 app.use("/api/admin/banners", adminBannerRoutes);
 app.use("/api/user/banners", userBannerRoutes);
 app.use("/api/admin/bookings", adminBookingRoutes);
+app.use("/api/notification", notificatioroute);
 
 // Root route for WebSocket server
 app.get("/", (req, res) => {
