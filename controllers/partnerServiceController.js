@@ -545,21 +545,21 @@ exports.acceptBooking = async (req, res) => {
 
     user.save();
 
-    const adminId = "679a7b0cf469c2393c0cd39e";
-    io.to(adminId).emit("admin booking accepted", {
-      message: `User (${updatedBooking?.user?._id}) booking for ${updatedBooking.subService.name} has been Accepted!`,
-      booking: updatedBooking,
-    });
-    console.log(`Emitted booking Accepted event to admin ${adminId}`);
-    const admin = await Admin.findById(adminId);
-    admin.notifications.push({
-      message: `User (${updatedBooking?.user?._id}) booking for ${updatedBooking.subService.name} has been Accepted!`,
-      booking: updatedBooking,
-      seen: false,
-      date: new Date(),
-    });
+    // const adminId = "679a7b0cf469c2393c0cd39e";
+    // io.to(adminId).emit("admin booking accepted", {
+    //   message: `User (${updatedBooking?.user?._id}) booking for ${updatedBooking.subService.name} has been Accepted!`,
+    //   booking: updatedBooking,
+    // });
+    // console.log(`Emitted booking Accepted event to admin ${adminId}`);
+    // const admin = await Admin.findById(adminId);
+    // admin.notifications.push({
+    //   message: `User (${updatedBooking?.user?._id}) booking for ${updatedBooking.subService.name} has been Accepted!`,
+    //   booking: updatedBooking,
+    //   seen: false,
+    //   date: new Date(),
+    // });
 
-    await admin.save();
+    // await admin.save();
 
     res.status(200).json({
       success: true,
@@ -811,7 +811,7 @@ exports.getCompletedBookings = async (req, res) => {
       .populate("service", "name") // Populate service details
       .populate("subService", "name") // Populate subService details
       .select("-__v") // Exclude version key
-      .sort({ completedAt: -1 }); // Sort by completion date, newest first
+      .sort({ updatedAt: -1 }); // Sort by completion date, newest first
 
     if (!completedBookings.length) {
       return res.status(200).json({
@@ -864,7 +864,7 @@ exports.getPendingBookings = async (req, res) => {
     const pendingBookings = await Booking.find({
       partnerId: partnerId,
       status: "pending",
-    });
+    }).sort({ updatedAt: -1 });
 
     if (!pendingBookings.length) {
       return res.status(404).json({ message: "No pending bookings found" });
@@ -894,9 +894,9 @@ exports.getRejectedBookings = async (req, res) => {
     })
       .populate("service", "name") // Populate service details
       .populate("subService", "name") // Populate subService details
-      .populate("user")  
+      .populate("user")
       .select("-__v") // Exclude version key
-      .sort({ rejectedAt: -1 }); // Sort by rejected date, newest first
+      .sort({ updatedAt: -1 }); // Sort by rejected date, newest first
 
     if (!rejectedBookings.length) {
       return res.status(200).json({
@@ -905,7 +905,7 @@ exports.getRejectedBookings = async (req, res) => {
         bookings: [],
       });
     }
-    console.log("rejectedBookings : " , rejectedBookings)
+    console.log("rejectedBookings : ", rejectedBookings);
     res.status(200).json({
       success: true,
       message: "Rejected bookings fetched successfully",
@@ -1177,7 +1177,7 @@ exports.getPartnerBookings = async (req, res) => {
         select:
           "name email phone profilePicture address experience qualification profile",
       })
-      .sort({ scheduledDate: -1 });
+      .sort({ updatedAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -1327,6 +1327,7 @@ exports.allpartnerBookings = async (req, res) => {
           { path: "user", select: "name email phone profilePicture" },
         ],
       })
+      .sort({ updatedAt: -1 })
       .lean(); // Convert to plain JS object for optimization
 
     if (!partner) {
