@@ -10,11 +10,15 @@ const userServiceController = require("../controllers/userServiceController");
 const { upload, processFilePath } = require("../middleware/upload");
 const SubCategory = require("../models/SubCategory");
 const Product = require("../models/product");
+const ReviewController = require("../controllers/reviewController");
 
 // Auth routes
 router.post("/login", adminController.loginAdmin);
 router.post("/create", adminAuth, adminController.createAdmin);
+router.post("/createmainadmin", adminController.createMainAdmin);
 router.get("/profile", adminAuth, adminController.getProfile);
+router.put("/profile/:subadminId", adminAuth, adminController.updateProfile);
+router.delete("/profile/:subadminId", adminAuth, adminController.deleteProfile);
 
 // Dashboard and analytics
 router.get("/dashboard", adminAuth, adminController.getDashboardAnalytics);
@@ -288,5 +292,7 @@ router.get(
   "/partner/:partnerId/earnings",
   adminServiceController.getPartnerEarnings
 );
+
+router.get("/contactus", adminAuth, ReviewController.getAllContactUs);
 
 module.exports = router;
