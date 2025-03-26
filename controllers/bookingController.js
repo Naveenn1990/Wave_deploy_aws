@@ -40,7 +40,11 @@ exports.createBooking = async (req, res) => {
       location,
       scheduledTime,
       scheduledDate,
+      lat,
+      lng
     } = req.body;
+
+    console.log("lat lng : " , lat , lng)
 
     // Validate required fields
     if (!subServiceId) {
@@ -72,6 +76,8 @@ exports.createBooking = async (req, res) => {
       subService: subServiceId,
       scheduledDate,
       scheduledTime,
+      lat,
+      lng,
       location: {
         address: location.address,
         landmark: location.landmark || "",
@@ -111,8 +117,8 @@ exports.createBooking = async (req, res) => {
 
     await user.save();
 
-    // const adminId = "679a7b0cf469c2393c0cd39e";
-    const adminId = "67e1202dcc9ae239cdb2d9a1";
+    // const adminId = "67e170ae35cd376d68647456";
+    const adminId = "67e170ae35cd376d68647456";
     io.to(adminId).emit("admin booking confirmed", {
       message: `User (${populatedBooking?.user?._id}) booking for ${subService.name} has been Confirmed!`,
       booking: populatedBooking,
@@ -246,7 +252,7 @@ exports.getAllBookingsWithFilters = async (req, res) => {
 exports.getUserBookings = async (req, res) => {
   try {
     const { status } = req.query;
-
+    console.log("Yessss")
     // Build query for user bookings
     const query = { user: req.user._id };
     if (status) {
@@ -488,7 +494,7 @@ exports.cancelBooking = async (req, res) => {
 
     user.save();
 
-    const adminId = "679a7b0cf469c2393c0cd39e";
+    const adminId = "67e170ae35cd376d68647456";
     io.to(adminId).emit("admin booking cancelled", {
       message: `User (${populatedBooking?.user?._id}) booking for ${populatedBooking.subService.name} has been Cancelled!`,
       booking: populatedBooking,
