@@ -203,7 +203,9 @@ exports.createAdmin = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    const { email, password, name, permissions } = req.body;
+    console.log("req.body : " , req.body)
+    const { email, password, name , permissions} = req.body;
+    // const permissions = JSON.parse(req.body.permissions);
 
     // Validate if admin already exists
     const existingAdmin = await Admin.findOne({ email });
@@ -246,23 +248,54 @@ exports.createAdmin = async (req, res) => {
       name,
       role: "subadmin",
       permissions: filteredPermissions,
-      createdBy: req.admin._id, // Tracks which admin created this subadmin
+      // createdBy: req.admin._id, // Tracks which admin created this subadmin
     });
+
+    console.log("subadmin : " , subadmin)
 
     await subadmin.save();
 
     res.status(201).json({
       message: "Subadmin created successfully",
-      subadmin: {
-        name: subadmin.name,
-        email: subadmin.email,
-        role: subadmin.role,
-        permissions: subadmin.permissions,
-      },
+      subadmin 
     });
   } catch (error) {
     console.error("Create Subadmin Error:", error);
     res.status(500).json({ message: "Error creating subadmin" });
+  }
+};
+
+// Get all Admin profiles
+exports.getProfiles = async (req, res, next) => {
+  try {
+    // console.log("Getting profile for admin:", req.admin._id);
+ 
+    // if (!req.admin || !req.admin._id) {
+    //   throw new Error("User not authenticated");
+    // }
+
+    const admins = await Admin.find()
+      // .select("-password -tempOTP -tempOTPExpiry")
+      // .lean();
+
+    if (!admins) {
+      console.log("Admin : " , admins)
+      const error = new Error("Admin not found");
+      error.statusCode = 404;
+      throw error;
+    } 
+    res.json({
+      success: true,
+      admins, 
+    });
+  } catch (error) {
+    console.error("Get Profile Error:", {
+      error: error.message,
+      stack: error.stack,
+      // adminId: req.admin?._id,
+    });
+ 
+    next(error);
   }
 };
 

@@ -505,7 +505,7 @@ exports.updateProfile = async (req, res) => {
 // Add address
 exports.addAddress = async (req, res) => {
   try {
-    const { address, landmark, addressType } = req.body;
+    const { address, landmark, addressType  , lat , lng} = req.body;
 
     if (!address) {
       return res.status(400).json({
@@ -527,6 +527,8 @@ exports.addAddress = async (req, res) => {
       address,
       landmark: landmark || "",
       addressType: addressType || "home",
+      lat , 
+      lng
     });
 
     await user.save();

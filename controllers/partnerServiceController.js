@@ -545,7 +545,7 @@ exports.acceptBooking = async (req, res) => {
 
     user.save();
 
-    const adminId = "679a7b0cf469c2393c0cd39e";
+    const adminId = "67e170ae35cd376d68647456";
     io.to(adminId).emit("admin booking accepted", {
       message: `User (${updatedBooking?.user?._id}) booking for ${updatedBooking.subService.name} has been Accepted!`,
       booking: updatedBooking,
@@ -769,7 +769,7 @@ exports.completeBooking = async (req, res) => {
 
     user.save();
 
-    const adminId = "679a7b0cf469c2393c0cd39e";
+    const adminId = "67e170ae35cd376d68647456";
     io.to(adminId).emit("admin booking completed", {
       message: `User (${booking?.user?._id}) booking for ${booking.subService.name} has been Completed!`,
       booking: booking,
@@ -1045,7 +1045,7 @@ exports.pauseBooking = async (req, res) => {
 
     user.save();
 
-    const adminId = "679a7b0cf469c2393c0cd39e";
+    const adminId = "67e170ae35cd376d68647456";
     io.to(adminId).emit("admin booking paused", {
       message: `User (${booking?.user?._id}) booking for ${booking.subService.name} has been Paused!`,
       booking: booking,
