@@ -13,27 +13,71 @@ const PartnerProfile = require("../models/PartnerProfile");
 const mongoose = require("mongoose");
 
 // Admin login
+// exports.loginAdmin = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     const admin = await Admin.findOne({ email });
+//     if (!admin || !(await bcrypt.compare(password, admin.password))) {
+//       return res.status(401).json({ message: "Invalid credentials" });
+//     }
+
+//     const token = jwt.sign({ adminId: admin._id }, process.env.JWT_SECRET, {
+//       expiresIn: "7d",
+//     });
+
+//     res.json({
+//       token,
+//       admin 
+//     });
+//   } catch (error) {
+//     console.error("Admin Login Error:", error);
+//     res.status(500).json({ message: "Login failed" });
+//   }
+// };
+
 exports.loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Check if admin or subadmin exists
     const admin = await Admin.findOne({ email });
-    if (!admin || !(await bcrypt.compare(password, admin.password))) {
+    if (!admin) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ adminId: admin._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    // Compare the provided password with the hashed password
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
-    res.json({
-      token,
-      admin: {
-        name: admin.name,
-        email: admin.email,
+    // Generate JWT token with role and permissions
+    const token = jwt.sign(
+      {
+        adminId: admin._id,
         role: admin.role,
         permissions: admin.permissions,
       },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // Prepare admin data for response
+    const adminData = {
+      id: admin._id,
+      name: admin.name,
+      email: admin.email,
+      role: admin.role,
+      permissions: admin.permissions,
+      createdBy: admin.createdBy,
+      notifications: admin.notifications,
+    };
+
+    res.status(200).json({
+      message: `${admin.role} logged in successfully`,
+      token,
+      admin: adminData,
     });
   } catch (error) {
     console.error("Admin Login Error:", error);
@@ -42,47 +86,283 @@ exports.loginAdmin = async (req, res) => {
 };
 
 // Create new admin (super_admin only)
+// exports.createAdmin = async (req, res) => {
+//   try {
+//     // Check if requester is super_admin
+//     if (req.admin.role !== "super_admin") {
+//       return res.status(403).json({ message: "Not authorized" });
+//     }
+
+//     const { email, password, name, permissions } = req.body;
+
+//     // Check if admin already exists
+//     const existingAdmin = await Admin.findOne({ email });
+//     if (existingAdmin) {
+//       return res.status(400).json({ message: "Admin already exists" });
+//     }
+
+//     // Hash password
+//     const hashedPassword = await bcrypt.hash(password, 12);
+
+//     // Create new admin
+//     const admin = new Admin({
+//       email,
+//       password: hashedPassword,
+//       name,
+//       permissions,
+//       role: "subadmin", // New admins are always regular admins
+//     });
+
+//     await admin.save();
+
+//     res.status(201).json({
+//       message: "Admin created successfully",
+//       admin: {
+//         name: admin.name,
+//         email: admin.email,
+//         role: admin.role,
+//         permissions: admin.permissions,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Create Admin Error:", error);
+//     res.status(500).json({ message: "Error creating admin" });
+//   }
+// };
+  
+exports.createMainAdmin = async (req, res) => {
+  try {
+    // Check if a main admin already exists
+    const existingMainAdmin = await Admin.findOne({ role: "admin" });
+    if (existingMainAdmin) {
+      return res.status(400).json({ message: "Main admin already exists" });
+    }
+
+    // Main admin details
+    const { email, password, name } = req.body;
+
+    // Validate required fields
+    if (!email || !password || !name) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // All permissions set to true
+    const allPermissions = {
+      dashboard: true,
+      subadmin: true,
+      banner: true,
+      categories: true,
+      subCategories: true,
+      services: true,
+      subServices: true,
+      offers: true,
+      productInventory: true,
+      booking: true,
+      refundRequest: true,
+      reviews: true,
+      customer: true,
+      providerVerification: true,
+      verifiedProvider: true,
+      enquiry: true,
+    };
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create main admin
+    const mainAdmin = new Admin({
+      email,
+      password: hashedPassword,
+      name,
+      role: "admin",
+      permissions: allPermissions,
+    });
+
+    await mainAdmin.save();
+
+    res.status(201).json({
+      message: "Main admin created successfully",
+      mainAdmin: {
+        name: mainAdmin.name,
+        email: mainAdmin.email,
+        role: mainAdmin.role,
+        permissions: mainAdmin.permissions,
+      },
+    });
+  } catch (error) {
+    console.error("Create Main Admin Error:", error);
+    res.status(500).json({ message: "Error creating main admin" });
+  }
+};
+ 
 exports.createAdmin = async (req, res) => {
   try {
-    // Check if requester is super_admin
-    if (req.admin.role !== "super_admin") {
+    // Check if the requester is an admin
+    // if (req.admin.role !== "super_admin") {
+    if (req.admin.role !== "admin") {
       return res.status(403).json({ message: "Not authorized" });
     }
 
     const { email, password, name, permissions } = req.body;
 
-    // Check if admin already exists
+    // Validate if admin already exists
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
-      return res.status(400).json({ message: "Admin already exists" });
+      return res.status(400).json({ message: "Subadmin already exists" });
     }
+
+    // Validate permissions - Only allow valid module names
+    const validModules = [
+      "dashboard",
+      "subadmin",
+      "banner",
+      "categories",
+      "subCategories",
+      "services",
+      "subServices",
+      "offers",
+      "productInventory",
+      "booking",
+      "refundRequest",
+      "reviews",
+      "customer",
+      "providerVerification",
+      "verifiedProvider",
+      "enquiry",
+    ];
+
+    const filteredPermissions = {};
+    validModules.forEach((module) => {
+      filteredPermissions[module] = permissions?.[module] || false;
+    });
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create new admin
-    const admin = new Admin({
+    // Create new subadmin
+    const subadmin = new Admin({
       email,
       password: hashedPassword,
       name,
-      permissions,
-      role: "admin", // New admins are always regular admins
+      role: "subadmin",
+      permissions: filteredPermissions,
+      createdBy: req.admin._id, // Tracks which admin created this subadmin
     });
 
-    await admin.save();
+    await subadmin.save();
 
     res.status(201).json({
-      message: "Admin created successfully",
-      admin: {
-        name: admin.name,
-        email: admin.email,
-        role: admin.role,
-        permissions: admin.permissions,
+      message: "Subadmin created successfully",
+      subadmin: {
+        name: subadmin.name,
+        email: subadmin.email,
+        role: subadmin.role,
+        permissions: subadmin.permissions,
       },
     });
   } catch (error) {
-    console.error("Create Admin Error:", error);
-    res.status(500).json({ message: "Error creating admin" });
+    console.error("Create Subadmin Error:", error);
+    res.status(500).json({ message: "Error creating subadmin" });
+  }
+};
+
+// Get Admin profile
+exports.getProfile = async (req, res, next) => {
+  try {
+    console.log("Getting profile for admin:", req.admin._id);
+ 
+    if (!req.admin || !req.admin._id) {
+      throw new Error("User not authenticated");
+    }
+
+    const admin = await Admin.findById(req.admin._id)
+      .select("-password -tempOTP -tempOTPExpiry")
+      .lean();
+
+    if (!admin) {
+      console.log("Admin : " , admin)
+      const error = new Error("Admin not found");
+      error.statusCode = 404;
+      throw error;
+    } 
+    res.json({
+      success: true,
+      admin, 
+    });
+  } catch (error) {
+    console.error("Get Profile Error:", {
+      error: error.message,
+      stack: error.stack,
+      // adminId: req.admin?._id,
+    });
+ 
+    next(error);
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const { subadminId } = req.params; // Get subadmin ID from URL
+    const { name, email, password, permissions } = req.body;
+
+    // Find subadmin by ID and ensure they exist
+    const subadmin = await Admin.findById(subadminId);
+    if (!subadmin || subadmin.role !== "subadmin") {
+      return res.status(404).json({ message: "Subadmin not found" });
+    }
+
+    // Update fields if provided
+    if (name) subadmin.name = name;
+    if (email) subadmin.email = email;
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      subadmin.password = hashedPassword;
+    }
+
+    // Update permissions if provided (deep merge to allow partial updates)
+    if (permissions) {
+      Object.keys(permissions).forEach((key) => {
+        if (subadmin.permissions.hasOwnProperty(key)) {
+          subadmin.permissions[key] = permissions[key];
+        }
+      });
+    }
+
+    // Save updated subadmin
+    await subadmin.save();
+
+    res.status(200).json({
+      message: "Subadmin updated successfully",
+      subadmin,
+    });
+  } catch (error) {
+    console.error("Update Subadmin Error:", error);
+    res.status(500).json({ message: "Failed to update subadmin" });
+  }
+};
+
+// Delete Subadmin by ID
+exports.deleteProfile = async (req, res) => {
+  try {
+    const { subadminId } = req.params;
+
+    // Find and delete subadmin
+    const deletedSubadmin = await Admin.findOneAndDelete({
+      _id: subadminId,
+      role: "subadmin",
+    });
+
+    if (!deletedSubadmin) {
+      return res.status(404).json({ message: "Subadmin not found" });
+    }
+
+    res.status(200).json({
+      message: "Subadmin deleted successfully",
+      deletedSubadmin,
+    });
+  } catch (error) {
+    console.error("Delete Subadmin Error:", error);
+    res.status(500).json({ message: "Failed to delete subadmin" });
   }
 };
 
@@ -285,8 +565,10 @@ exports.verifyPartnerKYC = async (req, res) => {
 
     if (!partner) {
       return res.status(404).json({ success: false, message: "Partner not found" });
-    }
-
+    } 
+    partner.kyc.status = 'approved'
+    await partner.save()
+    
     res.json({ success: true, message: "Partner found", partner });
   } catch (error) {
     console.error("Error:", error);

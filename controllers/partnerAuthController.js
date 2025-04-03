@@ -209,6 +209,7 @@ exports.resendOTP = async (req, res) => {
       success: true,
       message: "OTP resent successfully",
       phone,
+      otp,
     });
   } catch (error) {
     console.error("Resend Partner OTP Error:", error);
@@ -719,6 +720,7 @@ exports.updateProfile = async (req, res) => {
       service,
       modeOfService,
     } = req.body;
+    console.log("req.body : " , req.body)
 
     let profile = await Partner.findOne({ _id: req.partner._id });
     if (!profile) {
