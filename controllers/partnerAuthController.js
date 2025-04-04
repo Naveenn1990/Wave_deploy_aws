@@ -515,6 +515,7 @@ exports.completeKYC = async (req, res) => {
     const panCard = req.files?.panCard?.[0]?.filename || null;
     const aadhaar = req.files?.aadhaar?.[0]?.filename || null;
     const chequeImage = req.files?.chequeImage?.[0]?.filename || null;
+    const driverlicense = req.files?.driverlicense?.[0]?.filename || null;
 
     // Validate required fields
     if (!accountNumber || !ifscCode || !accountHolderName || !bankName) {
@@ -524,11 +525,11 @@ exports.completeKYC = async (req, res) => {
       });
     }
 
-    if (!panCard || !aadhaar || !chequeImage) {
+    if (!panCard || !aadhaar || !chequeImage|| !driverlicense) {
       return res.status(400).json({
         success: false,
         message:
-          "Please upload all required documents (PAN, Aadhaar, Cheque Image).",
+          "Please upload all required documents (PAN, Aadhaar, Cheque Image,Driver License).",
       });
     }
 
@@ -548,6 +549,7 @@ exports.completeKYC = async (req, res) => {
       panCard,
       aadhaar,
       chequeImage,
+      driverlicense,
       status: "pending", // Initial status
       remarks: null, // Clear previous remarks
     };
