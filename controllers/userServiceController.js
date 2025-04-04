@@ -21,19 +21,19 @@ function getCleanImageName(imagePath) {
 // Get complete service hierarchy (categories -> services -> subservices)
 async function getServiceHierarchy(req, res) {
   try {
-    console.log("Starting to fetch service hierarchy...");
+    // console.log("Starting to fetch service hierarchy...");
 
     // Get all active categories
     const categories = await ServiceCategory.find({ status: "active" }).lean();
-    console.log("Found categories:", categories.length);
+    // console.log("Found categories:", categories.length);
 
     // First, let's check all services in the database
     const allServices = await Service.find({}).lean();
-    console.log("Total services in database:", allServices);
+    // console.log("Total services in database:", allServices);
 
     // Process each category to include its services and subservices
     const hierarchyData = await Promise.all(categories.map(async (category) => {
-      console.log(`Processing category: ${category.name} (${category._id})`);
+      // console.log(`Processing category: ${category.name} (${category._id})`);
       
       // Get all active services for this category
       const services = await Service.find({
@@ -41,17 +41,17 @@ async function getServiceHierarchy(req, res) {
         isActive: true
       }).lean();
       
-      console.log(`Found ${services.length} services for category ${category.name}:`, services);
+      // console.log(`Found ${services.length} services for category ${category.name}:`, services);
 
       // Get subservices for each service
       const servicesWithSubservices = await Promise.all(services.map(async (service) => {
-        console.log(`Processing service: ${service.name} (${service._id})`);
+        // console.log(`Processing service: ${service.name} (${service._id})`);
         
         const subServices = await SubService.find({
           service: service._id
         }).lean();
         
-        console.log(`Found ${subServices.length} subservices for service ${service.name}:`, subServices);
+        // console.log(`Found ${subServices.length} subservices for service ${service.name}:`, subServices);
 
         // Format subservices
         const formattedSubServices = subServices.map(subService => ({
@@ -118,7 +118,7 @@ const getCategories = async (req, res) => {
                 }
             });
 
-        console.log('Fetched Categories:', categories); // Log fetched categories
+        // console.log('Fetched Categories:', categories); // Log fetched categories
 
         res.status(200).json({
             success: true,
@@ -346,7 +346,7 @@ async function getAllServices(req, res) {
       .populate('category')
       .lean();
 
-    console.log("All services:", services);
+    // console.log("All services:", services);
 
     return res.status(200).json({
       success: true,
@@ -448,7 +448,7 @@ const getAllSubCategories = async (req, res) => {
 
 
 const getAllSubCategoriesForUser = async (req, res) => {
-  console.log("subcategory")
+  // console.log("subcategory")
     try {
         const subcategories = await SubCategory.find({ isActive: true }); // Fetch active subcategories
 
@@ -529,7 +529,7 @@ const getAllSubServices = async (req, res) => {
 
 
 const getAllSubServicesForUser = async (req, res) => {
-  console.log("hi")
+  // console.log("hi")
     try {
         const subservices = await SubService.find({ isActive: true })
         .populate({path: 'reviews'})
@@ -547,7 +547,7 @@ const getAllSubServicesForUser = async (req, res) => {
 const getAllCategoriesForUser = async (req, res) => {
     try {
         const categories = await ServiceCategory.find(); // Fetch active categories
-        console.log(categories)
+        // console.log(categories)
         res.status(200).json({
             success: true,
             data: categories
@@ -679,8 +679,8 @@ const viewPartnerCart = async (req, res) => {
     const userId = req.user.id; // Authenticated user
     const { bookingId } = req.params;
 
-    console.log("Authenticated User ID:", userId);
-    console.log("Requested Booking ID:", bookingId);
+    // console.log("Authenticated User ID:", userId);
+    // console.log("Requested Booking ID:", bookingId);
 
     // Step 1: Verify if the booking exists and belongs to the user
     const booking = await Booking.findOne({ _id: bookingId, user: userId }).populate("cart.product");

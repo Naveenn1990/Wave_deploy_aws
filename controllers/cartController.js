@@ -26,13 +26,13 @@ exports.getCart = async (req, res) => {
       createdAt: cart.createdAt,
       updatedAt: cart.updatedAt,
       items: await Promise.all(cart.items.map(async (item) => {
-        console.log("Processing item:", item);
+        // console.log("Processing item:", item);
 
         // Find the category that contains this service
         const category = await ServiceCategory.findOne({ "services._id": item.service });
 
         if (!category) {
-          console.log(`Category not found for service ID: ${item.service}`);
+          // console.log(`Category not found for service ID: ${item.service}`);
         }
 
         // Extract service details
@@ -41,7 +41,7 @@ exports.getCart = async (req, res) => {
         );
 
         if (!service) {
-          console.log(`Service not found in category for service ID: ${item.service}`);
+          // console.log(`Service not found in category for service ID: ${item.service}`);
         }
 
         // Extract subservice details if applicable
@@ -102,7 +102,7 @@ exports.removeFromCart = async (req, res) => {
       subservice: item.subservice ? item.subservice.toString() : "MISSING"
     })));
 
-    console.log("🔍 Requested itemId:", itemId);
+    // console.log("🔍 Requested itemId:", itemId);
 
     // Find the item to remove
     const itemToRemove = cart.items.find(item => item._id.toString() === itemId);
@@ -188,7 +188,7 @@ exports.clearCart = async (req, res) => {
 // Add subservice directly to cart
 exports.addSubServiceToCart = async (req, res) => {
   try {
-    console.log("Request Body:", req.body);
+    // console.log("Request Body:", req.body);
     const { subserviceId, scheduledDate, scheduledTime, location } = req.body;
 
     if (!subserviceId) {
@@ -196,7 +196,7 @@ exports.addSubServiceToCart = async (req, res) => {
       return res.status(400).json({ message: "subserviceId is required" });
     }
 
-    console.log("Subservice ID from request body:", subserviceId);
+    // console.log("Subservice ID from request body:", subserviceId);
 
     // Fetch subservice details
     const subservice = await SubService.findById(subserviceId);
@@ -205,7 +205,7 @@ exports.addSubServiceToCart = async (req, res) => {
       return res.status(404).json({ message: "Subservice not found" });
     }
 
-    console.log("Fetched Subservice:", subservice);
+    // console.log("Fetched Subservice:", subservice);
 
     if (typeof subservice.price !== "number") {
       console.error("Invalid subservice price for ID:", subserviceId);
@@ -218,7 +218,7 @@ exports.addSubServiceToCart = async (req, res) => {
       cart = new Cart({ user: req.user._id, items: [], totalAmount: 0 });
     }
 
-    console.log("Cart before update:", JSON.stringify(cart, null, 2));
+    // console.log("Cart before update:", JSON.stringify(cart, null, 2));
 
     // Check if the subservice is already in the cart
     const existingItemIndex = cart.items.findIndex(
@@ -226,7 +226,7 @@ exports.addSubServiceToCart = async (req, res) => {
     );
 
     if (existingItemIndex !== -1) {
-      console.log("Subservice already in cart, removing it...");
+      // console.log("Subservice already in cart, removing it...");
       // Remove the item if it already exists (toggle behavior)
       cart.items.splice(existingItemIndex, 1);
     } else {
@@ -243,7 +243,7 @@ exports.addSubServiceToCart = async (req, res) => {
 
     await cart.save();
 
-    console.log("Updated Cart:", JSON.stringify(cart, null, 2));
+    // console.log("Updated Cart:", JSON.stringify(cart, null, 2));
     res.json({
       message: "Cart updated successfully",
       cart,
@@ -404,7 +404,7 @@ exports.clearCart = async (req, res) => {
 // New function for adding sub-services directly to the cart
 exports.addSubServiceToCartNew = async (req, res) => {
   try {
-    console.log("Request Body:", req.body);
+    // console.log("Request Body:", req.body);
     const { subserviceId, quantity } = req.body;
 
     // Validate request data
@@ -418,7 +418,7 @@ exports.addSubServiceToCartNew = async (req, res) => {
       return res.status(404).json({ message: "Subservice not found" });
     }
 
-    console.log("Fetched Subservice:", subservice);
+    // console.log("Fetched Subservice:", subservice);
 
     // Find or create user's cart
     let cart = await Cart.findOne({ user: req.user._id });
@@ -432,7 +432,7 @@ exports.addSubServiceToCartNew = async (req, res) => {
       cart.items = [];
     }
 
-    console.log("Current Cart:", cart);
+    // console.log("Current Cart:", cart);
 
     // Convert `subserviceId` to string for proper comparison
     const subserviceIdStr = subserviceId.toString();
@@ -460,7 +460,7 @@ exports.addSubServiceToCartNew = async (req, res) => {
     // Save the updated cart
     await cart.save();
 
-    console.log("Updated Cart:", cart);
+    // console.log("Updated Cart:", cart);
 
     res.json({
       message: "Subservice added to cart successfully",

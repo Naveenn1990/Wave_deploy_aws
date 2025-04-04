@@ -5,14 +5,14 @@ const PartnerService = require("../models/PartnerService");
 exports.getAllCategories = async (req, res) => {
   try {
     const allCategories = await ServiceCategory.find({});
-    console.log(`All categories in the database: ${JSON.stringify(allCategories)}`);
-    console.log(`Number of categories fetched: ${allCategories.length}`);
+    // console.log(`All categories in the database: ${JSON.stringify(allCategories)}`);
+    // console.log(`Number of categories fetched: ${allCategories.length}`);
     allCategories.forEach(category => {
-      console.log(`Category: ${category.name}, Icon: ${category.icon}`);
-      console.log(`Icon: ${category.icon}`); // added this line
+      // console.log(`Category: ${category.name}, Icon: ${category.icon}`);
+      // console.log(`Icon: ${category.icon}`); // added this line
     });
     const categories = allCategories.filter(category => category.status === 'active');
-    console.log(`Number of active categories fetched: ${categories.length}`);
+    // console.log(`Number of active categories fetched: ${categories.length}`);
     const defaultIcon = "path/to/default/icon.png";
     res.json({
       success: true,

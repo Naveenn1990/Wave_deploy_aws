@@ -70,7 +70,9 @@ const storage = multer.diskStorage({
     } else if (
       file.fieldname === "panCard" ||
       file.fieldname === "aadhaar" ||
-      file.fieldname === "chequeImage"
+      file.fieldname === "chequeImage" ||
+      file.fieldname === "drivingLicence" ||
+      file.fieldname === "bill"
     ) {
       cb(null, kycDir);
     } else if (file.fieldname === "photos") {
@@ -177,7 +179,8 @@ router.post(
       { name: "panCard", maxCount: 1 },
       { name: "aadhaar", maxCount: 1 },
       { name: "chequeImage", maxCount: 1 },
-      { name: "driverlicense", maxCount: 1 },
+      { name: "drivingLicence", maxCount: 1 },
+      { name: "bill", maxCount: 1 },
     ])(req, res, (err) => {
       if (err instanceof multer.MulterError) {
         return res.status(400).json({
@@ -191,7 +194,7 @@ router.post(
         });
       }
       // Log the files received
-      console.log("Files received:", req.files);
+      // console.log("Files received:", req.files);
       next();
     });
   },

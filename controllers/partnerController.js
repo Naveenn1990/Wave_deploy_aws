@@ -244,9 +244,11 @@ const uploadKYCDocuments = async (req, res) => {
     // Validate file uploads
     if (
       !req.files ||
-      !req.files.panCard ||
-      !req.files.aadhaarCard ||
-      !req.files.cancelledCheque
+      !req.files?.panCard ||
+      !req.files?.aadhaarCard ||
+      !req.files?.cancelledCheque ||
+      !req.files?.drivingLicence ||
+      !req.files?.bill 
     ) {
       return res.status(400).json({
         success: false,

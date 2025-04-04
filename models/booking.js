@@ -88,6 +88,7 @@ const bookingSchema = new mongoose.Schema(
     chat:[],
     lat: { type: String },
     lng: { type: String },
+    currentBooking: { type: Boolean, default: false },
   },
   { 
     timestamps: true,

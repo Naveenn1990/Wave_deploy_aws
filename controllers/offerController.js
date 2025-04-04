@@ -111,7 +111,7 @@ exports.createOffer = async (req, res) => {
 
 exports.editOffer = async (req, res) => {
     const { id } = req.params;
-    console.log("req Body", req.body )
+    // console.log("req Body", req.body )
     // Collecting update fields dynamically
     const updateFields = {};
 
@@ -125,7 +125,7 @@ exports.editOffer = async (req, res) => {
     if (req.file && req.file.path) {
         updateFields.promotionalImage = req.file.path;
     }
-    console.log('Update fields:', updateFields);
+    // console.log('Update fields:', updateFields);
 
 
     try {

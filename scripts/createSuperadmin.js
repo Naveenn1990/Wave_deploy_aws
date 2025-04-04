@@ -6,12 +6,12 @@ require("dotenv").config();
 async function createSuperAdmin() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log("Connected to MongoDB");
+    // console.log("Connected to MongoDB");
 
     // Check if super admin already exists
     const existingSuperAdmin = await Admin.findOne({ role: "super_admin" });
     if (existingSuperAdmin) {
-      console.log("Super admin already exists!");
+      // console.log("Super admin already exists!");
       process.exit(0);
     }
 
@@ -31,9 +31,9 @@ async function createSuperAdmin() {
     });
 
     await superAdmin.save();
-    console.log("Super admin created successfully!");
-    console.log("Email: superadmin@wave.com");
-    console.log("Password: admin123");
+    // console.log("Super admin created successfully!");
+    // console.log("Email: superadmin@wave.com");
+    // console.log("Password: admin123");
     process.exit(0);
   } catch (error) {
     console.error("Error creating super admin:", error);

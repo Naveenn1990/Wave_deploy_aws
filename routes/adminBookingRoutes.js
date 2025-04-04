@@ -23,7 +23,7 @@ router.get('/bookings', adminAuth, adminBookingController.getAllBookings);
 
 // Add a test route to verify controller is loaded
 router.get('/test', (req, res) => {
-    console.log('adminBookingController:', adminBookingController);
+    // console.log('adminBookingController:', adminBookingController);
     res.json({ message: 'Test route working' });
 });
 

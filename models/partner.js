@@ -22,7 +22,8 @@ const partnerSchema = new mongoose.Schema(
       panCard: String,
       aadhaar: String,
       chequeImage: String,
-      driverlicense: String,
+      drivingLicence: String,
+      bill: String,
       status: {
         type: String,
         enum: ["pending", "approved", "rejected"],
@@ -117,6 +118,9 @@ const partnerSchema = new mongoose.Schema(
         required: function () {
           return this.profileCompleted;
         },
+      },
+      city: {
+        type: String,
       },
     },
     profilePicture: String,
