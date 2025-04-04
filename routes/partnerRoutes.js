@@ -190,7 +190,7 @@ router.post(
         });
       }
       // Log the files received
-      console.log("Files received:", req.files);
+      // console.log("Files received:", req.files);
       next();
     });
   },

@@ -1,6 +1,7 @@
 const Banner = require("../models/Banner");
 const fs = require("fs").promises;
 const path = require("path");
+const Promovideo = require("../models/Promovideo");
 
 // Helper function to get filename from path
 const getFilename = (filepath) => {
@@ -11,6 +12,7 @@ const getFilename = (filepath) => {
   }
   return filepath;
 };
+ 
 
 const bannerController = {
   // Upload a new banner
@@ -105,51 +107,7 @@ const bannerController = {
       });
     }
   },
-
-  // // Update banner
-  // updateBanner: async (req, res) => {
-  //   try {
-  //     const { id } = req.params;
-  //     const {title} = req.body;
-
-  //     if (req.file) {
-  //       // Get just the filename without any path
-  //       updateData.image = getFilename(req.file.path);
-  //     }
-
-  //     const banner = await Banner.findByIdAndUpdate(
-  //       id,
-  //       title,
-  //       { new: true }
-  //     ).lean();
-
-  //     console.log(title , "banner")
-
-  //     if (!banner) {
-  //       return res.status(404).json({
-  //         success: false,
-  //         message: "Banner not found",
-  //       });
-  //     }
-
-  //     // Clean image path in response
-  //     banner.image = getFilename(banner.image);
-
-  //     res.status(200).json({
-  //       success: true,
-  //       message: "Banner updated successfully",
-  //       banner,
-  //     });
-  //   } catch (error) {
-  //     console.error("Error in updateBanner:", error);
-  //     res.status(500).json({
-  //       success: false,
-  //       message: "Error updating banner",
-  //       error: error.message,
-  //     });
-  //   }
-  // },
-
+ 
  updateBanner : async (req, res) => {
     try {
       const { bannerId } = req.params;
@@ -249,6 +207,157 @@ const bannerController = {
       });
     }
   },
+
+  // Upload a new Promovideo
+  uploadPromovideo: async (req, res) => {
+    console.log("Req body and req.file : " , req.body , req.file)
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "No PromoVideo file provided",
+        });
+      }
+
+      // Get just the filename without any path
+      const filename = getFilename(req.file.path);
+
+      const PromotionalVideo = new Promovideo({
+        image: filename,
+        title: req.body.title,
+        description: req.body.description, 
+        isActive: true
+      });
+
+      await PromotionalVideo.save();
+
+      const PromovideoResponse = PromotionalVideo.toObject();
+      PromovideoResponse.image = getFilename(PromovideoResponse.image);
+
+      res.status(201).json({
+        success: true,
+        message: "Promotional Video uploaded successfully",
+        banner: PromovideoResponse,
+      });
+    } catch (error) {
+      console.error("Error in upload:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error uploading PromotionalVideo",
+        error: error.message,
+      });
+    }
+  },
+
+  // Get all Promovideos
+  getAllPromovideos: async (req, res) => {
+      try {
+        const banners = await Promovideo.find().sort({ order: 1 }).lean();
+        
+        // Clean video paths
+        const promoVideos = banners.map(banner => ({
+          ...banner,
+          image: getFilename(banner.image)
+        }));
+  
+        res.status(200).json({
+          success: true,
+          promoVideos ,
+        });
+      } catch (error) {
+        console.error("Error in getAllPromoVideos:", error);
+        res.status(500).json({
+          success: false,
+          message: "Error fetching PromoVideos",
+          error: error.message,
+        });
+      }
+  },
+
+  updatePromoVideo: async (req, res) => {
+    console.log("Req body and req.file: ", req.body, req.file);
+    try {
+      const { id } = req.params;
+      const updateFields = {};
+  
+      // Check if the promo video exists
+      const existingVideo = await Promovideo.findById(id);
+      if (!existingVideo) {
+        return res.status(404).json({
+          success: false,
+          message: "Promo Video not found",
+        });
+      }
+  
+      // Allow partial updates for title, description, and isActive
+      if (req.body?.title) updateFields.title = req.body.title;
+      // if (req.body?.description) updateFields.description = req.body.description;
+      // if (req.body?.isActive !== undefined) updateFields.isActive = req.body.isActive;
+  
+      // If a new video file is uploaded, replace the old one
+ 
+      // Store new file
+      if (req?.file?.path){
+
+        updateFields.image = getFilename(req?.file?.path);
+      }
+      console.log("updateFields : " , updateFields)
+      // Update the document
+      const updatedPromo = await Promovideo.findByIdAndUpdate(id, updateFields, { new: true });
+  
+      res.status(200).json({
+        success: true,
+        message: "Promo Video updated successfully",
+        updatedPromo,
+      });
+    } catch (error) {
+      console.error("Error in updatePromoVideo:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error updating Promo Video",
+        error: error.message,
+      });
+    }
+  },
+
+  deletePromoVideo: async (req, res) => {
+    try {
+      const { id } = req.params;
+  
+      // Check if the promo video exists
+      const promoVideo = await Promovideo.findById(id);
+      if (!promoVideo) {
+        return res.status(404).json({
+          success: false,
+          message: "Promo Video not found",
+        });
+      }
+  
+      // Delete the associated file from storage
+      // deleteFile(promoVideo.image);
+  
+      // Remove from database
+      await Promovideo.findByIdAndDelete(id);
+  
+      res.status(200).json({
+        success: true,
+        message: "Promo Video deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error in deletePromoVideo:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error deleting Promo Video",
+        error: error.message,
+      });
+    } 
+  }
+  
+  
+
+
+
+
 };
 
-module.exports = bannerController;
+module.exports = bannerController 

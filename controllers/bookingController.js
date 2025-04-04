@@ -22,7 +22,7 @@ const createNotification = async (serviceId, name, job) => {
       const userIdString = ele._id.toString();
       io.to(userIdString).emit("new-job", job);
     });
-    console.log("Notification created", name);
+    // console.log("Notification created", name);
   } catch (error) {
     console.log(error);
   }
@@ -40,11 +40,14 @@ exports.createBooking = async (req, res) => {
       location,
       scheduledTime,
       scheduledDate,
+      currentBooking,
       lat,
       lng
     } = req.body;
 
-    console.log("lat lng : " , lat , lng)
+    // console.log("scheduledTime scheduledDate : " , 
+    //   scheduledTime,
+    //   scheduledDate,)
 
     // Validate required fields
     if (!subServiceId) {
@@ -78,6 +81,7 @@ exports.createBooking = async (req, res) => {
       scheduledTime,
       lat,
       lng,
+      currentBooking,
       location: {
         address: location.address,
         landmark: location.landmark || "",
@@ -106,7 +110,7 @@ exports.createBooking = async (req, res) => {
       message: `Your booking for ${subService.name} has been Confirmed!`,
       booking: populatedBooking,
     });
-    console.log(`Emitted 'booking confirmed' event to user ${userId}`);
+    // console.log(`Emitted 'booking confirmed' event to user ${userId}`);
     const user = await User.findById(userId);
     user.notifications.push({
       message: `Your booking for ${subService.name} has been confirmed!`,
@@ -352,7 +356,7 @@ exports.updateBooking = async (req, res) => {
       _id: bookingId,
       // user: req.user._id,
     });
-    console.log("Booking found in DB:", booking);
+    // console.log("Booking found in DB:", booking);
 
     if (!booking) {
       return res.status(404).json({
@@ -429,8 +433,8 @@ exports.updateBooking = async (req, res) => {
 // Cancel booking
 exports.cancelBooking = async (req, res) => {
   try {
-    console.log("Cancel Booking - Request Params:", req.params);
-    console.log("Cancel Booking - Request Body:", req.body);
+    // console.log("Cancel Booking - Request Params:", req.params);
+    // console.log("Cancel Booking - Request Body:", req.body);
 
     const { bookingId } = req.params;
     const { cancellationReason, userId } = req.body;
@@ -566,8 +570,8 @@ exports.addReview = async (req, res) => {
 // Get all bookings for a user
 exports.getAllUserBookings = async (req, res) => {
   try {
-    console.log("Request Parameters:", req.params);
-    console.log("User ID:", req.user._id);
+    // console.log("Request Parameters:", req.params);
+    // console.log("User ID:", req.user._id);
     const bookings = await Booking.find({ user: req.user._id })
       .populate({
         path: "subService",
@@ -692,7 +696,7 @@ exports.getAllReviews = async (req, res) => {
     const reviews = await Review.find()
       .populate("user") // Fetch all user details
       .populate("subService"); // Fetch all subService details
-    console.log(reviews);
+    // console.log(reviews);
     const ApprovedReviews = reviews.filter(
       (review) => review.status === "approved"
     );

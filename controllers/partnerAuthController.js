@@ -87,7 +87,7 @@ exports.verifyLoginOTP = async (req, res) => {
     );
 
     // Debug log
-    console.log("Found Partner:", partner);
+    // console.log("Found Partner:", partner);
     if (!partner) {
       return res
         .status(400)
@@ -223,7 +223,7 @@ exports.resendOTP = async (req, res) => {
 // Complete partner profile
 exports.completeProfile = async (req, res) => {
   try {
-    console.log("Received request body:", req.body);
+    // console.log("Received request body:", req.body);
     console.log(
       "Received file:",
       req.file ? req.file.filename : "No file uploaded"
@@ -299,7 +299,7 @@ exports.selectCategoryAndServices = async (req, res) => {
     }
 
     // Log received data for debugging
-    console.log("Received data:", req.body);
+    // console.log("Received data:", req.body);
 
     // ✅ Validate category
     const validCategory = await ServiceCategory.findById(category);
@@ -322,7 +322,7 @@ exports.selectCategoryAndServices = async (req, res) => {
 
     // ✅ Validate services under the selected subcategory
     let serviceIds = Array.isArray(service) ? service : JSON.parse(service);
-    console.log("Service IDs to check:", serviceIds);
+    // console.log("Service IDs to check:", serviceIds);
 
     // const validServices = await Service.find({ _id: { $in: serviceIds }, subcategory });
     const validServices = await Service.find({
@@ -330,7 +330,7 @@ exports.selectCategoryAndServices = async (req, res) => {
       subCategory: subcategory,
     });
 
-    console.log("Valid services found:", validServices);
+    // console.log("Valid services found:", validServices);
 
     if (validServices.length !== serviceIds.length) {
       return res.status(400).json({
@@ -506,15 +506,17 @@ exports.completeKYC = async (req, res) => {
     const { accountNumber, ifscCode, accountHolderName, bankName } = req.body;
 
     // Log received body data
-    console.log("Body received:", req.body);
+    // console.log("Body received:", req.body);
 
     // Log received files to debug missing fields
-    console.log("Uploaded Files:", req.files);
+    // console.log("Uploaded Files:", req.files);
 
     // Extract filenames safely
     const panCard = req.files?.panCard?.[0]?.filename || null;
     const aadhaar = req.files?.aadhaar?.[0]?.filename || null;
     const chequeImage = req.files?.chequeImage?.[0]?.filename || null;
+    const drivingLicence = req.files?.drivingLicence?.[0]?.filename || null;
+    const bill = req.files?.bill?.[0]?.filename || null;
 
     // Validate required fields
     if (!accountNumber || !ifscCode || !accountHolderName || !bankName) {
@@ -524,11 +526,11 @@ exports.completeKYC = async (req, res) => {
       });
     }
 
-    if (!panCard || !aadhaar || !chequeImage) {
+    if (!panCard || !aadhaar || !chequeImage || !drivingLicence || !bill) {
       return res.status(400).json({
         success: false,
         message:
-          "Please upload all required documents (PAN, Aadhaar, Cheque Image).",
+          "Please upload all required documents (PAN, Aadhaar, Cheque Image, Driving Licence , Bill).",
       });
     }
 
@@ -548,6 +550,8 @@ exports.completeKYC = async (req, res) => {
       panCard,
       aadhaar,
       chequeImage,
+      drivingLicence,
+      bill,
       status: "pending", // Initial status
       remarks: null, // Clear previous remarks
     };
@@ -577,6 +581,9 @@ exports.completeKYC = async (req, res) => {
           remarks: profile.kyc.remarks,
           panCard,
           aadhaar,
+          chequeImage,
+          drivingLicence,
+          bill,
         },
       },
     });
@@ -595,6 +602,7 @@ exports.updateKYCStatus = async (req, res) => {
   try {
     const { partnerId } = req.params;
     const { status, remarks } = req.body;
+    // console.log("Req body : " , req.body)
 
     if (!["pending", "approved", "rejected"].includes(status)) {
       return res.status(400).json({
@@ -612,10 +620,11 @@ exports.updateKYCStatus = async (req, res) => {
     }
 
     // Update KYC status
-    partner.kyc.status = status;
+    partner.kyc.status = status; 
     partner.kyc.remarks = remarks || null;
-
+    
     await partner.save();
+    // console.log("Partner : " , partner)
 
     res.json({
       success: true,
@@ -659,6 +668,7 @@ exports.getProfile = async (req, res) => {
       .populate("service", "name description basePrice duration");
 
     console.log("Fetched Profile:", profile);
+    
 
     if (!profile) {
       return res.status(404).json({

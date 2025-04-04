@@ -22,6 +22,8 @@ const partnerSchema = new mongoose.Schema(
       panCard: String,
       aadhaar: String,
       chequeImage: String,
+      drivingLicence: String,
+      bill : String,
       status: {
         type: String,
         enum: ["pending", "approved", "rejected"],

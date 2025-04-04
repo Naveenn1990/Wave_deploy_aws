@@ -329,9 +329,9 @@ exports.getMatchingBookings = async (req, res) => {
       });
     }
 
-    console.log("Partner Category:", category);
-    console.log("Partner Sub-Category:", subcategory);
-    console.log("Partner Services:", service);
+    // console.log("Partner Category:", category);
+    // console.log("Partner Sub-Category:", subcategory);
+    // console.log("Partner Services:", service);
 
     // Find sub-services that belong to the partner's selected services
     const subServices = await SubService.find({
@@ -346,7 +346,7 @@ exports.getMatchingBookings = async (req, res) => {
     }
 
     const subServiceIds = subServices.map((subService) => subService._id);
-    console.log("Eligible Sub-Services:", subServiceIds);
+    // console.log("Eligible Sub-Services:", subServiceIds);
 
     // Find bookings where sub-service matches the partner's selected service
     const bookings = await Booking.find({
@@ -470,7 +470,7 @@ exports.acceptBooking = async (req, res) => {
         .json({ success: false, message: "Booking not found" });
     }
 
-    console.log("Current Booking Status:", booking.status);
+    // console.log("Current Booking Status:", booking.status);
 
     // Check if booking is already accepted or canceled
     if (["accepted", "cancelled"].includes(booking.status) || booking.partner) {
@@ -515,7 +515,7 @@ exports.acceptBooking = async (req, res) => {
       { new: true }
     );
 
-    console.log("updatedBooking : ", updatedBooking);
+    // console.log("updatedBooking : ", updatedBooking);
 
     // io.to(userId).emit("booking confirmed", {
     //   message: `Your booking for ${subService.name} has been confirmed!`,
@@ -905,7 +905,7 @@ exports.getRejectedBookings = async (req, res) => {
         bookings: [],
       });
     }
-    console.log("rejectedBookings : ", rejectedBookings);
+    // console.log("rejectedBookings : ", rejectedBookings);
     res.status(200).json({
       success: true,
       message: "Rejected bookings fetched successfully",
@@ -1026,7 +1026,7 @@ exports.pauseBooking = async (req, res) => {
       pausedAt: new Date(),
     };
 
-    console.log("booking", booking);
+    // console.log("booking", booking);
     await booking.save();
 
     io.to(booking.user._id).emit("booking paused", {
@@ -1376,10 +1376,10 @@ exports.allpartnerBookings = async (req, res) => {
       status: "completed",
     });
 
-    console.log(
-      "Verified Completed Bookings Count from DB:",
-      completedBookingsCount
-    );
+    // console.log(
+    //   "Verified Completed Bookings Count from DB:",
+    //   completedBookingsCount
+    // );
 
     // Total bookings count
     const totalBookings = partner.bookings.length;

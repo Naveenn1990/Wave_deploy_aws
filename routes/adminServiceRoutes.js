@@ -58,10 +58,10 @@ const { getAllReviews, getAllReviewsForAdmin} = require('../controllers/reviewCo
 const handleFileUpload = (req, res, next) => {
     upload(req, res, function(err) {
         // Log the entire request for debugging
-        console.log('Request headers:', req.headers);
-        console.log('Request body:', req.body);
-        console.log('Files:', req.files);
-        console.log('File:', req.file);
+        // console.log('Request headers:', req.headers);
+        // console.log('Request body:', req.body);
+        // console.log('Files:', req.files);
+        // console.log('File:', req.file);
 
         if (err instanceof multer.MulterError) {
             // A Multer error occurred
@@ -83,18 +83,18 @@ const handleFileUpload = (req, res, next) => {
 
         // If no file was uploaded
         if (!req.file) {
-            console.log('No file uploaded');
+            // console.log('No file uploaded');
             return res.status(400).json({
                 success: false,
                 message: 'Please upload an icon file'
             });
         }
 
-        console.log('Uploaded File Details:', req.file);
-        console.log('File Name:', req.file.originalname);
-        console.log('File Type:', req.file.mimetype);
-        console.log('File Size:', req.file.size);
-        console.log('File Path:', req.file.path);
+        // console.log('Uploaded File Details:', req.file);
+        // console.log('File Name:', req.file.originalname);
+        // console.log('File Type:', req.file.mimetype);
+        // console.log('File Size:', req.file.size);
+        // console.log('File Path:', req.file.path);
 
         next();
     });

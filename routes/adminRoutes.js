@@ -189,6 +189,12 @@ router.put(
 );
 // router.post("/book-subservice", adminAuth, userServiceController.bookSubService);
 
+// Promotional Video Management
+router.post("/promovideo", adminAuth, upload.single("image"), processFilePath, bannerController.uploadPromovideo);
+router.get("/promovideo", bannerController.getAllPromovideos);
+router.put("/promovideo/:id", adminAuth, upload.single("image"), processFilePath, bannerController.updatePromoVideo);
+router.delete("/promovideo/:id", adminAuth, bannerController.deletePromoVideo);
+
 // Banner Management
 router.post(
   "/banners",
