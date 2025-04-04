@@ -96,6 +96,8 @@ const userSockets = {};
 
 const adminSockets = {};
 
+const locationSockets = {};
+
 // Notification.injectIO(io);
 
 io.on("connection", (socket) => {
@@ -109,6 +111,7 @@ io.on("connection", (socket) => {
       if (!chat) {
         return socket.emit("error", "Booking not found.");
       }
+      message.data.timestamp = new Date().toISOString()
 
       chat.chat.push(message);
       await chat.save();
@@ -191,16 +194,95 @@ io.on("connection", (socket) => {
       socket.emit("error", "Error retrieving chat messages.");
     }
   });
+  
+  socket.on("joinLocation", (location) => {
+    const { userId, lat, lng } = location;
+
+    if (!userId || lat === undefined || lng === undefined) {
+      console.error("Invalid location data");
+      return;
+    }
+
+    console.log(`Service Provider ${userId} joined with socket ${socket.id}`);
+
+    // Join room based on userId
+    socket.join(userId);
+
+    // Initialize storage if not already present
+    if (!locationSockets[userId]) { 
+      locationSockets[userId] = [];
+    }
+ 
+    locationSockets[userId].push({ id: socket.id, lat, lng });
+
+    console.log(`User ${userId} joined with socket ${socket.id}`);
+
+    // Broadcast location updates to all clients tracking this user
+    io.to(userId).emit("locationUpdate", { lat, lng });
+ 
+      // Handle live location updates
+    // socket.on("updateLocation", ({ userId, lat, lng }) => {
+    //   if (!userId || lat === undefined || lng === undefined) {
+    //     console.error("Invalid location update");
+    //     return;
+    //   }
+
+    // // Update partner's location
+    //   if (locationSockets[userId]) {
+    //     locationSockets[userId] = locationSockets[userId].map((socketData) =>
+    //       socketData.id === socket.id ? { id: socket.id, lat, lng } : socketData
+    //       );
+    //   }
+
+    //   console.log(`Updated location for user ${userId}: ${lat}, ${lng}`);
+
+    // // Send update to all tracking customers
+    //   io.to(userId).emit("locationUpdate", { lat, lng });
+    // });
+  }); 
+
+    // Handle live location updates
+socket.on("updateLocation", ({ userId, lat, lng }) => {
+    if (!userId || lat === undefined || lng === undefined) {
+      console.error("Invalid location update");
+      return;
+    }
+
+    // Ensure location storage is initialized
+    if (!locationSockets[userId]) {
+      locationSockets[userId] = [];
+    }
+
+    // Find and update the existing socket
+    const existingSocket = locationSockets[userId].find(
+      (socketData) => socketData.id === socket.id
+    );
+
+    if (existingSocket) {
+      // Update only if location has changed
+      if (existingSocket.lat !== lat || existingSocket.lng !== lng) {
+        existingSocket.lat = lat;
+        existingSocket.lng = lng;
+        console.log(`Updated location for user ${userId}: ${lat}, ${lng}`);
+
+        // Send updated location to all tracking clients
+        io.to(userId).emit("locationUpdate", { lat, lng });
+      }
+    } else {
+      // Add new socket if it doesn't exist
+      locationSockets[userId].push({ id: socket.id, lat, lng });
+    }
+  });
+
 
   socket.on("join", (userId) => {
     console.log(`Received join event from user ${userId}`);
-    socket.join(userId); // Join the user-specific room
+    socket.join(userId);  
 
     if (!userSockets[userId]) {
-      userSockets[userId] = [];
+      userSockets[userId] = []; 
     }
-    userSockets[userId].push(socket.id);
-
+    userSockets[userId].push(socket.id); 
     console.log(`User ${userId} joined with socket ${socket.id}`);
   });
 
@@ -327,7 +409,7 @@ const adminBannerRoutes = require("./routes/adminBannerRoutes");
 const userBannerRoutes = require("./routes/userBannerRoutes");
 const adminBookingRoutes = require("./routes/adminBookingRoutes");
 const adminBookingController = require("./controllers/adminBookingController");
-
+const notificatioroute = require("./routes/notificationRoute");
 // Routes
 app.use("/api/user", userRoutes);
 app.use("/api/user", userServiceRoutes);
@@ -341,6 +423,7 @@ app.use("/api/public", serviceHierarchyRoutes);
 app.use("/api/admin/banners", adminBannerRoutes);
 app.use("/api/user/banners", userBannerRoutes);
 app.use("/api/admin/bookings", adminBookingRoutes);
+app.use("/api/notification", notificatioroute);
 
 // Root route for WebSocket server
 app.get("/", (req, res) => {

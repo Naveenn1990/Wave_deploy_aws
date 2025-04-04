@@ -28,6 +28,8 @@ const userSchema = new mongoose.Schema({
   },
   addresses: [{
     address: { type: String, trim: true },
+    lat: { type: String },
+    lng: { type: String },
     landmark: { type: String, trim: true },
     addressType: { type: String, trim: true }
   }],

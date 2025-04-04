@@ -17,6 +17,7 @@ router.post("/login", adminController.loginAdmin);
 router.post("/create", adminAuth, adminController.createAdmin);
 router.post("/createmainadmin", adminController.createMainAdmin);
 router.get("/profile", adminAuth, adminController.getProfile);
+router.get("/profiles", adminAuth, adminController.getProfiles);
 router.put("/profile/:subadminId", adminAuth, adminController.updateProfile);
 router.delete("/profile/:subadminId", adminAuth, adminController.deleteProfile);
 
