@@ -68,7 +68,7 @@ exports.verifyOTP = async (req, res) => {
       tempOTPExpiry: { $gt: new Date() },
     });
 
-    console.log("User found for OTP verification:", user); // Debugging
+    // console.log("User found for OTP verification:", user); // Debugging
 
     if (!user) {
       // If OTP is incorrect/expired, remove it to prevent conflicts
@@ -153,6 +153,7 @@ exports.resendOTP = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      otp,
       message: "OTP resent successfully",
 
       //Added For Resend otp view in Ui

@@ -218,7 +218,7 @@ io.on("connection", (socket) => {
     console.log(`User ${userId} joined with socket ${socket.id}`);
 
     // Broadcast location updates to all clients tracking this user
-    io.to(userId).emit("locationUpdate", { lat, lng });
+    // io.to(userId).emit("locationUpdate", { lat, lng });
  
       // Handle live location updates
     // socket.on("updateLocation", ({ userId, lat, lng }) => {
@@ -242,7 +242,7 @@ io.on("connection", (socket) => {
   }); 
 
     // Handle live location updates
-socket.on("updateLocation", ({ userId, lat, lng }) => {
+  socket.on("updateLocation", ({ userId, lat, lng }) => {
     if (!userId || lat === undefined || lng === undefined) {
       console.error("Invalid location update");
       return;
@@ -273,6 +273,19 @@ socket.on("updateLocation", ({ userId, lat, lng }) => {
       locationSockets[userId].push({ id: socket.id, lat, lng });
     }
   });
+  // socket.on("updateLocation", ({ userId, lat, lng }) => {
+  //   if (!userId || lat === undefined || lng === undefined) return;
+  //   console.log(`User ${userId} updateLocation with socket ${socket.id}`);
+  //   if (locationSockets[userId]) {
+  //     locationSockets[userId] = locationSockets[userId].map((socketData) =>
+  //       socketData.id === socket.id ? { id: socket.id, lat, lng } : socketData
+  //     );
+
+  //     // Broadcast updated driver location
+  //     io.to(userId).emit("locationUpdate", { lat, lng });
+  //   }
+  // });
+
 
 
   socket.on("join", (userId) => {

@@ -196,24 +196,19 @@ exports.createMainAdmin = async (req, res) => {
 };
  
 exports.createAdmin = async (req, res) => {
-  try {
-    // Check if the requester is an admin
-    // if (req.admin.role !== "super_admin") {
+  try { 
     if (req.admin.role !== "admin") {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    console.log("req.body : " , req.body)
-    const { email, password, name , permissions} = req.body;
-    // const permissions = JSON.parse(req.body.permissions);
+    // console.log("req.body : " , req.body)
+    const { email, password, name , permissions} = req.body;  
 
-    // Validate if admin already exists
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
       return res.status(400).json({ message: "Subadmin already exists" });
     }
-
-    // Validate permissions - Only allow valid module names
+ 
     const validModules = [
       "dashboard",
       "subadmin",
@@ -227,6 +222,7 @@ exports.createAdmin = async (req, res) => {
       "booking",
       "refundRequest",
       "reviews",
+      "promotionalVideo",
       "customer",
       "providerVerification",
       "verifiedProvider",
@@ -237,6 +233,8 @@ exports.createAdmin = async (req, res) => {
     validModules.forEach((module) => {
       filteredPermissions[module] = permissions?.[module] || false;
     });
+
+    // console.log("filteredPermissions : " , filteredPermissions)
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -251,7 +249,7 @@ exports.createAdmin = async (req, res) => {
       // createdBy: req.admin._id, // Tracks which admin created this subadmin
     });
 
-    console.log("subadmin : " , subadmin)
+    // console.log("subadmin : " , subadmin)
 
     await subadmin.save();
 
@@ -534,6 +532,8 @@ exports.getPendingKYC = async (req, res) => {
         status: partner.kyc?.status || "Pending",
         panCard: partner.kyc?.panCard || "Not Uploaded",
         aadhaar: partner.kyc?.aadhaar || "Not Uploaded",
+        drivingLicence: partner.kyc?.drivingLicence || "Not Uploaded",
+        bill: partner.kyc?.bill || "Not Uploaded",
       },
     }));
 
@@ -700,9 +700,12 @@ exports.getAllPartners = async (req, res) => {
             createdAt: partner.createdAt,
             updatedAt: partner.updatedAt,
             KYC: {
-              status: partner.kyc?.status || "Pending",
-              panCard: partner.kyc?.panCard ? `/uploads/kyc/${partner.kyc.panCard}` : "Not Uploaded",
-              aadhaar: partner.kyc?.aadhaar ? `/uploads/kyc/${partner.kyc.aadhaar}` : "Not Uploaded",
+              status: partner?.kyc?.status ,
+              // status: partner?.kyc?.status || "Pending",
+              panCard: partner.kyc?.panCard ? `/uploads/kyc/${partner.kyc?.panCard}` : "Not Uploaded",
+              aadhaar: partner.kyc?.aadhaar ? `/uploads/kyc/${partner.kyc?.aadhaar}` : "Not Uploaded",
+              drivingLicence: partner.kyc?.drivingLicence ? `/uploads/kyc/${partner.kyc?.drivingLicence}` : "Not Uploaded",
+              bill: partner.kyc?.bill ? `/uploads/kyc/${partner.kyc.bill}` : "Not Uploaded",
             },
           },
           Bookings: partner.bookings.length > 0 ? partner.bookings : "No bookings",
@@ -835,7 +838,7 @@ exports.updatePartnerStatus = async (req, res) => {
       });
     }
 
-    const partner = await PartnerProfile.findById(partnerId);
+    const partner = await Partner.findById(partnerId);
     if (!partner) {
       return res.status(404).json({ 
         success: false,
@@ -872,7 +875,7 @@ exports.updatePartnerStatus = async (req, res) => {
       }
     };
 
-    const updatedPartner = await PartnerProfile.findByIdAndUpdate(
+    const updatedPartner = await Partner.findByIdAndUpdate(
       partnerId,
       updateData,
       { new: true, runValidators: true }

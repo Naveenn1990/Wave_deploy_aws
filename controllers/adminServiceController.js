@@ -424,8 +424,9 @@ exports.getAllCategories = async (req, res) => {
             return {
                 _id: category._id,
                 name: category.name,
-                description: category.description,
-                icon: icon
+                subtitle: category.subtitle,
+                icon: icon,
+                createdAt: category.createdAt
             };
         });
 

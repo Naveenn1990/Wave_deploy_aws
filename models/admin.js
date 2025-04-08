@@ -109,6 +109,7 @@ const adminSchema = new mongoose.Schema(
       reviews: { type: Boolean, default: false },
       customer: { type: Boolean, default: false },
       providerVerification: { type: Boolean, default: false },
+      promotionalVideo: { type: Boolean, default: false },
       verifiedProvider: { type: Boolean, default: false },
       enquiry: { type: Boolean, default: false },
     },

@@ -87,7 +87,7 @@ exports.verifyLoginOTP = async (req, res) => {
     );
 
     // Debug log
-    console.log("Found Partner:", partner);
+    // console.log("Found Partner:", partner);
     if (!partner) {
       return res
         .status(400)
@@ -148,7 +148,7 @@ exports.verifyLoginOTP = async (req, res) => {
         service: partner.service, // Ensure this field exists
         modeOfService: partner.modeOfService, // Ensure this field exists
         status: partner.status,
-        kycStatus: partner.kycStatus,
+        // kycStatus: partner.kycStatus,
         profileCompleted: partner.profileCompleted,
         profile: partner.profile,
         token,
@@ -223,7 +223,7 @@ exports.resendOTP = async (req, res) => {
 // Complete partner profile
 exports.completeProfile = async (req, res) => {
   try {
-    console.log("Received request body:", req.body);
+    // console.log("Received request body:", req.body);
     console.log(
       "Received file:",
       req.file ? req.file.filename : "No file uploaded"
@@ -239,6 +239,7 @@ exports.completeProfile = async (req, res) => {
       address,
       landmark,
       pincode,
+      city,
     } = req.body;
 
     if (!name || !email) {
@@ -255,7 +256,7 @@ exports.completeProfile = async (req, res) => {
       {
         $set: {
           profileCompleted: false,
-          profile: { name, email, address, landmark, pincode },
+          profile: { name, email, address, landmark, pincode, city },
           whatsappNumber,
           qualification,
           experience,
@@ -299,7 +300,7 @@ exports.selectCategoryAndServices = async (req, res) => {
     }
 
     // Log received data for debugging
-    console.log("Received data:", req.body);
+    // console.log("Received data:", req.body);
 
     // ✅ Validate category
     const validCategory = await ServiceCategory.findById(category);
@@ -322,7 +323,7 @@ exports.selectCategoryAndServices = async (req, res) => {
 
     // ✅ Validate services under the selected subcategory
     let serviceIds = Array.isArray(service) ? service : JSON.parse(service);
-    console.log("Service IDs to check:", serviceIds);
+    // console.log("Service IDs to check:", serviceIds);
 
     // const validServices = await Service.find({ _id: { $in: serviceIds }, subcategory });
     const validServices = await Service.find({
@@ -330,7 +331,7 @@ exports.selectCategoryAndServices = async (req, res) => {
       subCategory: subcategory,
     });
 
-    console.log("Valid services found:", validServices);
+    // console.log("Valid services found:", validServices);
 
     if (validServices.length !== serviceIds.length) {
       return res.status(400).json({
@@ -506,7 +507,7 @@ exports.completeKYC = async (req, res) => {
     const { accountNumber, ifscCode, accountHolderName, bankName } = req.body;
 
     // Log received body data
-    console.log("Body received:", req.body);
+    // console.log("Body received:", req.body);
 
     // Log received files to debug missing fields
     console.log("Uploaded Files:", req.files);
@@ -515,6 +516,8 @@ exports.completeKYC = async (req, res) => {
     const panCard = req.files?.panCard?.[0]?.filename || null;
     const aadhaar = req.files?.aadhaar?.[0]?.filename || null;
     const chequeImage = req.files?.chequeImage?.[0]?.filename || null;
+    const drivingLicence = req.files?.drivingLicence?.[0]?.filename || null;
+    const bill = req.files?.bill?.[0]?.filename || null;
 
     // Validate required fields
     if (!accountNumber || !ifscCode || !accountHolderName || !bankName) {
@@ -524,11 +527,11 @@ exports.completeKYC = async (req, res) => {
       });
     }
 
-    if (!panCard || !aadhaar || !chequeImage) {
+    if (!panCard || !aadhaar || !chequeImage || !drivingLicence || !bill) {
       return res.status(400).json({
         success: false,
         message:
-          "Please upload all required documents (PAN, Aadhaar, Cheque Image).",
+          "Please upload all required documents (PAN, Aadhaar, Cheque Image, Driving Licence , Bill).",
       });
     }
 
@@ -548,6 +551,8 @@ exports.completeKYC = async (req, res) => {
       panCard,
       aadhaar,
       chequeImage,
+      drivingLicence,
+      bill,
       status: "pending", // Initial status
       remarks: null, // Clear previous remarks
     };
@@ -577,6 +582,9 @@ exports.completeKYC = async (req, res) => {
           remarks: profile.kyc.remarks,
           panCard,
           aadhaar,
+          chequeImage,
+          drivingLicence,
+          bill,
         },
       },
     });
@@ -595,6 +603,7 @@ exports.updateKYCStatus = async (req, res) => {
   try {
     const { partnerId } = req.params;
     const { status, remarks } = req.body;
+    // console.log("Req body : " , req.body)
 
     if (!["pending", "approved", "rejected"].includes(status)) {
       return res.status(400).json({
@@ -616,6 +625,7 @@ exports.updateKYCStatus = async (req, res) => {
     partner.kyc.remarks = remarks || null;
 
     await partner.save();
+    // console.log("Partner : " , partner)
 
     res.json({
       success: true,
@@ -670,6 +680,7 @@ exports.getProfile = async (req, res) => {
     res.json({
       success: true,
       profile: {
+        city: profile.profile.city,
         id: profile._id,
         name: profile.profile?.name || "N/A",
         email: profile.profile?.email || "N/A",
@@ -719,8 +730,9 @@ exports.updateProfile = async (req, res) => {
       category,
       service,
       modeOfService,
+      city,
     } = req.body;
-    console.log("req.body : " , req.body)
+    console.log("req.body : ", req.body);
 
     let profile = await Partner.findOne({ _id: req.partner._id });
     if (!profile) {
@@ -734,21 +746,23 @@ exports.updateProfile = async (req, res) => {
     const profilePicture = req.file ? req.file.filename : undefined;
 
     // Update only provided fields (Handle both JSON & form-data)
-    const updatedFields = {};
-    if (name) updatedFields.name = name;
-    if (email) updatedFields.email = email;
-    if (whatsappNumber) updatedFields.whatsappNumber = whatsappNumber;
-    if (contactNumber) updatedFields.contactNumber = contactNumber;
-    if (qualification) updatedFields.qualification = qualification;
-    if (experience) updatedFields.experience = parseFloat(experience);
-    if (category) updatedFields.category = category;
-    if (service) updatedFields.service = service;
-    if (modeOfService) updatedFields.modeOfService = modeOfService;
-    if (profilePicture) updatedFields.profilePicture = profilePicture;
+
+    if (name) profile.profile.name = name;
+    if (city) profile.profile.city = city;
+    if (email) profile.profile.email = email;
+    if (whatsappNumber) profile.whatsappNumber = whatsappNumber;
+    if (contactNumber) profile.contactNumber = contactNumber;
+    if (qualification) profile.qualification = qualification;
+    if (experience) profile.experience = parseFloat(experience);
+    if (category) profile.category = category;
+    if (service) profile.service = service;
+    if (modeOfService) profile.modeOfService = modeOfService;
+    if (profilePicture) profile.profilePicture = profilePicture;
 
     // Apply updates to the profile
-    Object.assign(profile, updatedFields);
-    await profile.save();
+
+    profile = await profile.save();
+    console.log("prrrrrrrrr==>", profile);
 
     // Populate category and service details
     await profile.populate("category", "name description");
@@ -760,6 +774,7 @@ exports.updateProfile = async (req, res) => {
       profile: {
         id: profile._id,
         name: profile.name,
+        city: profile?.city,
         email: profile.email,
         phone: profile.phone,
         whatsappNumber: profile.whatsappNumber,
