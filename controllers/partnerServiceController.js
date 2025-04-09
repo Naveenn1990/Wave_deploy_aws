@@ -1538,3 +1538,19 @@ exports.topUpPartnerWallet = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.getwalletbypartner = async (req, res) => {
+  try {
+    let id = req.params.id;
+    let wallet = await PartnerWallet.findOne({ partnerId: id });
+    if (!wallet) {
+      return res
+        .status(200)
+        .json({ success: { balance: 0, transactions: [] } });
+    } else {
+      return res.status(200).json({ success: wallet });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};

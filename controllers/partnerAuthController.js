@@ -148,7 +148,7 @@ exports.verifyLoginOTP = async (req, res) => {
         service: partner.service, // Ensure this field exists
         modeOfService: partner.modeOfService, // Ensure this field exists
         status: partner.status,
-        kycStatus: partner.kycStatus,
+        // kycStatus: partner.kycStatus,
         profileCompleted: partner.profileCompleted,
         profile: partner.profile,
         token,
@@ -239,6 +239,7 @@ exports.completeProfile = async (req, res) => {
       address,
       landmark,
       pincode,
+      city,
     } = req.body;
 
     if (!name || !email) {
@@ -255,7 +256,7 @@ exports.completeProfile = async (req, res) => {
       {
         $set: {
           profileCompleted: false,
-          profile: { name, email, address, landmark, pincode },
+          profile: { name, email, address, landmark, pincode, city },
           whatsappNumber,
           qualification,
           experience,
@@ -509,7 +510,7 @@ exports.completeKYC = async (req, res) => {
     // console.log("Body received:", req.body);
 
     // Log received files to debug missing fields
-    // console.log("Uploaded Files:", req.files);
+    console.log("Uploaded Files:", req.files);
 
     // Extract filenames safely
     const panCard = req.files?.panCard?.[0]?.filename || null;
@@ -620,9 +621,9 @@ exports.updateKYCStatus = async (req, res) => {
     }
 
     // Update KYC status
-    partner.kyc.status = status; 
+    partner.kyc.status = status;
     partner.kyc.remarks = remarks || null;
-    
+
     await partner.save();
     // console.log("Partner : " , partner)
 
@@ -668,7 +669,6 @@ exports.getProfile = async (req, res) => {
       .populate("service", "name description basePrice duration");
 
     console.log("Fetched Profile:", profile);
-    
 
     if (!profile) {
       return res.status(404).json({
@@ -680,6 +680,7 @@ exports.getProfile = async (req, res) => {
     res.json({
       success: true,
       profile: {
+        city: profile.profile.city,
         id: profile._id,
         name: profile.profile?.name || "N/A",
         email: profile.profile?.email || "N/A",
@@ -729,8 +730,9 @@ exports.updateProfile = async (req, res) => {
       category,
       service,
       modeOfService,
+      city,
     } = req.body;
-    console.log("req.body : " , req.body)
+    console.log("req.body : ", req.body);
 
     let profile = await Partner.findOne({ _id: req.partner._id });
     if (!profile) {
@@ -744,21 +746,23 @@ exports.updateProfile = async (req, res) => {
     const profilePicture = req.file ? req.file.filename : undefined;
 
     // Update only provided fields (Handle both JSON & form-data)
-    const updatedFields = {};
-    if (name) updatedFields.name = name;
-    if (email) updatedFields.email = email;
-    if (whatsappNumber) updatedFields.whatsappNumber = whatsappNumber;
-    if (contactNumber) updatedFields.contactNumber = contactNumber;
-    if (qualification) updatedFields.qualification = qualification;
-    if (experience) updatedFields.experience = parseFloat(experience);
-    if (category) updatedFields.category = category;
-    if (service) updatedFields.service = service;
-    if (modeOfService) updatedFields.modeOfService = modeOfService;
-    if (profilePicture) updatedFields.profilePicture = profilePicture;
+
+    if (name) profile.profile.name = name;
+    if (city) profile.profile.city = city;
+    if (email) profile.profile.email = email;
+    if (whatsappNumber) profile.whatsappNumber = whatsappNumber;
+    if (contactNumber) profile.contactNumber = contactNumber;
+    if (qualification) profile.qualification = qualification;
+    if (experience) profile.experience = parseFloat(experience);
+    if (category) profile.category = category;
+    if (service) profile.service = service;
+    if (modeOfService) profile.modeOfService = modeOfService;
+    if (profilePicture) profile.profilePicture = profilePicture;
 
     // Apply updates to the profile
-    Object.assign(profile, updatedFields);
-    await profile.save();
+
+    profile = await profile.save();
+    console.log("prrrrrrrrr==>", profile);
 
     // Populate category and service details
     await profile.populate("category", "name description");
@@ -770,6 +774,7 @@ exports.updateProfile = async (req, res) => {
       profile: {
         id: profile._id,
         name: profile.name,
+        city: profile?.city,
         email: profile.email,
         phone: profile.phone,
         whatsappNumber: profile.whatsappNumber,

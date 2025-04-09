@@ -70,7 +70,9 @@ const storage = multer.diskStorage({
     } else if (
       file.fieldname === "panCard" ||
       file.fieldname === "aadhaar" ||
-      file.fieldname === "chequeImage"
+      file.fieldname === "chequeImage" ||
+      file.fieldname === "drivingLicence" ||
+      file.fieldname === "bill"
     ) {
       cb(null, kycDir);
     } else if (file.fieldname === "photos") {
@@ -177,6 +179,8 @@ router.post(
       { name: "panCard", maxCount: 1 },
       { name: "aadhaar", maxCount: 1 },
       { name: "chequeImage", maxCount: 1 },
+      { name: "drivingLicence", maxCount: 1 },
+      { name: "bill", maxCount: 1 },
     ])(req, res, (err) => {
       if (err instanceof multer.MulterError) {
         return res.status(400).json({
@@ -267,7 +271,7 @@ router.get(
 // Route to pause a booking
 router.post(
   "/bookings/:bookingId/pause",
- 
+
   partnerServiceController.pauseBooking
 );
 
@@ -284,11 +288,7 @@ router.post(
 );
 
 // Route to top up wallet
-router.post(
-  "/partner/wallet/topup",
-  auth,
-  partnerWalletController.topUpWallet
-);
+router.post("/partner/wallet/topup", auth, partnerWalletController.topUpWallet);
 // Route to get wallet transactions
 router.get(
   "/partner/:partnerId/transactions",
@@ -310,9 +310,9 @@ router.get("/bookings", auth, partnerServiceController.allpartnerBookings);
 router.get("/bookings", auth, partnerServiceController.allpartnerBookings);
 
 // Route to get user reviews
-router.get('/reviews/user', auth, partnerServiceController.getUserReviews);
+router.get("/reviews/user", auth, partnerServiceController.getUserReviews);
 
 // Route to review user
-router.post('/reviews/user', auth, partnerServiceController.reviewUser);
+router.post("/reviews/user", auth, partnerServiceController.reviewUser);
 
 module.exports = router;
