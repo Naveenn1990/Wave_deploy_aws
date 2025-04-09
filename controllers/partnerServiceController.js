@@ -576,6 +576,26 @@ exports.acceptBooking = async (req, res) => {
   }
 };
 
+exports.getBookingBybookid = async (req, res) => {
+  try {
+    let bookingId = req.params.bookingId;
+    let booking = await Booking.findById(bookingId).populate("user subService").populate({path:"cart.product"});
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Booking found",
+      data: booking,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 // Get completed bookings
 // Get completed bookings
 // Get completed bookings
@@ -1301,6 +1321,21 @@ exports.addToCart = async (req, res) => {
       .json({ message: "Error updating cart", error: error.message });
   }
 };
+
+exports.removeCart=async(req,res)=>{
+  try{
+    let {bookid,cartId}=req.body;
+    let booking=await Booking.findById(bookid);
+    if(!booking) return res.status(404).json({ message: "Booking not found" });
+    let cart=booking.cart.id(cartId);
+    cart.remove();
+    booking.save();
+    return res.status(200).json({message:"Cart item removed successfully",cart:booking.cart });
+  }catch(error){
+    console.log(error);
+    
+  }
+}
 
 // get all bookings
 // Get all bookings
