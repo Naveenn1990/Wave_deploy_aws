@@ -87,7 +87,14 @@ const adminSchema = new mongoose.Schema(
       enum: ["admin", "subadmin"],
       default: "admin",
     }, 
-    notifications: [], 
+    // notifications: [],
+    fcmToken: { type: String },
+    notifications: [{
+      message: { type: String, required: true },
+      booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
+      seen: { type: Boolean, default: false },
+      date: { type: Date, default: Date.now }
+    }], 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin", // Reference to the admin who created the subadmin

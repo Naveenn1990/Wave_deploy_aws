@@ -14,6 +14,8 @@ const socketIo = require("socket.io");
 const http = require("http");
 const Booking = require("./models/booking");
 // const Notification = require("./models/Notification");
+
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -422,7 +424,8 @@ const adminBannerRoutes = require("./routes/adminBannerRoutes");
 const userBannerRoutes = require("./routes/userBannerRoutes");
 const adminBookingRoutes = require("./routes/adminBookingRoutes");
 const adminBookingController = require("./controllers/adminBookingController");
-const notificatioroute = require("./routes/notificationRoute");
+// const notificationRoute = require('./routes/notificationRoute');
+
 // Routes
 app.use("/api/user", userRoutes);
 app.use("/api/user", userServiceRoutes);
@@ -435,8 +438,9 @@ app.use("/api/banners", bannerRoutes);
 app.use("/api/public", serviceHierarchyRoutes);
 app.use("/api/admin/banners", adminBannerRoutes);
 app.use("/api/user/banners", userBannerRoutes);
-app.use("/api/admin/bookings", adminBookingRoutes);
-app.use("/api/notification", notificatioroute);
+app.use("/api/admin/bookings", adminBookingRoutes); 
+
+// app.use('/api/notifications', notificationRoute);
 
 // Root route for WebSocket server
 app.get("/", (req, res) => {
