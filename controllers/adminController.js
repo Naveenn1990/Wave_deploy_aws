@@ -218,6 +218,7 @@ exports.createAdmin = async (req, res) => {
       "services",
       "subServices",
       "offers",
+      "orders",
       "productInventory",
       "booking",
       "refundRequest",
@@ -335,10 +336,11 @@ exports.updateProfile = async (req, res) => {
   try {
     const { subadminId } = req.params; // Get subadmin ID from URL
     const { name, email, password, permissions } = req.body;
+    console.log("Req Body : ") , req.body
 
     // Find subadmin by ID and ensure they exist
     const subadmin = await Admin.findById(subadminId);
-    if (!subadmin || subadmin.role !== "subadmin") {
+    if (!subadmin) {
       return res.status(404).json({ message: "Subadmin not found" });
     }
 

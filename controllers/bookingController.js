@@ -27,6 +27,7 @@ const createNotification = async (serviceId, name, job) => {
     console.log(error);
   }
 };
+
 // Create a new booking
 exports.createBooking = async (req, res) => {
   try {
@@ -121,23 +122,33 @@ exports.createBooking = async (req, res) => {
 
     await user.save();
 
-    // const adminId = "67e170ae35cd376d68647456";
-    const adminId = "67e170ae35cd376d68647456";
-    io.to(adminId).emit("admin booking confirmed", {
-      message: `User (${populatedBooking?.user?._id}) booking for ${subService.name} has been Confirmed!`,
-      booking: populatedBooking,
-    });
-    console.log(`Emitted 'booking confirmed' event to admin ${adminId}`);
-    const admin = await Admin.findById(adminId);
-    admin.notifications.push({
-      message: `User (${populatedBooking?.user?._id}) booking for ${subService.name} has been Confirmed!`,
-      booking: populatedBooking,
-      seen: false,
-      date: new Date(),
+    // Get all admins and send notifications
+    const admins = await Admin.find({});
+    const notificationMessage = `User (${populatedBooking?.user?._id}) booking for ${subService.name} has been Confirmed!`;
+
+    // Send socket notification to all admins
+    admins.forEach(admin => {
+      io.to(admin._id.toString()).emit("admin booking confirmed", {
+        message: notificationMessage,
+        booking: populatedBooking,
+      });
     });
 
-    await admin.save();
-
+    // Add notification to all admin accounts
+    await Admin.updateMany(
+      {},
+      {
+        $push: {
+          notifications: {
+            message: notificationMessage,
+            booking: populatedBooking,
+            seen: false,
+            date: new Date(),
+          }
+        }
+      }
+    ); 
+     
     res.status(201).json({
       message: "Booking created successfully",
       booking: populatedBooking,

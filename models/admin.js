@@ -104,6 +104,7 @@ const adminSchema = new mongoose.Schema(
       subServices: { type: Boolean, default: false },
       offers: { type: Boolean, default: false },
       productInventory: { type: Boolean, default: false },
+      orders: { type: Boolean, default: false },
       booking: { type: Boolean, default: false },
       refundRequest: { type: Boolean, default: false },
       reviews: { type: Boolean, default: false },
