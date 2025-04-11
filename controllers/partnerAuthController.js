@@ -799,3 +799,83 @@ exports.updateProfile = async (req, res) => {
     });
   }
 };
+
+exports.getWallet = async (req, res) => {
+  try {
+    if (!req.partner || !req.partner._id) {
+      return res.status(400).json({
+        success: false,
+        message: "Partner ID is missing",
+      });
+    }
+    const partnerId = new mongoose.Types.ObjectId(req.partner._id);
+
+    let data = await PartnerWallet.findOne({ partner: partnerId });
+    if (!data) {
+      data = await PartnerWallet.create({ partner: partnerId });
+    }
+    return res
+      .status(200)
+      .json({ success: true, message: "Wallet details", data: data });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+exports.addtransactionwallet = async (req, res) => {
+  try {
+    const { type, amount, description, reference, partner } = req.body;
+    if (!type || !amount || !partner || !description)
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid request" });
+    if (!["credit", "debit"].includes(type)) {
+      // throw new Error('Invalid transaction type');
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid transaction type" });
+    }
+    if (typeof amount !== "number" || amount <= 0) {
+      // throw new Error('Invalid amount');
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid amount" });
+    }
+
+    let data = await PartnerWallet.findOne({ partner: partner });
+    if (!data) {
+      data = await PartnerWallet.create({ partner: partner });
+    }
+
+    if (type == "credit") {
+      data.balance = data.balance + Number(amount);
+    } else {
+      data.balance = data.balance - Number(amount);
+    }
+    data.transactions.push({
+      type: type,
+      amount: amount,
+      description: description,
+      reference: reference,
+      balance: data.balance,
+    });
+    data = await data.save();
+    return res
+      .status(200)
+      .json({ message: "Successfully updated transaction", success: data });
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+exports.getAllwalletTransaction = async (req, res) => {
+  try {
+    let data = await PartnerWallet.find().populate("partner").sort({ _id: -1 });
+    return res.status(200).json({
+      message: "Successfully fetched all transactions",
+      success: data,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};

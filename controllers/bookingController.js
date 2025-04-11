@@ -554,7 +554,7 @@ exports.getAllBookingsWithFilters = async (req, res) => {
 exports.getUserBookings = async (req, res) => {
   try {
     const { status } = req.query;
-    console.log("Yessss")
+    console.log("Yessss");
     // Build query for user bookings
     const query = { user: req.user._id };
     if (status) {
@@ -899,7 +899,6 @@ exports.getBookingById = async (req, res) => {
   try {
     const booking = await Booking.findOne({
       _id: req.params.bookingId,
-      user: req.user._id,
     })
       .populate("service", "name description basePrice duration")
       .populate("category", "name description");

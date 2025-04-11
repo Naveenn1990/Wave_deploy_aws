@@ -9,7 +9,6 @@ const crypto = require("crypto");
 const partnerServiceController = require("../controllers/partnerServiceController");
 const partnerAuthController = require("../controllers/partnerAuthController");
 const partnerWalletController = require("../controllers/partnerWalletController");
-const PartnerWallet = require("../models/PartnerWallet");
 
 // Create upload directories if they don't exist
 const uploadDir = path.join(__dirname, "..", "uploads");
@@ -304,15 +303,34 @@ router.get(
 // router.put('/products/use/:id', auth, partnerServiceController.useProduct); // Use product (decrease stock)
 // router.put('/products/return/:id', auth, partnerServiceController.returnProduct); // Return product (increase stock)
 router.post("/products/add", auth, partnerServiceController.addToCart); // Add new product
+router.put('product/removecart',auth,partnerServiceController.removeCart);
 
 router.get("/bookings", auth, partnerServiceController.allpartnerBookings);
 
 router.get("/bookings", auth, partnerServiceController.allpartnerBookings);
+
+router.get(
+  "/bookingbyid/:bookingId",
+  auth,
+  partnerServiceController.getBookingBybookid
+);
 
 // Route to get user reviews
 router.get("/reviews/user", auth, partnerServiceController.getUserReviews);
 
 // Route to review user
 router.post("/reviews/user", auth, partnerServiceController.reviewUser);
+
+router.get("/getWalletbypartner", auth, partnerAuthController.getWallet);
+router.post(
+  "/addtransactionwallet",
+  auth,
+  partnerAuthController.addtransactionwallet
+);
+router.get(
+  "/getAllwalletTransaction",
+  auth,
+  partnerAuthController.getAllwalletTransaction
+);
 
 module.exports = router;
