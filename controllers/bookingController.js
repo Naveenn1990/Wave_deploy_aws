@@ -29,7 +29,207 @@ const createNotification = async (serviceId, name, job) => {
   }
 };
 
+const sendBookingNotifications = async (booking, user, subService, admins) => {
+  try {
+    // User notification
+    const userNotification = {
+      message: `Your booking for ${subService.name} has been confirmed!`,
+      booking: booking._id,
+      seen: false,
+      date: new Date()
+    };
+
+    // Add notification to user
+    user.notifications.push(userNotification);
+    await user.save();
+
+    // Send FCM to user if token exists
+    if (user.fcmToken) {
+      const userMessage = {
+        notification: {
+          title: 'Booking Confirmed',
+          body: userNotification.message
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'booking_confirmation',
+          // Include additional data for offline use
+          title: 'Booking Confirmed',
+          body: userNotification.message,
+          timestamp: new Date().toISOString()
+        },
+        token: user.fcmToken,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 // 24 hours retention
+        },
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true
+            }
+          },
+          headers: {
+            'apns-priority': '5' // Lower priority for background delivery
+          }
+        }
+      };
+
+      await admin.messaging().send(userMessage);
+    }
+
+    // Admin notifications
+    const adminNotificationMessage = `New booking from ${user.name} for ${subService.name}`;
+    
+    const adminNotification = {
+      message: adminNotificationMessage,
+      booking: booking._id,
+      seen: false,
+      date: new Date()
+    };
+
+    // Add notification to all admins
+    await Admin.updateMany(
+      {},
+      { $push: { notifications: adminNotification } }
+    );
+
+    // Send FCM to all admins with tokens
+    const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
+    if (adminTokens.length > 0) {
+      const adminMessage = {
+        notification: {
+          title: 'New Booking',
+          body: adminNotificationMessage
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'new_booking',
+          // Include additional data for offline use
+          title: 'New Booking',
+          body: adminNotificationMessage,
+          timestamp: new Date().toISOString()
+        },
+        tokens: adminTokens,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 // 24 hours retention
+        }
+      };
+
+      await admin.messaging().sendMulticast(adminMessage);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Notification service error:', error);
+    // Don't throw error here to not break booking flow
+    return false;
+  }
+};
+
+const sendCancellationNotifications = async (booking, user, subService, admins, cancellationReason) => {
+  try {
+    // User notification
+    const userNotification = {
+      message: `Your booking for ${subService.name} has been cancelled. Reason: ${cancellationReason}`,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'cancellation'
+    };
+
+    // Add notification to user
+    user.notifications.push(userNotification);
+    await user.save();
+
+    // Send FCM to user if token exists
+    if (user.fcmToken) {
+      const userMessage = {
+        notification: {
+          title: 'Booking Cancelled',
+          body: userNotification.message
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'booking_cancellation',
+          title: 'Booking Cancelled',
+          body: userNotification.message,
+          timestamp: new Date().toISOString(),
+          cancellationReason
+        },
+        token: user.fcmToken,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 // 24 hours retention
+        },
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true
+            }
+          },
+          headers: {
+            'apns-priority': '5'
+          }
+        }
+      };
+
+      await admin.messaging().send(userMessage);
+    }
+
+    // Admin notifications
+    const adminNotificationMessage = `Booking cancelled by ${user.name} for ${subService.name}. Reason: ${cancellationReason}`;
+    
+    const adminNotification = {
+      message: adminNotificationMessage,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'cancellation'
+    };
+
+    // Add notification to all admins
+    await Admin.updateMany(
+      {},
+      { $push: { notifications: adminNotification } }
+    );
+
+    // Send FCM to all admins with tokens
+    const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
+    if (adminTokens.length > 0) {
+      const adminMessage = {
+        notification: {
+          title: 'Booking Cancelled',
+          body: adminNotificationMessage
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'admin_booking_cancellation',
+          title: 'Booking Cancelled',
+          body: adminNotificationMessage,
+          timestamp: new Date().toISOString(),
+          cancellationReason
+        },
+        tokens: adminTokens,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 // 24 hours retention
+        }
+      };
+
+      await admin.messaging().sendMulticast(adminMessage);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Cancellation notification error:', error);
+    return false;
+  }
+};
+ 
 // Create a new booking
+
 // exports.createBooking = async (req, res) => {
 //   try {
 //     // console.log("Create Booking - Request Body:", req.body);
@@ -362,84 +562,23 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // User notification
-    const userNotification = {
-      message: `Your booking for ${subService.name} has been confirmed!`,
-      booking: populatedBooking._id,
-      seen: false,
-      date: new Date()
-    };
-
-    // Add notification to user
-    user.notifications.push(userNotification);
-    await user.save();
-
-    // Send FCM to user if token exists
-    if (user.fcmToken) {
-      try {
-        const userMessage = {
-          notification: {
-            title: 'Booking Confirmed',
-            body: userNotification.message
-          },
-          data: {
-            bookingId: populatedBooking._id.toString(),
-            type: 'booking_confirmation'
-          },
-          token: user.fcmToken
-        };
-
-        await admin.messaging().send(userMessage);  
-        console.log('User notification sent successfully');
-      } catch (fcmError) {
-        console.error('Error sending user FCM:', fcmError);
-      }
-    }
-
-    // Admin notifications
-    const adminNotificationMessage = `New booking from ${user.name} for ${subService.name}`;
-    
-    const adminNotification = {
-      message: adminNotificationMessage,
-      booking: populatedBooking._id,
-      seen: false,
-      date: new Date()
-    };
-
-    // Add notification to all admins
-    await Admin.updateMany(
-      {},
-      { $push: { notifications: adminNotification } }
-    );
-
-    // Send FCM to all admins with tokens
-    const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
-    if (adminTokens.length > 0) {
-      try {
-        const adminMessage = {
-          notification: {
-            title: 'New Booking',
-            body: adminNotificationMessage
-          },
-          data: {
-            bookingId: populatedBooking._id.toString(),
-            type: 'new_booking'
-          },
-          tokens: adminTokens
-        };
-
-        await admin.messaging().sendMulticast(adminMessage); // Note: Changed from Admin to admin
-        console.log('Admin notifications sent successfully');
-      } catch (fcmError) {
-        console.error('Error sending admin FCM:', fcmError);
-      }
-    }
+    // Send notifications (non-blocking)
+    sendBookingNotifications(populatedBooking, user, subService, admins)
+      .then(success => {
+        if (!success) {
+          console.log('Notifications partially failed');
+        }
+      })
+      .catch(err => {
+        console.error('Notification error:', err);
+      });
 
     res.status(201).json({
       success: true,
       message: "Booking created successfully",
       booking: populatedBooking,
     });
+
   } catch (error) {
     console.error("Error in createBooking:", error);
     res.status(500).json({
@@ -451,6 +590,7 @@ exports.createBooking = async (req, res) => {
 };
 
 // Get all bookings without pagination
+
 exports.getAllBookings = async (req, res) => {
   try {
     // Get all bookings with populated service and category details
@@ -726,12 +866,11 @@ exports.updateBooking = async (req, res) => {
     });
   }
 };
-
-// Cancel booking
+ 
 // Cancel booking
 exports.cancelBooking = async (req, res) => {
   try {
-    // console.log("Cancel Booking - Request Params:", req.params);
+    console.log("Cancel Booking - Request Params:", req.params);
     // console.log("Cancel Booking - Request Body:", req.body);
 
     const { bookingId } = req.params;
@@ -746,14 +885,16 @@ exports.cancelBooking = async (req, res) => {
     }
 
     // Find the booking by ID and user
-    const booking = await Booking.findOne({ _id: bookingId, user: userId });
+    const booking = await Booking.findOne({ _id: bookingId, user: userId })
+    .populate("subService")
+    .populate("user");
 
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: "Booking not found or does not belong to the user",
-      });
-    }
+  if (!booking) {
+    return res.status(404).json({
+      success: false,
+      message: "Booking not found or does not belong to the user",
+    });
+  }
 
     if (booking.status === "cancelled") {
       return res.status(400).json({
@@ -773,49 +914,28 @@ exports.cancelBooking = async (req, res) => {
     booking.status = "cancelled";
     booking.cancellationReason = cancellationReason || "No reason provided";
     booking.cancellationTime = new Date();
-
     await booking.save();
 
-    // Populate the booking with sub-service and user details
-    const populatedBooking = await Booking.findById(booking._id)
-      .populate("subService", "name description price")
-      .populate("user", "name email phone");
+    // Get admin details for notifications
+    const admins = await Admin.find({});
 
-    io.to(userId).emit("booking cancelled", {
-      message: `Your booking for ${populatedBooking.subService.name} has been Cancelled!`,
-      booking: populatedBooking,
+    // Send cancellation notifications (non-blocking)
+    sendCancellationNotifications(
+      booking, 
+      booking.user, 
+      booking.subService, 
+      admins,
+      booking.cancellationReason
+    ).then(success => {
+      if (!success) {
+        console.log('Cancellation notifications partially failed');
+      }
     });
-    console.log(`Emitted 'booking cancelled' event to user ${userId}`);
-    const user = await User.findById(userId);
-    user.notifications.push({
-      message: `Your booking for ${populatedBooking.subService.name} has been cancelled!`,
-      booking: populatedBooking,
-      seen: false,
-      date: new Date(),
-    });
-
-    user.save();
-
-    const adminId = "67e170ae35cd376d68647456";
-    io.to(adminId).emit("admin booking cancelled", {
-      message: `User (${populatedBooking?.user?._id}) booking for ${populatedBooking.subService.name} has been Cancelled!`,
-      booking: populatedBooking,
-    });
-    console.log(`Emitted 'booking Cancelled' event to admin ${adminId}`);
-    const admin = await Admin.findById(adminId);
-    admin.notifications.push({
-      message: `User (${populatedBooking?.user?._id}) booking for ${populatedBooking.subService.name} has been Cancelled!`,
-      booking: populatedBooking,
-      seen: false,
-      date: new Date(),
-    });
-
-    await admin.save();
 
     res.status(200).json({
       success: true,
       message: "Booking cancelled successfully",
-      booking: populatedBooking,
+      booking,
     });
   } catch (error) {
     console.error("Error in cancelBooking:", error);

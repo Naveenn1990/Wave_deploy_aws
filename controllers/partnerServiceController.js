@@ -817,8 +817,7 @@ exports.completeBooking = async (req, res) => {
     });
   }
 };
-
-// Get completed bookings
+ 
 // Get completed bookings
 exports.getCompletedBookings = async (req, res) => {
   try {
@@ -1336,9 +1335,7 @@ exports.removeCart=async(req,res)=>{
     
   }
 }
-
-// get all bookings
-// Get all bookings
+ 
 // Get all bookings
 exports.allpartnerBookings = async (req, res) => {
   try {
