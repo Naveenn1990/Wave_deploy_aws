@@ -8,6 +8,7 @@ const SubService = require("../models/SubService");
 const Admin = require("../models/admin");
 const PartnerModel = require("../models/Partner");
 const Notification = require("../models/Notification");
+const admin = require('firebase-admin');
 
 const createNotification = async (serviceId, name, job) => {
   try {
@@ -163,23 +164,168 @@ const createNotification = async (serviceId, name, job) => {
 //   }
 // }; 
 
+// exports.createBooking = async (req, res) => {
+//   try {
+//     const { subServiceId, userId, paymentMode, amount, location, scheduledTime, scheduledDate, currentBooking, lat, lng } = req.body;
+
+//     if (!subServiceId) {
+//       return res.status(400).json({ success: false, message: "subServiceId is required" });
+//     }
+
+//     const subService = await SubService.findById(subServiceId);
+//     if (!subService) {
+//       return res.status(404).json({ success: false, message: "SubService not found" });
+//     }
+
+//     if (!subService.isActive) {
+//       return res.status(400).json({ success: false, message: "SubService is currently inactive" });
+//     }
+
+//     const booking = new Booking({
+//       user: userId,
+//       subService: subServiceId,
+//       scheduledDate,
+//       scheduledTime,
+//       lat,
+//       lng,
+//       currentBooking,
+//       location: {
+//         address: location.address,
+//         landmark: location.landmark || "",
+//         pincode: location.pincode || "",
+//       },
+//       amount: amount || subService.price,
+//       status: "pending",
+//       paymentMode,
+//     });
+
+//     await booking.save();
+
+//     const populatedBooking = await Booking.findById(booking._id)
+//       .populate("subService")
+//       .populate("user");
+
+//     // Get user and admin details
+//     const user = await User.findById(userId);
+//     const admins = await Admin.find({});
+
+//     if (!user) {
+//       return res.status(404).json({ 
+//         success: false, 
+//         message: "User not found" 
+//       });
+//     }
+
+//     // Add this to your createBooking controller
+//     console.log('User FCM Token:', user.fcmToken);
+//     console.log('Admin Tokens:', adminTokens);
+
+//     // User notification
+//     const userNotification = {
+//       message: `Your booking for ${subService.name} has been confirmed!`,
+//       booking: populatedBooking._id,
+//       seen: false,
+//       date: new Date()
+//     };
+
+//     user.notifications.push(userNotification);
+//     await user.save();
+
+//     // Send FCM to user
+//     if (user.fcmToken) {
+//       const userMessage = {
+//         notification: {
+//           title: 'Booking Confirmed',
+//           body: userNotification.message
+//         },
+//         data: {
+//           bookingId: populatedBooking._id.toString(),
+//           type: 'booking_confirmation'
+//         },
+//         token: user.fcmToken
+//       };
+
+//       await Admin.messaging().send(userMessage)
+//         .catch(error => console.error('Error sending user FCM:', error));
+//     }
+
+//     // Admin notifications
+//     const adminNotificationMessage = `New booking from ${user.name} for ${subService.name}`;
+    
+//     const adminNotification = {
+//       message: adminNotificationMessage,
+//       booking: populatedBooking._id,
+//       seen: false,
+//       date: new Date()
+//     };
+
+//     // Add notification to all admins
+//     await Admin.updateMany(
+//       {},
+//       { $push: { notifications: adminNotification } }
+//     );
+
+//     // Send FCM to all admins
+//     const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
+//     if (adminTokens.length > 0) {
+//       const adminMessage = {
+//         notification: {
+//           title: 'New Booking',
+//           body: adminNotificationMessage
+//         },
+//         data: {
+//           bookingId: populatedBooking._id.toString(),
+//           type: 'new_booking'
+//         },
+//         tokens: adminTokens
+//       };
+
+//       await admin.messaging().sendMulticast(adminMessage)
+//         .catch(error => console.error('Error sending admin FCM:', error));
+//     }
+
+//     res.status(201).json({
+//       message: "Booking created successfully",
+//       booking: populatedBooking,
+//     });
+//   } catch (error) {
+//     console.error("Error in createBooking:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error creating booking",
+//       error: error.message,
+//     });
+//   }
+// };
+
 exports.createBooking = async (req, res) => {
   try {
     const { subServiceId, userId, paymentMode, amount, location, scheduledTime, scheduledDate, currentBooking, lat, lng } = req.body;
 
-    if (!subServiceId) {
-      return res.status(400).json({ success: false, message: "subServiceId is required" });
+    // Validate required fields
+    if (!subServiceId || !userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "subServiceId and userId are required" 
+      });
     }
 
     const subService = await SubService.findById(subServiceId);
     if (!subService) {
-      return res.status(404).json({ success: false, message: "SubService not found" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "SubService not found" 
+      });
     }
 
     if (!subService.isActive) {
-      return res.status(400).json({ success: false, message: "SubService is currently inactive" });
+      return res.status(400).json({ 
+        success: false, 
+        message: "SubService is currently inactive" 
+      });
     }
 
+    // Create new booking
     const booking = new Booking({
       user: userId,
       subService: subServiceId,
@@ -189,9 +335,9 @@ exports.createBooking = async (req, res) => {
       lng,
       currentBooking,
       location: {
-        address: location.address,
-        landmark: location.landmark || "",
-        pincode: location.pincode || "",
+        address: location?.address || "",
+        landmark: location?.landmark || "",
+        pincode: location?.pincode || "",
       },
       amount: amount || subService.price,
       status: "pending",
@@ -200,6 +346,7 @@ exports.createBooking = async (req, res) => {
 
     await booking.save();
 
+    // Populate booking details
     const populatedBooking = await Booking.findById(booking._id)
       .populate("subService")
       .populate("user");
@@ -208,9 +355,12 @@ exports.createBooking = async (req, res) => {
     const user = await User.findById(userId);
     const admins = await Admin.find({});
 
-    // Add this to your createBooking controller
-    console.log('User FCM Token:', user.fcmToken);
-    console.log('Admin Tokens:', adminTokens);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
+    }
 
     // User notification
     const userNotification = {
@@ -220,25 +370,30 @@ exports.createBooking = async (req, res) => {
       date: new Date()
     };
 
+    // Add notification to user
     user.notifications.push(userNotification);
     await user.save();
 
-    // Send FCM to user
+    // Send FCM to user if token exists
     if (user.fcmToken) {
-      const userMessage = {
-        notification: {
-          title: 'Booking Confirmed',
-          body: userNotification.message
-        },
-        data: {
-          bookingId: populatedBooking._id.toString(),
-          type: 'booking_confirmation'
-        },
-        token: user.fcmToken
-      };
+      try {
+        const userMessage = {
+          notification: {
+            title: 'Booking Confirmed',
+            body: userNotification.message
+          },
+          data: {
+            bookingId: populatedBooking._id.toString(),
+            type: 'booking_confirmation'
+          },
+          token: user.fcmToken
+        };
 
-      await Admin.messaging().send(userMessage)
-        .catch(error => console.error('Error sending user FCM:', error));
+        await admin.messaging().send(userMessage);  
+        console.log('User notification sent successfully');
+      } catch (fcmError) {
+        console.error('Error sending user FCM:', fcmError);
+      }
     }
 
     // Admin notifications
@@ -257,26 +412,31 @@ exports.createBooking = async (req, res) => {
       { $push: { notifications: adminNotification } }
     );
 
-    // Send FCM to all admins
+    // Send FCM to all admins with tokens
     const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
     if (adminTokens.length > 0) {
-      const adminMessage = {
-        notification: {
-          title: 'New Booking',
-          body: adminNotificationMessage
-        },
-        data: {
-          bookingId: populatedBooking._id.toString(),
-          type: 'new_booking'
-        },
-        tokens: adminTokens
-      };
+      try {
+        const adminMessage = {
+          notification: {
+            title: 'New Booking',
+            body: adminNotificationMessage
+          },
+          data: {
+            bookingId: populatedBooking._id.toString(),
+            type: 'new_booking'
+          },
+          tokens: adminTokens
+        };
 
-      await Admin.messaging().sendMulticast(adminMessage)
-        .catch(error => console.error('Error sending admin FCM:', error));
+        await admin.messaging().sendMulticast(adminMessage); // Note: Changed from Admin to admin
+        console.log('Admin notifications sent successfully');
+      } catch (fcmError) {
+        console.error('Error sending admin FCM:', fcmError);
+      }
     }
 
     res.status(201).json({
+      success: true,
       message: "Booking created successfully",
       booking: populatedBooking,
     });
@@ -285,7 +445,7 @@ exports.createBooking = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error creating booking",
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };

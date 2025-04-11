@@ -424,7 +424,18 @@ const adminBannerRoutes = require("./routes/adminBannerRoutes");
 const userBannerRoutes = require("./routes/userBannerRoutes");
 const adminBookingRoutes = require("./routes/adminBookingRoutes");
 const adminBookingController = require("./controllers/adminBookingController");
-// const notificationRoute = require('./routes/notificationRoute');
+const notificationRoute = require('./routes/notificationRoute');
+
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin
+// const serviceAccount = require('./firebase-admin.json');   
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+//   // databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
+//   databaseURL: `https://wave-755af.firebaseio.com`
+// });
+
 
 // Routes
 app.use("/api/user", userRoutes);
@@ -440,7 +451,7 @@ app.use("/api/admin/banners", adminBannerRoutes);
 app.use("/api/user/banners", userBannerRoutes);
 app.use("/api/admin/bookings", adminBookingRoutes); 
 
-// app.use('/api/notifications', notificationRoute);
+app.use('/api/notifications', notificationRoute);
 
 // Root route for WebSocket server
 app.get("/", (req, res) => {
