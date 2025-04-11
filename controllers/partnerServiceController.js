@@ -562,10 +562,10 @@ if(data){
     message: `Your booking for ${updatedBooking.subService.name} has been Accepted and job fee Rs.100 has been deducted!`,
   });
 }
-io.to(updatedBooking.user._id).emit("booking accepted", {
-  message: `Your booking for ${updatedBooking.subService.name} has been Confirm!`,
-  booking: updatedBooking,
-});
+// io.to(updatedBooking.user._id).emit("booking accepted", {
+//   message: `Your booking for ${updatedBooking.subService.name} has been Confirm!`,
+//   booking: updatedBooking,
+// });
 
 // console.log(
 //   `Emitted 'booking accepted' event to user ${updatedBooking?.user?._id}`
@@ -578,7 +578,7 @@ io.to(updatedBooking.user._id).emit("booking accepted", {
 //   date: new Date(),
 // });
 
-user.save();
+// user.save();
   } catch (error) {
     console.log(error);
     
