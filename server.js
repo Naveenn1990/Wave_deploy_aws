@@ -438,7 +438,7 @@ const admin = require('firebase-admin');
 
 
 // Routes
-app.use("/api/user", userRoutes);
+app.use("/api/user", userRoutes); 
 app.use("/api/user", userServiceRoutes);
 app.use("/api/user", userBookingRoutes);
 app.use("/api/user/account", userAccountRoutes);

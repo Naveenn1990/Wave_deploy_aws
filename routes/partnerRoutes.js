@@ -322,6 +322,7 @@ router.get("/reviews/user", auth, partnerServiceController.getUserReviews);
 router.post("/reviews/user", auth, partnerServiceController.reviewUser);
 
 router.get("/getWalletbypartner", auth, partnerAuthController.getWallet);
+router.put("/updateTokenFmc",auth,partnerAuthController.updateTokenFmc);
 router.post(
   "/addtransactionwallet",
   auth,
