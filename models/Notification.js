@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const admin = require('firebase-admin');
+const admin = require("firebase-admin");
 const Partner = require("./Partner");
 const notificationSchema = new mongoose.Schema(
   {
@@ -30,7 +30,7 @@ const notificationSchema = new mongoose.Schema(
 );
 
 // Post-save hook for real-time updates
-notificationSchema.post("save",async function (doc) {
+notificationSchema.post("save", async function (doc) {
   const userIdString = doc.userId.toString();
   // io.to(userIdString).emit("new-notification", doc, (response) => {
   //   console.log("Acknowledgment from client:", response);
@@ -40,42 +40,40 @@ notificationSchema.post("save",async function (doc) {
   //     console.log("No acknowledgment received from client", userIdString);
   //   }
   // });
-  let partner=await Partner.findById(userIdString)
-  if(partner?.fcmtoken){
+  let partner = await Partner.findById(userIdString);
+  if (partner?.fcmtoken) {
     const userMessage = {
-          notification: {
-            title:doc.title,
-            body: doc.message
+      notification: {
+        title: doc.title,
+        body: doc.message,
+      },
+      data: {
+        type: doc.title,
+        title: doc.title,
+        body: doc.message,
+        timestamp: new Date().toISOString(),
+        // partnerName: partner.name
+      },
+      token: partner.fcmtoken,
+      android: {
+        priority: "high",
+        ttl: 60 * 60 * 24, // 24 hours retention
+      },
+      apns: {
+        payload: {
+          aps: {
+            contentAvailable: true,
           },
-          data: {
+        },
+        headers: {
+          "apns-priority": "5",
+        },
+      },
+    };
+    console.log("send message");
 
-            type: doc.title,
-            title:doc.title,
-            body: doc.message,
-            timestamp: new Date().toISOString(),
-            // partnerName: partner.name
-          },
-          token: partner.fcmtoken,
-          android: {
-            priority: 'high',
-            ttl: 60 * 60 * 24 // 24 hours retention
-          },
-          apns: {
-            payload: {
-              aps: {
-                contentAvailable: true
-              }
-            },
-            headers: {
-              'apns-priority': '5'
-            }
-          }
-        };
-  console.log("send message");
-  
-        await admin.messaging().send(userMessage);
+    await admin.messaging().send(userMessage);
   }
-    
 });
 
 module.exports = mongoose.model("Notification", notificationSchema);

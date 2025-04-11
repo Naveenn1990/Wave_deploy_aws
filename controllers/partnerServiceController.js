@@ -413,7 +413,7 @@ exports.getMatchingBookings = async (req, res) => {
   try {
     // Get partner's profile
     const profile = await Partner.findOne({ _id: req.partner._id });
-    console.log("Profile:", profile);
+    // console.log("Profile:", profile);
 
     if (!profile) {
       return res.status(400).json({
@@ -489,7 +489,7 @@ exports.getMatchingBookings = async (req, res) => {
       .sort({updatedAt:-1})
       // .sort({ scheduledDate: 1, scheduledTime: 1 });
 
-    console.log("Found Bookings Count:", bookings.length);
+    // console.log("Found Bookings Count:", bookings.length);
 
     // Format the response
     const formattedBookings = bookings.map((booking) => ({
@@ -662,7 +662,7 @@ exports.acceptBooking = async (req, res) => {
 
     // Get admin details for notifications
     const admins = await Admin.find({});
-    console.log("updatedBooking : " , updatedBooking)
+    // console.log("updatedBooking : " , updatedBooking)
     // Send notifications (non-blocking)
     sendBookingAcceptanceNotifications(
       updatedBooking,
@@ -801,7 +801,7 @@ exports.rejectBooking = async (req, res) => {
         .json({ success: false, message: "Booking not found" });
     }
 
-    console.log("Current Booking Status:", booking.status);
+    // console.log("Current Booking Status:", booking.status);
 
     // Check if booking is already accepted, rejected, or canceled
     if (["accepted", "cancelled", "rejected"].includes(booking.status)) {
@@ -1380,11 +1380,11 @@ exports.pauseBooking = async (req, res) => {
     const { bookingId } = req.params;
     let { nextScheduledDate, nextScheduledTime, pauseReason } = req.body;
 
-    console.log("Received:", {
-      nextScheduledDate,
-      nextScheduledTime,
-      pauseReason,
-    });
+    // console.log("Received:", {
+    //   nextScheduledDate,
+    //   nextScheduledTime,
+    //   pauseReason,
+    // });
 
     // Validate inputs
     if (!nextScheduledDate || isNaN(new Date(nextScheduledDate).getTime())) {
@@ -1585,7 +1585,7 @@ exports.getProductsByCategory = async (req, res) => {
   try {
     const { category } = req.params; // Extract category ID from URL
 
-    console.log("Received categoryId:", category);
+    // console.log("Received categoryId:", category);
 
     // Validate category ID format
     if (!mongoose.Types.ObjectId.isValid(category)) {
@@ -1746,7 +1746,7 @@ exports.allpartnerBookings = async (req, res) => {
     }
 
     // Debugging logs
-    console.log("Total Bookings for Partner:", partner.bookings.length);
+    // console.log("Total Bookings for Partner:", partner.bookings.length);
 
     // Define booking status categories
     const statuses = [
@@ -1763,7 +1763,7 @@ exports.allpartnerBookings = async (req, res) => {
     // Categorize bookings by status
     partner.bookings.forEach((booking) => {
       const status = booking.status || "pending"; // Default to "pending" if missing
-      console.log(`Booking ID: ${booking._id}, Status: ${status}`);
+      // console.log(`Booking ID: ${booking._id}, Status: ${status}`);
 
       if (statuses.includes(status)) {
         bookingsByStatus[status].push(booking);
