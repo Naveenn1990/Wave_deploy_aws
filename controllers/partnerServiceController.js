@@ -12,6 +12,108 @@ const Admin = require("../models/admin");
 const NotificationModel = require("../models/Notification");
 const PartnerWallet = require("../models/PartnerWallet");
 // Get all available services for partners
+const admin = require('firebase-admin');
+
+const sendBookingAcceptanceNotifications = async (booking, user, subService, partner, admins) => {
+  try {
+    // User notification
+    const userNotification = {
+      message: `Your booking for ${subService.name} has been accepted by ${partner.name}!`,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'booking_accepted'
+    };
+
+    // Add notification to user
+    user?.notifications?.push(userNotification);
+    await user.save();
+
+    // Send FCM to user if token exists
+    if (user.fcmToken) {
+      const userMessage = {
+        notification: {
+          title: 'Booking Accepted',
+          body: userNotification.message
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'booking_accepted',
+          title: 'Booking Accepted',
+          body: userNotification.message,
+          timestamp: new Date().toISOString(),
+          // partnerName: partner.name
+        },
+        token: user.fcmToken,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 // 24 hours retention
+        },
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true
+            }
+          },
+          headers: {
+            'apns-priority': '5'
+          }
+        }
+      };
+
+      await admin.messaging().send(userMessage);
+    }
+
+    // Admin notifications
+    const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been accepted by partner ${partner.name}`;
+    
+    const adminNotification = {
+      message: adminNotificationMessage,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'booking_accepted'
+    };
+
+    // Add notification to all admins
+    await Admin.updateMany(
+      {},
+      { $push: { notifications: adminNotification } }
+    );
+
+    // Send FCM to all admins with tokens
+    const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
+    if (adminTokens.length > 0) {
+      const adminMessage = {
+        notification: {
+          title: 'Booking Accepted',
+          body: adminNotificationMessage
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'admin_booking_accepted',
+          title: 'Booking Accepted',
+          body: adminNotificationMessage,
+          timestamp: new Date().toISOString(),
+          partnerName: partner.name
+        },
+        tokens: adminTokens,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 // 24 hours retention
+        }
+      };
+
+      await admin.messaging().sendMulticast(adminMessage);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Booking acceptance notification error:', error);
+    return false;
+  }
+}; 
+
 exports.getAvailableServices = async (req, res) => {
   try {
     const categories = await ServiceCategory.find({ status: "active" })
@@ -337,7 +439,7 @@ exports.getMatchingBookings = async (req, res) => {
     // Find sub-services that belong to the partner's selected services
     const subServices = await SubService.find({
       service: { $in: service },
-    }).select("_id");
+    }).select("_id").sort({updatedAt:-1})
 
     if (!subServices || subServices.length === 0) {
       return res.status(400).json({
@@ -384,7 +486,8 @@ exports.getMatchingBookings = async (req, res) => {
         select: "name", // Ensure subcategory name is fetched
       })
       .select("-__v")
-      .sort({ scheduledDate: 1, scheduledTime: 1 });
+      .sort({updatedAt:-1})
+      // .sort({ scheduledDate: 1, scheduledTime: 1 });
 
     console.log("Found Bookings Count:", bookings.length);
 
@@ -507,7 +610,10 @@ exports.acceptBooking = async (req, res) => {
     }
 
     // Validate booking existence
-    const booking = await Booking.findById(bookingId);
+    const booking = await Booking.findById(bookingId) 
+    .populate('user')
+    .populate('subService');
+
     if (!booking) {
       return res
         .status(404)
@@ -535,21 +641,16 @@ exports.acceptBooking = async (req, res) => {
       { new: true }
     )
       .populate({
-        path: "partner",
-        select:
-          "name email phone profilePicture address experience qualification profile",
+        path: "partner", 
       })
       .populate({
-        path: "user",
-        select: "name email phone profilePhoto address",
+        path: "user", 
       })
       .populate({
-        path: "subService",
-        select: "name price photo description duration",
+        path: "subService", 
       })
       .populate({
-        path: "service",
-        select: "name description",
+        path: "service", 
       });
 
     // Update Partner: Add booking to bookings array
@@ -559,31 +660,24 @@ exports.acceptBooking = async (req, res) => {
       { new: true }
     );
 
+    // Get admin details for notifications
+    const admins = await Admin.find({});
+    console.log("updatedBooking : " , updatedBooking)
+    // Send notifications (non-blocking)
+    sendBookingAcceptanceNotifications(
+      updatedBooking,
+      updatedBooking.user,
+      updatedBooking.subService,
+      updatedBooking.partner,
+      admins
+    ).then(success => {
+      if (!success) {
+        console.log('Acceptance notifications partially failed');
+      }
+    });
+
     deductWallet(updatedBooking,partnerId);
-    // console.log("updatedBooking : ", updatedBooking);
-
-    // io.to(userId).emit("booking confirmed", {
-    //   message: `Your booking for ${subService.name} has been confirmed!`,
-    //   booking: populatedBooking,
-    // });
-
-
-    // const adminId = "679a7b0cf469c2393c0cd39e";
-    // io.to(adminId).emit("admin booking accepted", {
-    //   message: `User (${updatedBooking?.user?._id}) booking for ${updatedBooking.subService.name} has been Accepted!`,
-    //   booking: updatedBooking,
-    // });
-    // console.log(`Emitted booking Accepted event to admin ${adminId}`);
-    // const admin = await Admin.findById(adminId);
-    // admin.notifications.push({
-    //   message: `User (${updatedBooking?.user?._id}) booking for ${updatedBooking.subService.name} has been Accepted!`,
-    //   booking: updatedBooking,
-    //   seen: false,
-    //   date: new Date(),
-    // });
-
-    // await admin.save();
-
+  
     res.status(200).json({
       success: true,
       message: "Booking accepted successfully",
@@ -793,39 +887,7 @@ exports.completeBooking = async (req, res) => {
         message: "Booking not found",
       });
     }
-
-    io.to(booking.user._id).emit("booking completed", {
-      message: `Your booking for ${booking.subService.name} has been Completed!`,
-      booking: booking,
-    });
-
-    console.log(
-      `Emitted 'booking completed' event to user ${booking?.user?._id}`
-    );
-    const user = await User.findById(booking?.user?._id);
-    user.notifications.push({
-      message: `Your booking for ${booking.subService.name} has been Completed!`,
-      booking: booking,
-      seen: false,
-      date: new Date(),
-    });
-
-    user.save();
-
-    const adminId = "67e170ae35cd376d68647456";
-    io.to(adminId).emit("admin booking completed", {
-      message: `User (${booking?.user?._id}) booking for ${booking.subService.name} has been Completed!`,
-      booking: booking,
-    });
-    console.log(`Emitted booking Completed event to admin ${adminId}`);
-    const admin = await Admin.findById(adminId);
-    admin.notifications.push({
-      message: `User (${booking?.user?._id}) booking for ${booking.subService.name} has been Completed!`,
-      booking: booking,
-      seen: false,
-      date: new Date(),
-    });
-
+  
     res.status(200).json({
       success: true,
       message: "Booking completed successfully",
@@ -1018,6 +1080,148 @@ exports.getRejectedBookings = async (req, res) => {
 //   }
 // };
 
+const sendBookingPauseNotifications = async (booking, user, subService, partner, admins, pauseDetails) => {
+  try {
+    // User notification
+    const userNotification = {
+      message: `Your booking for ${subService.name} has been paused. Reason: ${pauseDetails.pauseReason}. Will resume on ${pauseDetails.nextScheduledDate}`,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'booking_paused'
+    };
+
+    // Add notification to user
+    user.notifications.push(userNotification);
+    await user.save();
+
+    // Send FCM to user if token exists
+    if (user.fcmToken) {
+      const userMessage = {
+        notification: {
+          title: 'Booking Paused',
+          body: userNotification.message
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'booking_paused',
+          title: 'Booking Paused',
+          body: userNotification.message,
+          timestamp: new Date().toISOString(),
+          resumeDate: pauseDetails.nextScheduledDate.toISOString(),
+          pauseReason: pauseDetails.pauseReason
+        },
+        token: user.fcmToken,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 * 7 // 1 week retention for paused bookings
+        },
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true
+            }
+          },
+          headers: {
+            'apns-priority': '5'
+          }
+        }
+      };
+
+      await admin.messaging().send(userMessage);
+    }
+
+    // Partner notification
+    const partnerNotification = {
+      message: `You have paused booking for ${subService.name}. Reason: ${pauseDetails.pauseReason}. Will resume on ${pauseDetails.nextScheduledDate}`,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'booking_paused'
+    };
+
+    // Add notification to partner
+    partner.notifications.push(partnerNotification);
+    await partner.save();
+
+    // Send FCM to partner if token exists
+    if (partner.fcmToken) {
+      const partnerMessage = {
+        notification: {
+          title: 'Booking Paused',
+          body: partnerNotification.message
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'partner_booking_paused',
+          title: 'Booking Paused',
+          body: partnerNotification.message,
+          timestamp: new Date().toISOString(),
+          resumeDate: pauseDetails.nextScheduledDate.toISOString(),
+          pauseReason: pauseDetails.pauseReason
+        },
+        token: partner.fcmToken,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 * 7 // 1 week retention
+        }
+      };
+
+      await admin.messaging().send(partnerMessage);
+    }
+
+    // Admin notifications
+    const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been paused by partner ${partner.name}. Reason: ${pauseDetails.pauseReason}. Will resume on ${pauseDetails.nextScheduledDate}`;
+    
+    const adminNotification = {
+      message: adminNotificationMessage,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'booking_paused'
+    };
+
+    // Add notification to all admins
+    await Admin.updateMany(
+      {},
+      { $push: { notifications: adminNotification } }
+    );
+
+    // Send FCM to all admins with tokens
+    const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
+    if (adminTokens.length > 0) {
+      const adminMessage = {
+        notification: {
+          title: 'Booking Paused',
+          body: adminNotificationMessage
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'admin_booking_paused',
+          title: 'Booking Paused',
+          body: adminNotificationMessage,
+          timestamp: new Date().toISOString(),
+          partnerName: partner.name,
+          resumeDate: pauseDetails.nextScheduledDate.toISOString(),
+          pauseReason: pauseDetails.pauseReason
+        },
+        tokens: adminTokens,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 * 7 // 1 week retention
+        }
+      };
+
+      await admin.messaging().sendMulticast(adminMessage);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Booking pause notification error:', error);
+    return false;
+  }
+};
+
 exports.pauseBooking = async (req, res) => {
   console.log("Pausing the booking...");
 
@@ -1031,6 +1235,7 @@ exports.pauseBooking = async (req, res) => {
       pauseReason,
     });
 
+    // Validate inputs
     if (!nextScheduledDate || isNaN(new Date(nextScheduledDate).getTime())) {
       return res.status(400).json({
         success: false,
@@ -1045,12 +1250,14 @@ exports.pauseBooking = async (req, res) => {
       });
     }
 
-    // Find booking
+    // Find booking with populated data
     const booking = await Booking.findOne({
       _id: bookingId,
-      // partner: req.partner?._id,
       status: { $in: ["accepted", "in_progress"] },
-    });
+    })
+      .populate('user')
+      .populate('subService')
+      .populate('partner');
 
     if (!booking) {
       return res.status(404).json({
@@ -1059,49 +1266,35 @@ exports.pauseBooking = async (req, res) => {
       });
     }
 
-    // Update booking
-    booking.status = "paused";
-    booking.pauseDetails = {
+    // Prepare pause details
+    const pauseDetails = {
       nextScheduledDate: new Date(nextScheduledDate),
       nextScheduledTime,
-      pauseReason,
-      pausedAt: new Date(),
+      pauseReason: pauseReason || "Not specified",
+      pausedAt: new Date()
     };
 
-    // console.log("booking", booking);
+    // Update booking
+    booking.status = "paused";
+    booking.pauseDetails = pauseDetails;
     await booking.save();
 
-    io.to(booking.user._id).emit("booking paused", {
-      message: `Your booking for ${booking.subService.name} has been Paused!`,
-      booking: booking,
-    });
+    // Get admin details for notifications
+    const admins = await Admin.find({});
 
-    console.log(`Emitted 'booking paused' event to user ${booking?.user?._id}`);
-    const user = await User.findById(booking?.user?._id);
-    user.notifications.push({
-      message: `Your booking for ${booking.subService.name} has been Paused!`,
-      booking: booking,
-      seen: false,
-      date: new Date(),
+    // Send notifications (non-blocking)
+    sendBookingPauseNotifications(
+      booking,
+      booking.user,
+      booking.subService,
+      booking.partner,
+      admins,
+      pauseDetails
+    ).then(success => {
+      if (!success) {
+        console.log('Pause notifications partially failed');
+      }
     });
-
-    user.save();
-
-    const adminId = "67e170ae35cd376d68647456";
-    io.to(adminId).emit("admin booking paused", {
-      message: `User (${booking?.user?._id}) booking for ${booking.subService.name} has been Paused!`,
-      booking: booking,
-    });
-    console.log(`Emitted booking Paused event to admin ${adminId}`);
-    const admin = await Admin.findById(adminId);
-    admin.notifications.push({
-      message: `User (${booking?.user?._id}) booking for ${booking.subService.name} has been Paused!`,
-      booking: booking,
-      seen: false,
-      date: new Date(),
-    });
-
-    await admin.save();
 
     res.status(200).json({
       success: true,
@@ -1113,7 +1306,7 @@ exports.pauseBooking = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error pausing booking",
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
