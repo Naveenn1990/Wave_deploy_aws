@@ -1270,10 +1270,10 @@ exports.addToCart = async (req, res) => {
     }
 
     // Validate Booking (Ensure it belongs to this partner & is accepted)
-    const booking = await Booking.findOne({
+    let booking = await Booking.findOne({
       _id: bookingId,
       partner: partnerId, // Ensure booking belongs to this partner
-      status: "accepted",
+     
     });
 
     if (!booking) {
@@ -1292,11 +1292,12 @@ exports.addToCart = async (req, res) => {
 
     if (existingItemIndex !== -1) {
       // Update quantity
-      booking.cart[existingItemIndex].quantity += change;
-
+      booking.cart[existingItemIndex].quantity = change;
+      booking.cart[existingItemIndex].approved=false
       // Remove item if quantity is 0 or negative
       if (booking.cart[existingItemIndex].quantity <= 0) {
         booking.cart.splice(existingItemIndex, 1);
+
       }
     } else if (change > 0) {
       // Add new product to cart
@@ -1309,7 +1310,7 @@ exports.addToCart = async (req, res) => {
     }
 
     // Save the updated booking with the modified cart
-    await booking.save();
+    booking=await booking.save();
 
     return res.status(200).json({
       message: "Cart updated successfully",
@@ -1325,11 +1326,11 @@ exports.addToCart = async (req, res) => {
 exports.removeCart=async(req,res)=>{
   try{
     let {bookid,cartId}=req.body;
-    let booking=await Booking.findById(bookid);
+    let booking=await Booking.findByIdAndUpdate(bookid,{$pull:{cart:{_id:cartId}}},{new:true});
     if(!booking) return res.status(404).json({ message: "Booking not found" });
-    let cart=booking.cart.id(cartId);
-    cart.remove();
-    booking.save();
+    // let cart=booking.cart.id(cartId);
+    // cart.remove();
+  
     return res.status(200).json({message:"Cart item removed successfully",cart:booking.cart });
   }catch(error){
     console.log(error);
