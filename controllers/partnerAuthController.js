@@ -69,6 +69,22 @@ exports.sendLoginOTP = async (req, res) => {
   }
 };
 
+
+exports.updateTokenFmc = async (req, res) => {
+  try {
+    let {token}=req.body;
+    console.log("Partner ID:", req.partner._id);
+    let data = await Partner.findById(req.partner._id);
+    if (!data) return res.status(200).json({ error: "Data not found" });
+    data.fcmtoken=token;
+    await data.save()
+    return res.status(200).json({ success: "Successfully updated" });
+
+  } catch (error) {
+    console.log(error);
+
+  }
+}
 // Verify OTP and login partner
 exports.verifyLoginOTP = async (req, res) => {
   try {

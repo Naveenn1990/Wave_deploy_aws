@@ -134,7 +134,9 @@ const partnerSchema = new mongoose.Schema(
       type: Date,
       select: false, // Ensures it is fetched only when explicitly requested
     },
-
+    fcmtoken: {
+      type: String,
+    },
     // Add Reviews Field
     reviews: [
       {

@@ -105,6 +105,19 @@ const verifyOTP = async (req, res) => {
   }
 };
 
+const updateTokenFmc = async (req, res) => {
+  try {
+    console.log("Partner ID:", req.partner._id);
+    let data = await Partner.findById(req.partner._id);
+    if (!data) return res.status(200).json({ error: "Data not found" });
+    return res.status(200).json({ success: "Successfully updated" });
+
+  } catch (error) {
+    console.log(error);
+
+  }
+}
+
 const updateProfile = async (req, res) => {
   try {
     console.log("Request body:", req.body);
@@ -248,7 +261,7 @@ const uploadKYCDocuments = async (req, res) => {
       !req.files?.aadhaarCard ||
       !req.files?.cancelledCheque ||
       !req.files?.drivingLicence ||
-      !req.files?.bill 
+      !req.files?.bill
     ) {
       return res.status(400).json({
         success: false,
@@ -360,4 +373,5 @@ module.exports = {
   getKYCStatus,
   completeBooking,
   getAllPartnerKYC,
+  updateTokenFmc,
 };
