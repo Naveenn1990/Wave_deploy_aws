@@ -838,12 +838,155 @@ exports.rejectBooking = async (req, res) => {
 
 // Complete booking - Partner uploads photos and videos before marking the job as completed
 // Complete booking - Partner uploads photos and videos before marking the job as completed
+
+const sendBookingCompletionNotifications = async (booking, user, subService, partner, admins) => {
+  try {
+    // User notification
+    const userNotification = {
+      message: `Your booking for ${subService.name} has been completed by ${partner.name}. Please provide your feedback!`,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'booking_completed'
+    };
+
+    // Add notification to user
+    user.notifications.push(userNotification);
+    await user.save();
+
+    // Send FCM to user if token exists
+    if (user.fcmToken) {
+      const userMessage = {
+        notification: {
+          title: 'Booking Completed',
+          body: userNotification.message
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'booking_completed',
+          title: 'Booking Completed',
+          body: userNotification.message,
+          timestamp: new Date().toISOString(),
+          partnerName: partner.name,
+          action: 'rate_booking'
+        },
+        token: user.fcmToken,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 * 3 // 3 days retention
+        },
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true,
+              mutableContent: 1
+            }
+          },
+          headers: {
+            'apns-priority': '5'
+          }
+        }
+      };
+
+      await admin.messaging().send(userMessage);
+    }
+
+    // Partner notification
+    const partnerNotification = {
+      message: `You have successfully completed booking for ${subService.name}. Payment will be processed shortly.`,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'booking_completed'
+    };
+
+    // Add notification to partner
+    partner.notifications.push(partnerNotification);
+    await partner.save();
+
+    // Send FCM to partner if token exists
+    if (partner.fcmToken) {
+      const partnerMessage = {
+        notification: {
+          title: 'Booking Completed',
+          body: partnerNotification.message
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'partner_booking_completed',
+          title: 'Booking Completed',
+          body: partnerNotification.message,
+          timestamp: new Date().toISOString(),
+          paymentStatus: booking.paymentStatus
+        },
+        token: partner.fcmToken,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 * 3 // 3 days retention
+        }
+      };
+
+      await admin.messaging().send(partnerMessage);
+    }
+
+    // Admin notifications
+    const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been completed by partner ${partner.name}.`;
+    
+    const adminNotification = {
+      message: adminNotificationMessage,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'booking_completed'
+    };
+
+    // Add notification to all admins
+    await Admin.updateMany(
+      {},
+      { $push: { notifications: adminNotification } }
+    );
+
+    // Send FCM to all admins with tokens
+    const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
+    if (adminTokens.length > 0) {
+      const adminMessage = {
+        notification: {
+          title: 'Booking Completed',
+          body: adminNotificationMessage
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'admin_booking_completed',
+          title: 'Booking Completed',
+          body: adminNotificationMessage,
+          timestamp: new Date().toISOString(),
+          partnerName: partner.name,
+          paymentStatus: booking.paymentStatus
+        },
+        tokens: adminTokens,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24 * 3 // 3 days retention
+        }
+      };
+
+      await admin.messaging().sendMulticast(adminMessage);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Booking completion notification error:', error);
+    return false;
+  }
+};
+  
+
 exports.completeBooking = async (req, res) => {
   try {
     const { id } = req.params;
     const files = req.files;
 
-    // Extract only the filename from the path without using path module
+    // Process file uploads
     const photos = files.photos
       ? files.photos.map((file) => file.path.split("/").pop())
       : [];
@@ -851,12 +994,12 @@ exports.completeBooking = async (req, res) => {
       ? files.videos.map((file) => file.path.split("/").pop())
       : [];
 
-    // Find and update the booking
+    // Find and update the booking with populated data
     const booking = await Booking.findByIdAndUpdate(
       id,
       {
         status: "completed",
-        paymentStatus: "completed", // Update payment status to completed
+        paymentStatus: "completed",
         photos,
         videos,
         completedAt: new Date(),
@@ -864,21 +1007,13 @@ exports.completeBooking = async (req, res) => {
       { new: true }
     )
       .populate({
-        path: "user",
-        select: "name email phone profilePhoto address",
+        path: "user", 
       })
       .populate({
-        path: "subService",
-        select: "name price photo description duration",
+        path: "subService", 
       })
       .populate({
-        path: "service",
-        select: "name description",
-      })
-      .populate({
-        path: "partner",
-        select:
-          "name email phone profilePicture address experience qualification profile",
+        path: "partner", 
       });
 
     if (!booking) {
@@ -887,7 +1022,23 @@ exports.completeBooking = async (req, res) => {
         message: "Booking not found",
       });
     }
-  
+
+    // Get admin details for notifications
+    const admins = await Admin.find({}).select('fcmToken');
+
+    // Send completion notifications (non-blocking)
+    sendBookingCompletionNotifications(
+      booking,
+      booking.user,
+      booking.subService,
+      booking.partner,
+      admins
+    ).then(success => {
+      if (!success) {
+        console.log('Completion notifications partially failed');
+      }
+    });
+
     res.status(200).json({
       success: true,
       message: "Booking completed successfully",
@@ -898,7 +1049,7 @@ exports.completeBooking = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error completing booking",
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
