@@ -550,7 +550,13 @@ exports.createBooking = async (req, res) => {
     const populatedBooking = await Booking.findById(booking._id)
       .populate("subService")
       .populate("user");
-
+      if (populatedBooking) {
+              createNotification(
+                populatedBooking.subService.service,
+                subService.name,
+                populatedBooking
+              );
+            }
     // Get user and admin details
     const user = await User.findById(userId);
     const admins = await Admin.find({});

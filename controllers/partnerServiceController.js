@@ -10,6 +10,7 @@ const Product = require("../models/product");
 const User = require("../models/User");
 const Admin = require("../models/admin");
 const NotificationModel = require("../models/Notification");
+const PartnerWallet = require("../models/PartnerWallet");
 // Get all available services for partners
 exports.getAvailableServices = async (req, res) => {
   try {
@@ -438,6 +439,49 @@ exports.getMatchingBookings = async (req, res) => {
   }
 };
 
+async function deductWallet(updatedBooking,partner){
+  try {
+ let  data = await PartnerWallet.findOne({ partner: partner });
+if(data){
+  data.balance = data.balance -100;
+  data.transactions.push({
+    type: "debit",
+    amount: 100,
+    description: `Job accepted fee for ${updatedBooking.subService.name}`,
+    reference:"",
+    balance: data.balance,
+  });
+  await data.save()
+
+  await NotificationModel.create({
+    userId: partner,
+    title: "Accepted Booking",
+    message: `Your booking for ${updatedBooking.subService.name} has been Accepted and job fee Rs.100 has been deducted!`,
+  });
+}
+io.to(updatedBooking.user._id).emit("booking accepted", {
+  message: `Your booking for ${updatedBooking.subService.name} has been Confirm!`,
+  booking: updatedBooking,
+});
+
+// console.log(
+//   `Emitted 'booking accepted' event to user ${updatedBooking?.user?._id}`
+// );
+// const user = await User.findById(updatedBooking?.user?._id);
+// user.notifications.push({
+//   message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
+//   booking: updatedBooking,
+//   seen: false,
+//   date: new Date(),
+// });
+
+user.save();
+  } catch (error) {
+    console.log(error);
+    
+  }
+}
+
 //accept booking
 exports.acceptBooking = async (req, res) => {
   try {
@@ -515,35 +559,14 @@ exports.acceptBooking = async (req, res) => {
       { new: true }
     );
 
+    deductWallet(updatedBooking,partnerId);
     // console.log("updatedBooking : ", updatedBooking);
 
     // io.to(userId).emit("booking confirmed", {
     //   message: `Your booking for ${subService.name} has been confirmed!`,
     //   booking: populatedBooking,
     // });
-    await NotificationModel.create({
-      userId: partnerId,
-      title: "Accepted Booking",
-      message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
-    });
 
-    io.to(updatedBooking.user._id).emit("booking accepted", {
-      message: `Your booking for ${updatedBooking.subService.name} has been Confirm!`,
-      booking: updatedBooking,
-    });
-
-    console.log(
-      `Emitted 'booking accepted' event to user ${updatedBooking?.user?._id}`
-    );
-    const user = await User.findById(updatedBooking?.user?._id);
-    user.notifications.push({
-      message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
-      booking: updatedBooking,
-      seen: false,
-      date: new Date(),
-    });
-
-    user.save();
 
     // const adminId = "679a7b0cf469c2393c0cd39e";
     // io.to(adminId).emit("admin booking accepted", {
@@ -1269,10 +1292,10 @@ exports.addToCart = async (req, res) => {
     }
 
     // Validate Booking (Ensure it belongs to this partner & is accepted)
-    const booking = await Booking.findOne({
+    let booking = await Booking.findOne({
       _id: bookingId,
       partner: partnerId, // Ensure booking belongs to this partner
-      status: "accepted",
+     
     });
 
     if (!booking) {
@@ -1291,11 +1314,12 @@ exports.addToCart = async (req, res) => {
 
     if (existingItemIndex !== -1) {
       // Update quantity
-      booking.cart[existingItemIndex].quantity += change;
-
+      booking.cart[existingItemIndex].quantity = change;
+      booking.cart[existingItemIndex].approved=false
       // Remove item if quantity is 0 or negative
       if (booking.cart[existingItemIndex].quantity <= 0) {
         booking.cart.splice(existingItemIndex, 1);
+
       }
     } else if (change > 0) {
       // Add new product to cart
@@ -1308,7 +1332,7 @@ exports.addToCart = async (req, res) => {
     }
 
     // Save the updated booking with the modified cart
-    await booking.save();
+    booking=await booking.save();
 
     return res.status(200).json({
       message: "Cart updated successfully",
@@ -1324,11 +1348,11 @@ exports.addToCart = async (req, res) => {
 exports.removeCart=async(req,res)=>{
   try{
     let {bookid,cartId}=req.body;
-    let booking=await Booking.findById(bookid);
+    let booking=await Booking.findByIdAndUpdate(bookid,{$pull:{cart:{_id:cartId}}},{new:true});
     if(!booking) return res.status(404).json({ message: "Booking not found" });
-    let cart=booking.cart.id(cartId);
-    cart.remove();
-    booking.save();
+    // let cart=booking.cart.id(cartId);
+    // cart.remove();
+  
     return res.status(200).json({message:"Cart item removed successfully",cart:booking.cart });
   }catch(error){
     console.log(error);
