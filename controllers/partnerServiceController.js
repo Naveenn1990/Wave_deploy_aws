@@ -10,6 +10,7 @@ const Product = require("../models/product");
 const User = require("../models/User");
 const Admin = require("../models/admin");
 const NotificationModel = require("../models/Notification");
+const PartnerWallet = require("../models/PartnerWallet");
 // Get all available services for partners
 exports.getAvailableServices = async (req, res) => {
   try {
@@ -438,6 +439,49 @@ exports.getMatchingBookings = async (req, res) => {
   }
 };
 
+async function deductWallet(updatedBooking,partner){
+  try {
+ let  data = await PartnerWallet.findOne({ partner: partner });
+if(data){
+  data.balance = data.balance -100;
+  data.transactions.push({
+    type: "debit",
+    amount: 100,
+    description: `Job accepted fee for ${updatedBooking.subService.name}`,
+    reference:"",
+    balance: data.balance,
+  });
+  await data.save()
+
+  await NotificationModel.create({
+    userId: partner,
+    title: "Accepted Booking",
+    message: `Your booking for ${updatedBooking.subService.name} has been Accepted and job fee Rs.100 has been deducted!`,
+  });
+}
+io.to(updatedBooking.user._id).emit("booking accepted", {
+  message: `Your booking for ${updatedBooking.subService.name} has been Confirm!`,
+  booking: updatedBooking,
+});
+
+// console.log(
+//   `Emitted 'booking accepted' event to user ${updatedBooking?.user?._id}`
+// );
+// const user = await User.findById(updatedBooking?.user?._id);
+// user.notifications.push({
+//   message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
+//   booking: updatedBooking,
+//   seen: false,
+//   date: new Date(),
+// });
+
+user.save();
+  } catch (error) {
+    console.log(error);
+    
+  }
+}
+
 //accept booking
 exports.acceptBooking = async (req, res) => {
   try {
@@ -515,35 +559,14 @@ exports.acceptBooking = async (req, res) => {
       { new: true }
     );
 
+    deductWallet(updatedBooking,partnerId);
     // console.log("updatedBooking : ", updatedBooking);
 
     // io.to(userId).emit("booking confirmed", {
     //   message: `Your booking for ${subService.name} has been confirmed!`,
     //   booking: populatedBooking,
     // });
-    await NotificationModel.create({
-      userId: partnerId,
-      title: "Accepted Booking",
-      message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
-    });
 
-    io.to(updatedBooking.user._id).emit("booking accepted", {
-      message: `Your booking for ${updatedBooking.subService.name} has been Confirm!`,
-      booking: updatedBooking,
-    });
-
-    console.log(
-      `Emitted 'booking accepted' event to user ${updatedBooking?.user?._id}`
-    );
-    const user = await User.findById(updatedBooking?.user?._id);
-    user.notifications.push({
-      message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
-      booking: updatedBooking,
-      seen: false,
-      date: new Date(),
-    });
-
-    user.save();
 
     // const adminId = "679a7b0cf469c2393c0cd39e";
     // io.to(adminId).emit("admin booking accepted", {

@@ -10,6 +10,7 @@ const ServiceCategory = require("../models/ServiceCategory");
 const SubCategory = require("../models/SubCategory");
 const Service = require("../models/Service");
 const mongoose = require("mongoose");
+const NotificationModel = require("../models/Notification");
 // Send OTP for partner login/registration
 exports.sendLoginOTP = async (req, res) => {
   try {
@@ -813,6 +814,21 @@ exports.getWallet = async (req, res) => {
     let data = await PartnerWallet.findOne({ partner: partnerId });
     if (!data) {
       data = await PartnerWallet.create({ partner: partnerId });
+      await NotificationModel.create({
+        title: "New Wallet Alert",
+        userId: partnerId,
+        message: `You have top up your wallet and get jobs`,
+      })
+      return res
+      .status(200)
+      .json({ success: true, message: "Wallet details", data: data });
+    }
+    if(data.balance<100){
+      await NotificationModel.create({
+        title: "New Wallet Alert",
+        userId: partnerId,
+        message: `Your wallet balance is low please top up your wallet and get jobs`,
+      })
     }
     return res
       .status(200)

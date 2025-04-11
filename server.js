@@ -425,7 +425,7 @@ const userBannerRoutes = require("./routes/userBannerRoutes");
 const adminBookingRoutes = require("./routes/adminBookingRoutes");
 const adminBookingController = require("./controllers/adminBookingController");
 const notificationRoute = require('./routes/notificationRoute');
-
+const partnerNotification=require('./routes/partnerNotification');
 const admin = require('firebase-admin');
 
 // Initialize Firebase Admin
@@ -452,7 +452,7 @@ app.use("/api/user/banners", userBannerRoutes);
 app.use("/api/admin/bookings", adminBookingRoutes); 
 
 app.use('/api/notifications', notificationRoute);
-
+app.use("/api/notification", partnerNotification);
 // Root route for WebSocket server
 app.get("/", (req, res) => {
   res.send("WebSocket Server is Running");
