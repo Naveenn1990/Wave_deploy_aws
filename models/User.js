@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema({
     default: 'active'
   },
   // notifications:[],
-  fcmToken: { type: String },
+  fcmToken: {type: String},
   notifications: [{
     message: { type: String, required: true },
     booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
