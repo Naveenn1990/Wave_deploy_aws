@@ -8,24 +8,129 @@ const SubService = require("../models/SubService");
 const Admin = require("../models/admin");
 const PartnerModel = require("../models/Partner");
 const Notification = require("../models/Notification");
-const admin = require('firebase-admin');
+const admin = require("firebase-admin");
+
 
 const createNotification = async (serviceId, name, job) => {
   try {
-    let data = await PartnerModel.find({ service: serviceId });
-    data.map(async (ele) => {
-      let noti = new Notification({
-        title: "New Booking Alert",
-        userId: ele._id,
-        message: `You have new service booking for ${name} service`,
-      });
-      await noti.save();
-      const userIdString = ele._id.toString();
-      io.to(userIdString).emit("new-job", job);
-    });
-    // console.log("Notification created", name);
+    // Find partners with the given serviceId
+    const partners = await PartnerModel.find({ service: serviceId }).populate('service');
+    console.log(`Found ${partners.length} partners for service: ${name}`);
+
+    // Process each partner concurrently
+    await Promise.all(
+      partners.map(async (partner) => {
+        try {
+          const userIdString = partner._id.toString();
+
+          // Prepare minimal job data for FCM, including all fields needed by JobNotificationScreen
+          const minimalJob = {
+            id: job._id?.toString() || '',
+            serviceId: job.serviceId?.toString() || '',
+            subService: {
+              name: job.subService?.name || name || 'Unknown Service',
+              description:
+                (job.subService?.description || '').slice(0, 100) || 'No description', // Truncate to save space
+            },
+            amount: job.amount?.toString() || '0',
+            scheduledDate: job.scheduledDate
+              ? new Date(job.scheduledDate).toISOString().split('T')[0]
+              : '',
+            scheduledTime: job.scheduledTime || '',
+            location: {
+              address: job.location?.address || 'Location not specified',
+            },
+            paymentStatus: job.paymentStatus || 'pending',
+            user: {
+              name: job.user?.name || 'Customer',
+              phone: job.user?.phone || 'N/A',
+            },
+          };
+
+          // Save notification to Firestore/MongoDB
+         
+          // console.log(`Notification saved for partner: ${userIdString}`);
+
+          // Send FCM notification if fcmtoken exists
+          if (partner.fcmtoken) {
+            const userMessage = {
+              notification: {
+                title: 'New-job Alert',
+                body: `You have new service booking for ${name || job.subService?.name || 'service'}`,
+              },
+              data: {
+                type: 'new-job',
+                job: JSON.stringify(minimalJob),
+                userId: userIdString,
+              },
+              token: partner.fcmtoken,
+              android: {
+                priority: 'high',
+                ttl: 60 * 60 * 24, // 24 hours
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    contentAvailable: true,
+                  },
+                },
+                headers: {
+                  'apns-priority': '5',
+                },
+              },
+            };
+
+            // Validate payload size (4KB = 4096 bytes)
+            const payloadString = JSON.stringify(userMessage);
+            const payloadSize = Buffer.byteLength(payloadString, 'utf8');
+            if (payloadSize > 4096) {
+              console.error(
+                `Payload too large for partner ${userIdString}: ${payloadSize} bytes`,
+              );
+              // Fallback to minimal payload
+              userMessage.data.job = JSON.stringify({
+                id: minimalJob.id,
+                serviceId: minimalJob.serviceId,
+                subService: { name: minimalJob.subService.name },
+              });
+              const fallbackSize = Buffer.byteLength(
+                JSON.stringify(userMessage),
+                'utf8',
+              );
+              if (fallbackSize > 4096) {
+                console.error(
+                  `Fallback payload still too large for partner ${userIdString}: ${fallbackSize} bytes`,
+                );
+                return;
+              }
+            }
+
+            console.log(`Sending FCM to partner: ${userIdString}`);
+            await admin.messaging().send(userMessage);
+            console.log(`FCM sent to partner: ${userIdString}`);
+          } else {
+            console.log(
+              `No FCM token for partner: ${userIdString}, notification saved to DB`,
+            );
+         
+          }
+          const notification = new Notification({
+            title: 'New Booking Alert',
+            userId: partner._id,
+            message: `You have new service booking for ${name || job.subService?.name || 'service'}`,
+            createdAt: new Date(),
+            read: false,
+          });
+          await notification.save();
+        } catch (error) {
+          console.error(`Error processing partner ${partner._id}:`, error.message);
+        }
+      }),
+    );
+
+    console.log(`Notifications processed for service: ${name}`);
   } catch (error) {
-    console.log(error);
+    console.error('Error in createNotification:', error);
   }
 };
 
@@ -33,201 +138,359 @@ const sendBookingNotifications = async (booking, user, subService, admins) => {
   try {
     // User notification
     const userNotification = {
+      title: 'Booking Confirmed',
       message: `Your booking for ${subService.name} has been confirmed!`,
-      booking: booking._id,
-      seen: false,
-      date: new Date()
+      userId: user._id,
+      type: 'booking_confirmation',
+      read: false,
+      skipFcm: true, // Prevent post-save hook from sending FCM
     };
 
-    // Add notification to user
-    user.notifications.push(userNotification);
-    await user.save();
+    // Save user notification to Notification collection
+    const userDoc = new Notification(userNotification);
+    await userDoc.save();
+    console.log(`User notification saved for user: ${user._id}`);
 
     // Send FCM to user if token exists
     if (user.fcmToken) {
       const userMessage = {
         notification: {
-          title: 'Booking Confirmed',
-          body: userNotification.message
+          title: userNotification.title,
+          body: userNotification.message.length > 100
+            ? userNotification.message.slice(0, 97) + '...'
+            : userNotification.message,
         },
         data: {
+          type: 'new-notification', // Align with FirebaseProvider
+          userId: user._id.toString(),
           bookingId: booking._id.toString(),
-          type: 'booking_confirmation',
-          // Include additional data for offline use
-          title: 'Booking Confirmed',
-          body: userNotification.message,
-          timestamp: new Date().toISOString()
+          title: userNotification.title,
+          message: userNotification.message.length > 100
+            ? userNotification.message.slice(0, 97) + '...'
+            : userNotification.message,
+          timestamp: new Date().toISOString(),
         },
         token: user.fcmToken,
         android: {
           priority: 'high',
-          ttl: 60 * 60 * 24 // 24 hours retention
+          ttl: 60 * 60 * 24,
         },
         apns: {
           payload: {
             aps: {
-              contentAvailable: true
-            }
+              contentAvailable: true,
+            },
           },
           headers: {
-            'apns-priority': '5' // Lower priority for background delivery
-          }
-        }
+            'apns-priority': '5',
+          },
+        },
       };
 
+      // Validate payload size
+      const userPayloadString = JSON.stringify(userMessage);
+      const userPayloadSize = Buffer.byteLength(userPayloadString, 'utf8');
+      if (userPayloadSize > 4096) {
+        console.error(`User FCM payload too large: ${userPayloadSize} bytes`);
+        userMessage.notification.body = userMessage.notification.body.slice(0, 50) + '...';
+        userMessage.data.message = userMessage.data.message.slice(0, 50) + '...';
+        const fallbackSize = Buffer.byteLength(JSON.stringify(userMessage), 'utf8');
+        if (fallbackSize > 4096) {
+          console.error(`User fallback payload still too large: ${fallbackSize} bytes`);
+          throw new Error('User FCM payload exceeds size limit');
+        }
+      }
+
+      console.log(`Sending FCM to user: ${user._id}`);
       await admin.messaging().send(userMessage);
+      console.log(`FCM sent to user: ${user._id}`);
+    } else {
+      console.log(`No FCM token for user: ${user._id}`);
     }
 
     // Admin notifications
     const adminNotificationMessage = `New booking from ${user.name} for ${subService.name}`;
-    
     const adminNotification = {
+      title: 'New Booking',
       message: adminNotificationMessage,
-      booking: booking._id,
-      seen: false,
-      date: new Date()
+      type: 'new_booking',
+      read: false,
+      skipFcm: true,
     };
 
-    // Add notification to all admins
-    await Admin.updateMany(
-      {},
-      { $push: { notifications: adminNotification } }
-    );
+    // Save admin notifications individually
+    await Promise.all(
+      admins.map(async (admin) => {
+        try {
+          const adminDoc = new Notification({
+            ...adminNotification,
+            userId: admin._id,
+          });
+          await adminDoc.save();
+          console.log(`Admin notification saved for admin: ${admin._id}`);
 
-    // Send FCM to all admins with tokens
-    const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
-    if (adminTokens.length > 0) {
-      const adminMessage = {
-        notification: {
-          title: 'New Booking',
-          body: adminNotificationMessage
-        },
-        data: {
-          bookingId: booking._id.toString(),
-          type: 'new_booking',
-          // Include additional data for offline use
-          title: 'New Booking',
-          body: adminNotificationMessage,
-          timestamp: new Date().toISOString()
-        },
-        tokens: adminTokens,
-        android: {
-          priority: 'high',
-          ttl: 60 * 60 * 24 // 24 hours retention
+          // Send FCM to admin if token exists
+          if (admin.fcmToken) {
+            const adminMessage = {
+              notification: {
+                title: adminNotification.title,
+                body: adminNotification.message.length > 100
+                  ? adminNotification.message.slice(0, 97) + '...'
+                  : adminNotification.message,
+              },
+              data: {
+                type: 'new-notification', // Align with FirebaseProvider
+                userId: admin._id.toString(),
+                bookingId: booking._id.toString(),
+                title: adminNotification.title,
+                message: adminNotification.message.length > 100
+                  ? adminNotification.message.slice(0, 97) + '...'
+                  : adminNotification.message,
+                timestamp: new Date().toISOString(),
+                userName: user.name,
+              },
+              token: admin.fcmToken,
+              android: {
+                priority: 'high',
+                ttl: 60 * 60 * 24,
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    contentAvailable: true,
+                  },
+                },
+                headers: {
+                  'apns-priority': '5',
+                },
+              },
+            };
+
+            // Validate payload size
+            const adminPayloadString = JSON.stringify(adminMessage);
+            const adminPayloadSize = Buffer.byteLength(adminPayloadString, 'utf8');
+            if (adminPayloadSize > 4096) {
+              console.error(`Admin FCM payload too large for ${admin._id}: ${adminPayloadSize} bytes`);
+              adminMessage.notification.body = adminMessage.notification.body.slice(0, 50) + '...';
+              adminMessage.data.message = adminMessage.data.message.slice(0, 50) + '...';
+              const fallbackSize = Buffer.byteLength(JSON.stringify(adminMessage), 'utf8');
+              if (fallbackSize > 4096) {
+                console.error(`Admin fallback payload still too large: ${fallbackSize} bytes`);
+                return;
+              }
+            }
+
+            console.log(`Sending FCM to admin: ${admin._id}`);
+            await admin.messaging().send(adminMessage);
+            console.log(`FCM sent to admin: ${admin._id}`);
+          } else {
+            console.log(`No FCM token for admin: ${admin._id}`);
+          }
+        } catch (error) {
+          console.error(`Error processing admin ${admin._id}:`, error.message);
         }
-      };
-
-      await admin.messaging().sendMulticast(adminMessage);
-    }
+      }),
+    );
 
     return true;
   } catch (error) {
-    console.error('Notification service error:', error);
-    // Don't throw error here to not break booking flow
-    return false;
+    console.error('Booking notification error:', error);
+    return { success: false, error: error.message };
   }
 };
 
-const sendCancellationNotifications = async (booking, user, subService, admins, cancellationReason) => {
+const sendCancellationNotifications = async (
+  booking,
+  user,
+  subService,
+  admins,
+  cancellationReason,
+) => {
   try {
     // User notification
+    if( booking.partner){
+       const notification = new Notification({
+      title: 'Cancelled Booking Alert',
+      userId: booking.partner,
+      message: `You job service is ${subService.name} cancelled .`,
+      createdAt: new Date(),
+      read: false,
+    });
+    await notification.save();
+    }
+   
     const userNotification = {
+      title: 'Booking Cancelled',
       message: `Your booking for ${subService.name} has been cancelled. Reason: ${cancellationReason}`,
-      booking: booking._id,
-      seen: false,
-      date: new Date(),
-      type: 'cancellation'
+      userId: user._id,
+      type: 'booking_cancellation',
+      read: false,
+      skipFcm: true, // Prevent post-save hook from sending FCM
     };
 
-    // Add notification to user
-    user.notifications.push(userNotification);
-    await user.save();
+    // Save user notification
+    const userDoc = new Notification(userNotification);
+    await userDoc.save();
+    console.log(`User notification saved for user: ${user._id}`);
 
     // Send FCM to user if token exists
     if (user.fcmToken) {
       const userMessage = {
         notification: {
-          title: 'Booking Cancelled',
-          body: userNotification.message
+          title: userNotification.title,
+          body: userNotification.message.length > 100
+            ? userNotification.message.slice(0, 97) + '...'
+            : userNotification.message,
         },
         data: {
+          type: 'new-notification', // Align with FirebaseProvider
+          userId: user._id.toString(),
           bookingId: booking._id.toString(),
-          type: 'booking_cancellation',
-          title: 'Booking Cancelled',
-          body: userNotification.message,
+          title: userNotification.title,
+          message: userNotification.message.length > 100
+            ? userNotification.message.slice(0, 97) + '...'
+            : userNotification.message,
+          cancellationReason:
+            cancellationReason.length > 50
+              ? cancellationReason.slice(0, 47) + '...'
+              : cancellationReason,
           timestamp: new Date().toISOString(),
-          cancellationReason
         },
         token: user.fcmToken,
         android: {
           priority: 'high',
-          ttl: 60 * 60 * 24 // 24 hours retention
+          ttl: 60 * 60 * 24,
         },
         apns: {
           payload: {
             aps: {
-              contentAvailable: true
-            }
+              contentAvailable: true,
+            },
           },
           headers: {
-            'apns-priority': '5'
-          }
-        }
+            'apns-priority': '5',
+          },
+        },
       };
 
+      // Validate payload size
+      const userPayloadString = JSON.stringify(userMessage);
+      const userPayloadSize = Buffer.byteLength(userPayloadString, 'utf8');
+      if (userPayloadSize > 4096) {
+        console.error(`User FCM payload too large: ${userPayloadSize} bytes`);
+        userMessage.notification.body = userMessage.notification.body.slice(0, 50) + '...';
+        userMessage.data.message = userMessage.data.message.slice(0, 50) + '...';
+        userMessage.data.cancellationReason = userMessage.data.cancellationReason.slice(0, 20) + '...';
+        const fallbackSize = Buffer.byteLength(JSON.stringify(userMessage), 'utf8');
+        if (fallbackSize > 4096) {
+          console.error(`User fallback payload still too large: ${fallbackSize} bytes`);
+          throw new Error('User FCM payload exceeds size limit');
+        }
+      }
+
+      console.log(`Sending FCM to user: ${user._id}`);
       await admin.messaging().send(userMessage);
+      console.log(`FCM sent to user: ${user._id}`);
+    } else {
+      console.log(`No FCM token for user: ${user._id}`);
     }
 
     // Admin notifications
     const adminNotificationMessage = `Booking cancelled by ${user.name} for ${subService.name}. Reason: ${cancellationReason}`;
-    
     const adminNotification = {
+      title: 'Booking Cancelled',
       message: adminNotificationMessage,
-      booking: booking._id,
-      seen: false,
-      date: new Date(),
-      type: 'cancellation'
+      type: 'booking_cancellation',
+      read: false,
+      skipFcm: true,
     };
 
-    // Add notification to all admins
-    await Admin.updateMany(
-      {},
-      { $push: { notifications: adminNotification } }
-    );
+    // Save admin notifications individually
+    await Promise.all(
+      admins.map(async (admin) => {
+        try {
+          const adminDoc = new Notification({
+            ...adminNotification,
+            userId: admin._id,
+          });
+          await adminDoc.save();
+          console.log(`Admin notification saved for admin: ${admin._id}`);
 
-    // Send FCM to all admins with tokens
-    const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
-    if (adminTokens.length > 0) {
-      const adminMessage = {
-        notification: {
-          title: 'Booking Cancelled',
-          body: adminNotificationMessage
-        },
-        data: {
-          bookingId: booking._id.toString(),
-          type: 'admin_booking_cancellation',
-          title: 'Booking Cancelled',
-          body: adminNotificationMessage,
-          timestamp: new Date().toISOString(),
-          cancellationReason
-        },
-        tokens: adminTokens,
-        android: {
-          priority: 'high',
-          ttl: 60 * 60 * 24 // 24 hours retention
+          // Send FCM to admin if token exists
+          if (admin.fcmToken) {
+            const adminMessage = {
+              notification: {
+                title: adminNotification.title,
+                body: adminNotification.message.length > 100
+                  ? adminNotification.message.slice(0, 97) + '...'
+                  : adminNotification.message,
+              },
+              data: {
+                type: 'new-notification',
+                userId: admin._id.toString(),
+                bookingId: booking._id.toString(),
+                title: adminNotification.title,
+                message: adminNotification.message.length > 100
+                  ? adminNotification.message.slice(0, 97) + '...'
+                  : adminNotification.message,
+                cancellationReason:
+                  cancellationReason.length > 50
+                    ? cancellationReason.slice(0, 47) + '...'
+                    : cancellationReason,
+                timestamp: new Date().toISOString(),
+                userName: user.name,
+              },
+              token: admin.fcmToken,
+              android: {
+                priority: 'high',
+                ttl: 60 * 60 * 24,
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    contentAvailable: true,
+                  },
+                },
+                headers: {
+                  'apns-priority': '5',
+                },
+              },
+            };
+
+            // Validate payload size
+            const adminPayloadString = JSON.stringify(adminMessage);
+            const adminPayloadSize = Buffer.byteLength(adminPayloadString, 'utf8');
+            if (adminPayloadSize > 4096) {
+              console.error(`Admin FCM payload too large for ${admin._id}: ${adminPayloadSize} bytes`);
+              adminMessage.notification.body = adminMessage.notification.body.slice(0, 50) + '...';
+              adminMessage.data.message = adminMessage.data.message.slice(0, 50) + '...';
+              adminMessage.data.cancellationReason = adminMessage.data.cancellationReason.slice(0, 20) + '...';
+              const fallbackSize = Buffer.byteLength(JSON.stringify(adminMessage), 'utf8');
+              if (fallbackSize > 4096) {
+                console.error(`Admin fallback payload still too large: ${fallbackSize} bytes`);
+                return;
+              }
+            }
+
+            console.log(`Sending FCM to admin: ${admin._id}`);
+            await admin.messaging().send(adminMessage);
+            console.log(`FCM sent to admin: ${admin._id}`);
+          } else {
+            console.log(`No FCM token for admin: ${admin._id}`);
+          }
+        } catch (error) {
+          console.error(`Error processing admin ${admin._id}:`, error.message);
         }
-      };
-
-      await admin.messaging().sendMulticast(adminMessage);
-    }
+      }),
+    );
 
     return true;
   } catch (error) {
     console.error('Cancellation notification error:', error);
-    return false;
+    return { success: false, error: error.message };
   }
 };
- 
+
 // Create a new booking
 
 // exports.createBooking = async (req, res) => {
@@ -247,7 +510,7 @@ const sendCancellationNotifications = async (booking, user, subService, admins, 
 //       lng
 //     } = req.body;
 
-//     // console.log("scheduledTime scheduledDate : " , 
+//     // console.log("scheduledTime scheduledDate : " ,
 //     //   scheduledTime,
 //     //   scheduledDate,)
 
@@ -348,8 +611,8 @@ const sendCancellationNotifications = async (booking, user, subService, admins, 
 //           }
 //         }
 //       }
-//     ); 
-     
+//     );
+
 //     res.status(201).json({
 //       message: "Booking created successfully",
 //       booking: populatedBooking,
@@ -362,7 +625,7 @@ const sendCancellationNotifications = async (booking, user, subService, admins, 
 //       error: error.message,
 //     });
 //   }
-// }; 
+// };
 
 // exports.createBooking = async (req, res) => {
 //   try {
@@ -410,9 +673,9 @@ const sendCancellationNotifications = async (booking, user, subService, admins, 
 //     const admins = await Admin.find({});
 
 //     if (!user) {
-//       return res.status(404).json({ 
-//         success: false, 
-//         message: "User not found" 
+//       return res.status(404).json({
+//         success: false,
+//         message: "User not found"
 //       });
 //     }
 
@@ -451,7 +714,7 @@ const sendCancellationNotifications = async (booking, user, subService, admins, 
 
 //     // Admin notifications
 //     const adminNotificationMessage = `New booking from ${user.name} for ${subService.name}`;
-    
+
 //     const adminNotification = {
 //       message: adminNotificationMessage,
 //       booking: populatedBooking._id,
@@ -500,28 +763,39 @@ const sendCancellationNotifications = async (booking, user, subService, admins, 
 
 exports.createBooking = async (req, res) => {
   try {
-    const { subServiceId, userId, paymentMode, amount, location, scheduledTime, scheduledDate, currentBooking, lat, lng } = req.body;
+    const {
+      subServiceId,
+      userId,
+      paymentMode,
+      amount,
+      location,
+      scheduledTime,
+      scheduledDate,
+      currentBooking,
+      lat,
+      lng,
+    } = req.body;
 
     // Validate required fields
     if (!subServiceId || !userId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "subServiceId and userId are required" 
+      return res.status(400).json({
+        success: false,
+        message: "subServiceId and userId are required",
       });
     }
 
     const subService = await SubService.findById(subServiceId);
     if (!subService) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "SubService not found" 
+      return res.status(404).json({
+        success: false,
+        message: "SubService not found",
       });
     }
 
     if (!subService.isActive) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "SubService is currently inactive" 
+      return res.status(400).json({
+        success: false,
+        message: "SubService is currently inactive",
       });
     }
 
@@ -550,47 +824,39 @@ exports.createBooking = async (req, res) => {
     const populatedBooking = await Booking.findById(booking._id)
       .populate("subService")
       .populate("user");
-      if (populatedBooking) {
-              createNotification(
-                populatedBooking.subService.service,
-                subService.name,
-                populatedBooking
-              );
-            }
+    if (populatedBooking) {
+      createNotification(
+        populatedBooking.subService.service,
+        subService.name,
+        populatedBooking
+      );
+    }
     // Get user and admin details
     const user = await User.findById(userId);
     const admins = await Admin.find({});
 
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "User not found" 
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
       });
     }
 
     // Send notifications (non-blocking)
     sendBookingNotifications(populatedBooking, user, subService, admins)
-      .then(success => {
-        if (!success) {
-          console.log('Notifications partially failed');
-        }
-      })
-      .catch(err => {
-        console.error('Notification error:', err);
-      });
+      
 
     res.status(201).json({
       success: true,
       message: "Booking created successfully",
       booking: populatedBooking,
     });
-
   } catch (error) {
     console.error("Error in createBooking:", error);
     res.status(500).json({
       success: false,
       message: "Error creating booking",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -872,7 +1138,7 @@ exports.updateBooking = async (req, res) => {
     });
   }
 };
- 
+
 // Cancel booking
 exports.cancelBooking = async (req, res) => {
   try {
@@ -892,15 +1158,15 @@ exports.cancelBooking = async (req, res) => {
 
     // Find the booking by ID and user
     const booking = await Booking.findOne({ _id: bookingId, user: userId })
-    .populate("subService")
-    .populate("user");
+      .populate("subService")
+      .populate("user");
 
-  if (!booking) {
-    return res.status(404).json({
-      success: false,
-      message: "Booking not found or does not belong to the user",
-    });
-  }
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found or does not belong to the user",
+      });
+    }
 
     if (booking.status === "cancelled") {
       return res.status(400).json({
@@ -927,14 +1193,14 @@ exports.cancelBooking = async (req, res) => {
 
     // Send cancellation notifications (non-blocking)
     sendCancellationNotifications(
-      booking, 
-      booking.user, 
-      booking.subService, 
+      booking,
+      booking.user,
+      booking.subService,
       admins,
       booking.cancellationReason
-    ).then(success => {
+    ).then((success) => {
       if (!success) {
-        console.log('Cancellation notifications partially failed');
+        console.log("Cancellation notifications partially failed");
       }
     });
 

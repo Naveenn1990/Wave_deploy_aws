@@ -18,101 +18,166 @@ const sendBookingAcceptanceNotifications = async (booking, user, subService, par
   try {
     // User notification
     const userNotification = {
+      title: 'Booking Accepted',
       message: `Your booking for ${subService.name} has been accepted by ${partner.name}!`,
-      booking: booking._id,
-      seen: false,
-      date: new Date(),
-      type: 'booking_accepted'
+      userId: user._id,
+      type: 'booking_accepted',
+      read: false,
+      skipFcm: true, // Prevent post-save hook from sending FCM
     };
 
-    // Add notification to user
-    user?.notifications?.push(userNotification);
-    await user.save();
+    // Save user notification to Notification collection
+    const userDoc = new Notification(userNotification);
+    await userDoc.save();
+    console.log(`User notification saved for user: ${user._id}`);
 
     // Send FCM to user if token exists
     if (user.fcmToken) {
       const userMessage = {
         notification: {
-          title: 'Booking Accepted',
-          body: userNotification.message
+          title: userNotification.title,
+          body: userNotification.message.length > 100
+            ? userNotification.message.slice(0, 97) + '...'
+            : userNotification.message,
         },
         data: {
+          type: 'new-notification', // Align with FirebaseProvider
+          userId: user._id.toString(),
           bookingId: booking._id.toString(),
-          type: 'booking_accepted',
-          title: 'Booking Accepted',
-          body: userNotification.message,
+          title: userNotification.title,
+          message: userNotification.message.length > 100
+            ? userNotification.message.slice(0, 97) + '...'
+            : userNotification.message,
           timestamp: new Date().toISOString(),
-          // partnerName: partner.name
         },
         token: user.fcmToken,
         android: {
           priority: 'high',
-          ttl: 60 * 60 * 24 // 24 hours retention
+          ttl: 60 * 60 * 24,
         },
         apns: {
           payload: {
             aps: {
-              contentAvailable: true
-            }
+              contentAvailable: true,
+            },
           },
           headers: {
-            'apns-priority': '5'
-          }
-        }
+            'apns-priority': '5',
+          },
+        },
       };
 
+      // Validate payload size
+      const userPayloadString = JSON.stringify(userMessage);
+      const userPayloadSize = Buffer.byteLength(userPayloadString, 'utf8');
+      if (userPayloadSize > 4096) {
+        console.error(`User FCM payload too large: ${userPayloadSize} bytes`);
+        userMessage.notification.body = userMessage.notification.body.slice(0, 50) + '...';
+        userMessage.data.message = userMessage.data.message.slice(0, 50) + '...';
+        const fallbackSize = Buffer.byteLength(JSON.stringify(userMessage), 'utf8');
+        if (fallbackSize > 4096) {
+          console.error(`User fallback payload still too large: ${fallbackSize} bytes`);
+          throw new Error('User FCM payload exceeds size limit');
+        }
+      }
+
+      console.log(`Sending FCM to user: ${user._id}`);
       await admin.messaging().send(userMessage);
+      console.log(`FCM sent to user: ${user._id}`);
+    } else {
+      console.log(`No FCM token for user: ${user._id}`);
     }
 
     // Admin notifications
     const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been accepted by partner ${partner.name}`;
-    
     const adminNotification = {
+      title: 'Booking Accepted',
       message: adminNotificationMessage,
-      booking: booking._id,
-      seen: false,
-      date: new Date(),
-      type: 'booking_accepted'
+      type: 'booking_accepted',
+      read: false,
+      skipFcm: true,
     };
 
-    // Add notification to all admins
-    await Admin.updateMany(
-      {},
-      { $push: { notifications: adminNotification } }
-    );
+    // Save admin notifications individually
+    await Promise.all(
+      admins.map(async (admin) => {
+        try {
+          const adminDoc = new Notification({
+            ...adminNotification,
+            userId: admin._id,
+          });
+          await adminDoc.save();
+          console.log(`Admin notification saved for admin: ${admin._id}`);
 
-    // Send FCM to all admins with tokens
-    const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
-    if (adminTokens.length > 0) {
-      const adminMessage = {
-        notification: {
-          title: 'Booking Accepted',
-          body: adminNotificationMessage
-        },
-        data: {
-          bookingId: booking._id.toString(),
-          type: 'admin_booking_accepted',
-          title: 'Booking Accepted',
-          body: adminNotificationMessage,
-          timestamp: new Date().toISOString(),
-          partnerName: partner.name
-        },
-        tokens: adminTokens,
-        android: {
-          priority: 'high',
-          ttl: 60 * 60 * 24 // 24 hours retention
+          // Send FCM to admin if token exists
+          if (admin.fcmToken) {
+            const adminMessage = {
+              notification: {
+                title: adminNotification.title,
+                body: adminNotification.message.length > 100
+                  ? adminNotification.message.slice(0, 97) + '...'
+                  : adminNotification.message,
+              },
+              data: {
+                type: 'new-notification', // Align with FirebaseProvider
+                userId: admin._id.toString(),
+                bookingId: booking._id.toString(),
+                title: adminNotification.title,
+                message: adminNotification.message.length > 100
+                  ? adminNotification.message.slice(0, 97) + '...'
+                  : adminNotification.message,
+                timestamp: new Date().toISOString(),
+                partnerName: partner.name,
+              },
+              token: admin.fcmToken,
+              android: {
+                priority: 'high',
+                ttl: 60 * 60 * 24,
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    contentAvailable: true,
+                  },
+                },
+                headers: {
+                  'apns-priority': '5',
+                },
+              },
+            };
+
+            // Validate payload size
+            const adminPayloadString = JSON.stringify(adminMessage);
+            const adminPayloadSize = Buffer.byteLength(adminPayloadString, 'utf8');
+            if (adminPayloadSize > 4096) {
+              console.error(`Admin FCM payload too large for ${admin._id}: ${adminPayloadSize} bytes`);
+              adminMessage.notification.body = adminMessage.notification.body.slice(0, 50) + '...';
+              adminMessage.data.message = adminMessage.data.message.slice(0, 50) + '...';
+              const fallbackSize = Buffer.byteLength(JSON.stringify(adminMessage), 'utf8');
+              if (fallbackSize > 4096) {
+                console.error(`Admin fallback payload still too large: ${fallbackSize} bytes`);
+                return;
+              }
+            }
+
+            console.log(`Sending FCM to admin: ${admin._id}`);
+            await admin.messaging().send(adminMessage);
+            console.log(`FCM sent to admin: ${admin._id}`);
+          } else {
+            console.log(`No FCM token for admin: ${admin._id}`);
+          }
+        } catch (error) {
+          console.error(`Error processing admin ${admin._id}:`, error.message);
         }
-      };
-
-      await admin.messaging().sendMulticast(adminMessage);
-    }
+      }),
+    );
 
     return true;
   } catch (error) {
     console.error('Booking acceptance notification error:', error);
-    return false;
+    return { success: false, error: error.message };
   }
-}; 
+};
 
 exports.getAvailableServices = async (req, res) => {
   try {
@@ -670,11 +735,7 @@ exports.acceptBooking = async (req, res) => {
       updatedBooking.subService,
       updatedBooking.partner,
       admins
-    ).then(success => {
-      if (!success) {
-        console.log('Acceptance notifications partially failed');
-      }
-    });
+    )
 
     deductWallet(updatedBooking,partnerId);
   
