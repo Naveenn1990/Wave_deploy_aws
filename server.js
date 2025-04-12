@@ -451,7 +451,7 @@ app.use("/api/admin/banners", adminBannerRoutes);
 app.use("/api/user/banners", userBannerRoutes);
 app.use("/api/admin/bookings", adminBookingRoutes); 
 
-app.use('/api/notifications', notificationRoute);
+app.use('/api/user/notifications', notificationRoute);
 app.use("/api/notification", partnerNotification);
 // Root route for WebSocket server
 app.get("/", (req, res) => {
