@@ -4,12 +4,12 @@ const { sendOTP } = require("../utils/sendOTP");
 const path = require("path");
 const Booking = require("../models/booking"); // Ensure the correct model is imported
 const SubService = require("../models/SubService");
- 
+
 // Register new user
 exports.register = async (req, res) => {
   try {
     const { name, email, phone, password, confirmPassword } = req.body;
-    console.log("req.body : " , req.body)
+    console.log("req.body : ", req.body)
     // Validate required fields
     if (!name || !email || !phone || !password || !confirmPassword) {
       return res.status(400).json({
@@ -42,14 +42,14 @@ exports.register = async (req, res) => {
       user.name = name;
       user.email = email;
       user.password = password;
- 
+
       // Mark profile as complete since required fields are provided
       user.isProfileComplete = true;
-      
+
       if (req.body.fcmToken) {
-        user.fcmToken = req.body.fcmToken; 
-      } 
-      
+        user.fcmToken = req.body.fcmToken;
+      }
+
       if (fcmToken) {
         user.fcmToken = fcmToken;
       }
@@ -97,6 +97,22 @@ exports.register = async (req, res) => {
     });
   }
 };
+
+exports.updateFcmToken = async (req, res) => {
+  try {
+    let { id, fcmToken } = req.body;
+    let data = await User.findById(id);
+    if (!data) return res.status(400).json({ error: "User Data not found" });
+    if (fcmToken) {
+      data.fcmToken = fcmToken
+    }
+    await data.save();
+    return res.status(200).json({ success: "Successfully updated" })
+  } catch (error) {
+    console.log(error);
+
+  }
+}
 
 
 // Login with password
@@ -393,7 +409,7 @@ exports.getProfile = async (req, res, next) => {
       .lean();
 
     if (!user) {
-      console.log("User : " , user)
+      console.log("User : ", user)
       const error = new Error("User not found");
       error.statusCode = 404;
       throw error;
@@ -513,7 +529,7 @@ exports.updateProfile = async (req, res) => {
 // Add address
 exports.addAddress = async (req, res) => {
   try {
-    const { address, landmark, addressType  , lat , lng} = req.body;
+    const { address, landmark, addressType, lat, lng } = req.body;
 
     if (!address) {
       return res.status(400).json({
@@ -535,7 +551,7 @@ exports.addAddress = async (req, res) => {
       address,
       landmark: landmark || "",
       addressType: addressType || "home",
-      lat , 
+      lat,
       lng
     });
 

@@ -50,18 +50,24 @@ const createNotification = async (serviceId, name, job) => {
           // Save notification to Firestore/MongoDB
          
           // console.log(`Notification saved for partner: ${userIdString}`);
-
+          const notification = new Notification({
+            title: 'New Booking Alert',
+            userId: partner._id,
+            message: `You have new service booking for ${name || job.subService?.name || 'service'}`,
+            createdAt: new Date(),
+            read: false,
+          });
+          await notification.save();
           // Send FCM notification if fcmtoken exists
           if (partner.fcmtoken) {
             const userMessage = {
-              notification: {
-                title: 'New-job Alert',
-                body: `You have new service booking for ${name || job.subService?.name || 'service'}`,
-              },
               data: {
                 type: 'new-job',
                 job: JSON.stringify(minimalJob),
                 userId: userIdString,
+                title: 'New Job Alert',
+                body: `You have new service booking for ${name || job.subService?.name || 'service'}`,
+                autoNavigate: 'true',
               },
               token: partner.fcmtoken,
               android: {
@@ -72,13 +78,13 @@ const createNotification = async (serviceId, name, job) => {
                 payload: {
                   aps: {
                     contentAvailable: true,
+                    sound: 'notificationalert.mp3',
+                    priority: 5,
+                    badge: 1,
                   },
                 },
-                headers: {
-                  'apns-priority': '5',
-                },
               },
-            };
+            }
 
             // Validate payload size (4KB = 4096 bytes)
             const payloadString = JSON.stringify(userMessage);
@@ -114,14 +120,7 @@ const createNotification = async (serviceId, name, job) => {
             );
          
           }
-          const notification = new Notification({
-            title: 'New Booking Alert',
-            userId: partner._id,
-            message: `You have new service booking for ${name || job.subService?.name || 'service'}`,
-            createdAt: new Date(),
-            read: false,
-          });
-          await notification.save();
+        
         } catch (error) {
           console.error(`Error processing partner ${partner._id}:`, error.message);
         }
