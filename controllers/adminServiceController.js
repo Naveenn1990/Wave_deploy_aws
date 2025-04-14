@@ -1265,7 +1265,7 @@ exports.updatePartnerStatus = async (req, res) => {
 exports.getPartnerEarnings = async (req, res) => {
     try {
         const { partnerId } = req.params;
-
+        console.log("Request Params : " , req.params)
         // Fetch all completed bookings for the partner
         const bookings = await Booking.find({ partner: partnerId, status: "completed" })
             .populate("user", "name email")

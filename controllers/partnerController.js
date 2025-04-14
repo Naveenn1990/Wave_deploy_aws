@@ -28,10 +28,10 @@ const sendLoginOTP = async (req, res) => {
     await partner.save();
 
     // Log saved partner for debugging
-    console.log("Saved partner:", {
-      phone: partner.phone,
-      tempOTP: partner.tempOTP,
-    });
+    // console.log("Saved partner:", {
+    //   phone: partner.phone,
+    //   tempOTP: partner.tempOTP,
+    // });
 
     // Send OTP (in development, we're just logging it)
     await sendOTP(phone, otp);
@@ -50,17 +50,17 @@ const sendLoginOTP = async (req, res) => {
 };
 
 const verifyOTP = async (req, res) => {
-  console.log("Verification attempt:", req.body);
+  // console.log("Verification attempt:", req.body);
   try {
     const { phone, otp } = req.body;
 
     // Log received data
-    console.log("Verification attempt:", { phone, otp });
+    // console.log("Verification attempt:", { phone, otp });
 
     const partner = await Partner.findOne({ phone });
 
     // Log found partner
-    console.log("Found 54567654567898765 000partner:", partner);
+    // console.log("Found 54567654567898765 000partner:", partner);
 
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -73,11 +73,11 @@ const verifyOTP = async (req, res) => {
     }
 
     // Log OTP comparison
-    console.log("Comparing OTPs:", {
-      stored: partner.tempOTP,
-      received: otp,
-      match: partner.tempOTP === otp,
-    });
+    // console.log("Comparing OTPs:", {
+    //   stored: partner.tempOTP,
+    //   received: otp,
+    //   match: partner.tempOTP === otp,
+    // });
 
     if (partner.tempOTP !== otp) {
       return res.status(400).json({ message: "Invalid OTP" });
@@ -105,11 +105,24 @@ const verifyOTP = async (req, res) => {
   }
 };
 
+const updateTokenFmc = async (req, res) => {
+  try {
+    console.log("Partner ID:", req.partner._id);
+    let data = await Partner.findById(req.partner._id);
+    if (!data) return res.status(200).json({ error: "Data not found" });
+    return res.status(200).json({ success: "Successfully updated" });
+
+  } catch (error) {
+    console.log(error);
+
+  }
+}
+
 const updateProfile = async (req, res) => {
   try {
-    console.log("Request body:", req.body);
-    console.log("Request file:", req.file);
-    console.log("Partner ID:", req.partner._id);
+    // console.log("Request body:", req.body);
+    // console.log("Request file:", req.file);
+    // console.log("Partner ID:", req.partner._id);
 
     const {
       name,
@@ -133,16 +146,16 @@ const updateProfile = async (req, res) => {
       !service ||
       !modeOfService
     ) {
-      console.log("Missing fields:", {
-        name,
-        email,
-        whatsappNumber,
-        highestQualification,
-        experience,
-        category,
-        service,
-        modeOfService,
-      });
+      // console.log("Missing fields:", {
+      //   name,
+      //   email,
+      //   whatsappNumber,
+      //   highestQualification,
+      //   experience,
+      //   category,
+      //   service,
+      //   modeOfService,
+      // });
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -159,7 +172,7 @@ const updateProfile = async (req, res) => {
     }
 
     const partner = await Partner.findById(req.partner._id);
-    console.log("Found partner:", partner);
+    // console.log("Found partner:", partner);
 
     // Update profile
     partner.profile = {
@@ -181,7 +194,7 @@ const updateProfile = async (req, res) => {
 
     partner.profileCompleted = true;
     const savedPartner = await partner.save();
-    console.log("Saved partner:", savedPartner);
+    // console.log("Saved partner:", savedPartner);
 
     res.json({
       success: true,
@@ -248,7 +261,7 @@ const uploadKYCDocuments = async (req, res) => {
       !req.files?.aadhaarCard ||
       !req.files?.cancelledCheque ||
       !req.files?.drivingLicence ||
-      !req.files?.bill 
+      !req.files?.bill
     ) {
       return res.status(400).json({
         success: false,
@@ -360,4 +373,5 @@ module.exports = {
   getKYCStatus,
   completeBooking,
   getAllPartnerKYC,
+  updateTokenFmc,
 };

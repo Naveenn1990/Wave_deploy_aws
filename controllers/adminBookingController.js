@@ -30,37 +30,49 @@ exports.getAllBookings = async (req, res) => {
 
         // Step 3: Fetch all bookings
         const bookings = await Booking.find()
-            .populate('user', 'name email phone')
-            .populate({
-                path: 'partner',
-                select: '_id profile.phone profile.email profile.name profile.address'
-            })
-            .populate({
-                path: 'subService',
+        .populate({
+            path: "user", // Populate user details
+            // select: 'name email phone profilePicture addresses' // Select specific fields
+          })
+          .populate({
+            path: "subService",
+            populate: {
+              path: "service", // SubService -> Service
+              populate: {
+                path: "subCategory", // Service -> SubCategory
                 populate: {
-                    path: 'service',
-                    populate: {
-                        path: 'subCategory',
-                        populate: {
-                            path: 'category',
-                            select: 'name description'
-                        }
-                    }
-                }
-            })
-            .sort({ createdAt: -1 })
-            .lean();
+                  path: "category", // SubCategory -> ServiceCategory
+                  select: "name",
+                },
+              },
+            },
+          })
+          .populate({
+            path: "partner", // Populate partner details
+          })
+          .populate({
+            path: "cart.product", // Populate product details inside cart
+          })
+          .populate({
+            path: "cart.addedByPartner", // Populate partner who added the product
+            select: "profile.name profile.email", // Select specific fields
+          })
+          .sort({ createdAt: -1 })
+          .lean(); // Convert to plain JS objects for better performance
+    
 
-        console.log('Raw bookings found:', bookings.length);
+        // console.log('Raw bookings found:', bookings.length);
 
         // Step 4: Format the bookings
         const formattedBookings = bookings.map(booking => ({
             _id: booking._id,
+            booking,
             customerName: booking.user?.name || 'N/A',
             customerEmail: booking.user?.email || 'N/A',
             customerPhone: booking.user?.phone || 'N/A',
             serviceName: booking.subService?.service?.name || 'N/A',
             categoryName: booking.subService?.service?.subCategory?.category?.name || 'N/A',
+            partner: booking.partner,
             partnerId: booking.partner?._id || 'N/A',
             partnerName: booking.partner?.profile?.name || 'Still not assigned',
             partnerEmail: booking.partner?.profile?.email || 'N/A',

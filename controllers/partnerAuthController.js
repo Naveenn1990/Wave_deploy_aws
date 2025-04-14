@@ -10,6 +10,7 @@ const ServiceCategory = require("../models/ServiceCategory");
 const SubCategory = require("../models/SubCategory");
 const Service = require("../models/Service");
 const mongoose = require("mongoose");
+const NotificationModel = require("../models/Notification");
 // Send OTP for partner login/registration
 exports.sendLoginOTP = async (req, res) => {
   try {
@@ -28,7 +29,7 @@ exports.sendLoginOTP = async (req, res) => {
       // If partner does not exist, create a new partner record.
       partner = new Partner({ phone });
       await partner.save();
-      console.log("New partner created for phone:", phone);
+      // console.log("New partner created for phone:", phone);
     }
 
     // Generate OTP
@@ -51,7 +52,7 @@ exports.sendLoginOTP = async (req, res) => {
     await sendOTP(phone, otp);
 
     // Debug log
-    console.log("Generated OTP:", { phone, otp, expiry: otpExpiry });
+    // console.log("Generated OTP:", { phone, otp, expiry: otpExpiry });
 
     res.json({
       success: true,
@@ -68,6 +69,22 @@ exports.sendLoginOTP = async (req, res) => {
   }
 };
 
+
+exports.updateTokenFmc = async (req, res) => {
+  try {
+    let {token}=req.body;
+    // console.log("Partner ID:", req.partner._id);
+    let data = await Partner.findById(req.partner._id);
+    if (!data) return res.status(200).json({ error: "Data not found" });
+    data.fcmtoken=token;
+    await data.save()
+    return res.status(200).json({ success: "Successfully updated" });
+
+  } catch (error) {
+    console.log(error);
+
+  }
+}
 // Verify OTP and login partner
 exports.verifyLoginOTP = async (req, res) => {
   try {
@@ -80,7 +97,7 @@ exports.verifyLoginOTP = async (req, res) => {
     }
 
     // Debug log
-    console.log("Verifying OTP:", { phone, otp });
+    // console.log("Verifying OTP:", { phone, otp });
 
     const partner = await Partner.findOne({ phone }).select(
       "+tempOTP +otpExpiry"
@@ -94,13 +111,13 @@ exports.verifyLoginOTP = async (req, res) => {
         .json({ success: false, message: "Partner not found" });
     }
 
-    console.log("Stored OTP:", partner.tempOTP, "Entered OTP:", otp);
-    console.log(
-      "Stored OTP Expiry:",
-      partner.otpExpiry,
-      "Current Time:",
-      new Date()
-    );
+    // console.log("Stored OTP:", partner.tempOTP, "Entered OTP:", otp);
+    // console.log(
+    //   "Stored OTP Expiry:",
+    //   partner.otpExpiry,
+    //   "Current Time:",
+    //   new Date()
+    // );
 
     // Check if OTP is expired
     if (!partner.otpExpiry || partner.otpExpiry < new Date()) {
@@ -224,10 +241,10 @@ exports.resendOTP = async (req, res) => {
 exports.completeProfile = async (req, res) => {
   try {
     // console.log("Received request body:", req.body);
-    console.log(
-      "Received file:",
-      req.file ? req.file.filename : "No file uploaded"
-    );
+    // console.log(
+    //   "Received file:",
+    //   req.file ? req.file.filename : "No file uploaded"
+    // );
 
     const {
       name,
@@ -510,7 +527,7 @@ exports.completeKYC = async (req, res) => {
     // console.log("Body received:", req.body);
 
     // Log received files to debug missing fields
-    console.log("Uploaded Files:", req.files);
+    // console.log("Uploaded Files:", req.files);
 
     // Extract filenames safely
     const panCard = req.files?.panCard?.[0]?.filename || null;
@@ -536,7 +553,7 @@ exports.completeKYC = async (req, res) => {
     }
 
     // Fetch partner profile
-    console.log("Partner ID:", req.partner._id);
+    // console.log("Partner ID:", req.partner._id);
     const profile = await Partner.findById(req.partner._id);
 
     if (!profile) {
@@ -570,7 +587,7 @@ exports.completeKYC = async (req, res) => {
     await profile.save();
 
     // Log the updated profile
-    console.log("Updated KYC Profile:", profile.kyc);
+    // console.log("Updated KYC Profile:", profile.kyc);
 
     res.json({
       success: true,
@@ -655,12 +672,12 @@ exports.getProfile = async (req, res) => {
       });
     }
 
-    console.log(
-      "Partner ID:",
-      req.partner._id,
-      "Type:",
-      typeof req.partner._id
-    );
+    // console.log(
+    //   "Partner ID:",
+    //   req.partner._id,
+    //   "Type:",
+    //   typeof req.partner._id
+    // );
 
     const partnerId = new mongoose.Types.ObjectId(req.partner._id);
 
@@ -668,7 +685,7 @@ exports.getProfile = async (req, res) => {
       .populate("category", "name description")
       .populate("service", "name description basePrice duration");
 
-    console.log("Fetched Profile:", profile);
+    // console.log("Fetched Profile:", profile);
 
     if (!profile) {
       return res.status(404).json({
@@ -732,7 +749,7 @@ exports.updateProfile = async (req, res) => {
       modeOfService,
       city,
     } = req.body;
-    console.log("req.body : ", req.body);
+    // console.log("req.body : ", req.body);
 
     let profile = await Partner.findOne({ _id: req.partner._id });
     if (!profile) {
@@ -762,7 +779,7 @@ exports.updateProfile = async (req, res) => {
     // Apply updates to the profile
 
     profile = await profile.save();
-    console.log("prrrrrrrrr==>", profile);
+    // console.log("prrrrrrrrr==>", profile);
 
     // Populate category and service details
     await profile.populate("category", "name description");
@@ -797,5 +814,100 @@ exports.updateProfile = async (req, res) => {
       message: "Error updating profile",
       error: error.message,
     });
+  }
+};
+
+exports.getWallet = async (req, res) => {
+  try {
+    if (!req.partner || !req.partner._id) {
+      return res.status(400).json({
+        success: false,
+        message: "Partner ID is missing",
+      });
+    }
+    const partnerId = new mongoose.Types.ObjectId(req.partner._id);
+
+    let data = await PartnerWallet.findOne({ partner: partnerId });
+    if (!data) {
+      data = await PartnerWallet.create({ partner: partnerId });
+      await NotificationModel.create({
+        title: "New Wallet Alert",
+        userId: partnerId,
+        message: `You have top up your wallet and get jobs`,
+      })
+      return res
+      .status(200)
+      .json({ success: true, message: "Wallet details", data: data });
+    }
+    if(data.balance<100){
+      await NotificationModel.create({
+        title: "New Wallet Alert",
+        userId: partnerId,
+        message: `Your wallet balance is low please top up your wallet and get jobs`,
+      })
+    }
+    return res
+      .status(200)
+      .json({ success: true, message: "Wallet details", data: data });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+exports.addtransactionwallet = async (req, res) => {
+  try {
+    const { type, amount, description, reference, partner } = req.body;
+    if (!type || !amount || !partner || !description)
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid request" });
+    if (!["credit", "debit"].includes(type)) {
+      // throw new Error('Invalid transaction type');
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid transaction type" });
+    }
+    if (typeof amount !== "number" || amount <= 0) {
+      // throw new Error('Invalid amount');
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid amount" });
+    }
+
+    let data = await PartnerWallet.findOne({ partner: partner });
+    if (!data) {
+      data = await PartnerWallet.create({ partner: partner });
+    }
+
+    if (type == "credit") {
+      data.balance = data.balance + Number(amount);
+    } else {
+      data.balance = data.balance - Number(amount);
+    }
+    data.transactions.push({
+      type: type,
+      amount: amount,
+      description: description,
+      reference: reference,
+      balance: data.balance,
+    });
+    data = await data.save();
+    return res
+      .status(200)
+      .json({ message: "Successfully updated transaction", success: data });
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+exports.getAllwalletTransaction = async (req, res) => {
+  try {
+    let data = await PartnerWallet.find().populate("partner").sort({ _id: -1 });
+    return res.status(200).json({
+      message: "Successfully fetched all transactions",
+      success: data,
+    });
+  } catch (error) {
+    console.log(error);
   }
 };

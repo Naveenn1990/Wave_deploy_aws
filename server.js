@@ -14,6 +14,8 @@ const socketIo = require("socket.io");
 const http = require("http");
 const Booking = require("./models/booking");
 // const Notification = require("./models/Notification");
+
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -26,8 +28,8 @@ const io = socketIo(server, {
 
 // Middleware
 app.use(morgan("dev"));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// app.use(bodyParser.json());
+// app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
   cors({
     origin: "*",
@@ -422,9 +424,21 @@ const adminBannerRoutes = require("./routes/adminBannerRoutes");
 const userBannerRoutes = require("./routes/userBannerRoutes");
 const adminBookingRoutes = require("./routes/adminBookingRoutes");
 const adminBookingController = require("./controllers/adminBookingController");
-const notificatioroute = require("./routes/notificationRoute");
+const notificationRoute = require('./routes/notificationRoute');
+const partnerNotification=require('./routes/partnerNotification');
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin
+// const serviceAccount = require('./firebase-admin.json');   
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+//   // databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
+//   databaseURL: `https://wave-755af.firebaseio.com`
+// });
+
+
 // Routes
-app.use("/api/user", userRoutes);
+app.use("/api/user", userRoutes); 
 app.use("/api/user", userServiceRoutes);
 app.use("/api/user", userBookingRoutes);
 app.use("/api/user/account", userAccountRoutes);
@@ -435,9 +449,10 @@ app.use("/api/banners", bannerRoutes);
 app.use("/api/public", serviceHierarchyRoutes);
 app.use("/api/admin/banners", adminBannerRoutes);
 app.use("/api/user/banners", userBannerRoutes);
-app.use("/api/admin/bookings", adminBookingRoutes);
-app.use("/api/notification", notificatioroute);
+app.use("/api/admin/bookings", adminBookingRoutes); 
 
+app.use('/api/user/notifications', notificationRoute);
+app.use("/api/notification", partnerNotification);
 // Root route for WebSocket server
 app.get("/", (req, res) => {
   res.send("WebSocket Server is Running");

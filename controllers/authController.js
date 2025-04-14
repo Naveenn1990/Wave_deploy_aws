@@ -47,12 +47,89 @@ exports.sendOTP = async (req, res) => {
     });
   }
 };
+ 
+// Verify OTP
+// exports.verifyOTP = async (req, res) => {
+//   try {
+//     const { phone, otp , fcmToken} = req.body;
+//     console.log("req.body : " , req.body)
+//     console.log("fcmToken : " , fcmToken)
+//     if (!phone || !otp) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Phone and OTP are required",
+//       });
+//     }
 
-// Verify OTP
-// Verify OTP
+//     // Find user with matching OTP & valid expiry
+//     const user = await User.findOne({
+//       phone,
+//       tempOTP: otp,
+//       tempOTPExpiry: { $gt: new Date() },
+//     });
+
+//     // console.log("User found for OTP verification:", user); // Debugging
+
+//     if (!user) {
+//       // If OTP is incorrect/expired, remove it to prevent conflicts
+//       await User.updateOne(
+//         { phone },
+//         { $unset: { tempOTP: 1, tempOTPExpiry: 1 } }
+//       );
+
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid OTP or OTP expired. Request a new OTP.",
+//       });
+//     }
+
+//     // ✅ Mark user as verified
+//     user.isVerified = true;
+//     user.tempOTP = undefined;
+//     user.tempOTPExpiry = undefined;
+
+//     if (fcmToken) {
+//       user.fcmToken = fcmToken;
+//     }
+ 
+//     await user.save();
+
+//     // Generate token after successful verification
+//     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+//       expiresIn: "7d",
+//     });
+
+//     if (req.body.fcmToken) {
+//       user.fcmToken = req.body.fcmToken;
+//       await user.save();
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: "OTP verified successfully!",
+//       user: {
+//         token,
+//         userId: user._id,
+//         name: user.name,
+//         email: user.email,
+//         phone: user.phone,
+//         isVerified: user.isVerified,
+//         isProfileComplete: user.isProfileComplete,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error in verifyOTP:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to verify OTP",
+//     });
+//   }
+// };
+
+
 exports.verifyOTP = async (req, res) => {
   try {
-    const { phone, otp } = req.body;
+    const { phone, otp, fcmToken } = req.body;
 
     if (!phone || !otp) {
       return res.status(400).json({
@@ -61,35 +138,36 @@ exports.verifyOTP = async (req, res) => {
       });
     }
 
-    // Find user with matching OTP & valid expiry
+    // Find user with matching OTP
     const user = await User.findOne({
       phone,
       tempOTP: otp,
       tempOTPExpiry: { $gt: new Date() },
     });
 
-    // console.log("User found for OTP verification:", user); // Debugging
-
     if (!user) {
-      // If OTP is incorrect/expired, remove it to prevent conflicts
       await User.updateOne(
         { phone },
         { $unset: { tempOTP: 1, tempOTPExpiry: 1 } }
       );
-
       return res.status(400).json({
         success: false,
         message: "Invalid OTP or OTP expired. Request a new OTP.",
       });
     }
 
-    // ✅ Mark user as verified
+    // Update user with FCM token if provided
     user.isVerified = true;
     user.tempOTP = undefined;
     user.tempOTPExpiry = undefined;
+    
+    if (fcmToken) {
+      user.fcmToken = fcmToken;
+    }
+
     await user.save();
 
-    // Generate token after successful verification
+    // Generate JWT token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });

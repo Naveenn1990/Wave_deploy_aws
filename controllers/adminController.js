@@ -218,6 +218,7 @@ exports.createAdmin = async (req, res) => {
       "services",
       "subServices",
       "offers",
+      "orders",
       "productInventory",
       "booking",
       "refundRequest",
@@ -335,10 +336,11 @@ exports.updateProfile = async (req, res) => {
   try {
     const { subadminId } = req.params; // Get subadmin ID from URL
     const { name, email, password, permissions } = req.body;
+    console.log("Req Body : ") , req.body
 
     // Find subadmin by ID and ensure they exist
     const subadmin = await Admin.findById(subadminId);
-    if (!subadmin || subadmin.role !== "subadmin") {
+    if (!subadmin) {
       return res.status(404).json({ message: "Subadmin not found" });
     }
 
@@ -813,10 +815,7 @@ exports.getPartnerDetails = async (req, res) => {
     console.error("Get Partner Details Error:", error);
     res.status(500).json({ message: "Error fetching partner details" });
   }
-};
-
-
-
+}; 
 
 // Update Partner Status
 exports.updatePartnerStatus = async (req, res) => {
@@ -845,29 +844,7 @@ exports.updatePartnerStatus = async (req, res) => {
         message: "Partner not found" 
       });
     }
-
-    // Additional validations based on status
-    // if (status === "Approved") {
-    //   // if (!partner.isVerified === "") {
-    //   //   return res.status(400).json({
-    //   //     success: false,
-    //   //     message: "Cannot approve partner without KYC verification"
-    //   //   });
-    //   // }
-    //   if (!partner.profileCompleted) {
-    //     return res.status(400).json({
-    //       success: false,
-    //       message: "Cannot approve partner without completed profile",
-    //       currentStatus: {
-    //         profileCompleted: partner.profileCompleted,
-    //         kycVerified: partner.kycDetails?.isVerified
-    //       },
-    //       note: "Please ensure the partner has completed their profile using the profile completion API"
-    //     });
-    //   }
-    // }
-
-    // Update the partner status
+ 
     const updateData = {
       $set: {
         status: status,
@@ -879,8 +856,7 @@ exports.updatePartnerStatus = async (req, res) => {
       partnerId,
       updateData,
       { new: true, runValidators: true }
-    ) 
-
+    )  
     res.json({
       success: true,
       message: `Partner status updated to ${status} successfully`,

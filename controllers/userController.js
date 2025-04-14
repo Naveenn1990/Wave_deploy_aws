@@ -4,13 +4,12 @@ const { sendOTP } = require("../utils/sendOTP");
 const path = require("path");
 const Booking = require("../models/booking"); // Ensure the correct model is imported
 const SubService = require("../models/SubService");
-
-// Register new user
+ 
 // Register new user
 exports.register = async (req, res) => {
   try {
     const { name, email, phone, password, confirmPassword } = req.body;
-
+    console.log("req.body : " , req.body)
     // Validate required fields
     if (!name || !email || !phone || !password || !confirmPassword) {
       return res.status(400).json({
@@ -43,9 +42,17 @@ exports.register = async (req, res) => {
       user.name = name;
       user.email = email;
       user.password = password;
-      
+ 
       // Mark profile as complete since required fields are provided
       user.isProfileComplete = true;
+      
+      if (req.body.fcmToken) {
+        user.fcmToken = req.body.fcmToken; 
+      } 
+      
+      if (fcmToken) {
+        user.fcmToken = fcmToken;
+      }
 
       await user.save();
     } else {
@@ -56,6 +63,7 @@ exports.register = async (req, res) => {
         password,
         isVerified: true,
         isProfileComplete: true, // Set to true on successful profile completion
+        fcmToken: fcmToken || null // Store FCM token
       });
 
       await user.save();
