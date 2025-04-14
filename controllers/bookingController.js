@@ -25,7 +25,7 @@ const createNotification = async (serviceId, name, job) => {
 
           // Prepare minimal job data for FCM, including all fields needed by JobNotificationScreen
           const minimalJob = {
-            id: job._id?.toString() || '',
+            _id: job._id?.toString() || '',
             serviceId: job.serviceId?.toString() || '',
             subService: {
               name: job.subService?.name || name || 'Unknown Service',
@@ -134,8 +134,17 @@ const createNotification = async (serviceId, name, job) => {
   }
 };
 
-const sendBookingNotifications = async (booking, user, subService, admins) => {
+const sendBookingNotifications = async (booking, userId, subService) => {
   try {
+    const user = await User.findById(userId);
+    const admins = await Admin.find({});
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
     // User notification
     const userNotification = {
       title: 'Booking Confirmed',
@@ -147,8 +156,13 @@ const sendBookingNotifications = async (booking, user, subService, admins) => {
     };
 
     // Save user notification to Notification collection
-    const userDoc = new Notification(userNotification);
-    await userDoc.save();
+    // user.notifications.push({
+    //   message: `Your booking for ${subService.name} has been confirmed!`,
+    //   booking:booking._id,
+    //   seen:false,
+    //   date: Date.now()
+    // });
+    // await user.save();
     console.log(`User notification saved for user: ${user._id}`);
 
     // Send FCM to user if token exists
@@ -832,18 +846,10 @@ exports.createBooking = async (req, res) => {
       );
     }
     // Get user and admin details
-    const user = await User.findById(userId);
-    const admins = await Admin.find({});
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+  
 
     // Send notifications (non-blocking)
-    sendBookingNotifications(populatedBooking, user, subService, admins)
+    sendBookingNotifications(populatedBooking, userId, subService)
       
 
     res.status(201).json({
