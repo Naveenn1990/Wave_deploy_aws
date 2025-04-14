@@ -50,12 +50,12 @@ const userSchema = new mongoose.Schema({
   },
   // notifications:[],
   fcmToken: {type: String},
-  notifications: [{
-    message: { type: String, required: true },
-    booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
-    seen: { type: Boolean, default: false },
-    date: { type: Date, default: Date.now }
-  }],
+  // notifications: [{
+  //   message: { type: String, required: true },
+  //   booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
+  //   seen: { type: Boolean, default: false },
+  //   date: { type: Date, default: Date.now }
+  // }],
   reviews: [
     {
       partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner" },
