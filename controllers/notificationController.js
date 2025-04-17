@@ -108,9 +108,9 @@ const sendTestNotification = async (req, res) => {
     }
 
     if (!user || !user.fcmToken) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found or has no FCM token' 
+      return res.status(404).json({
+        success: false,
+        message: 'User not found or has no FCM token'
       });
     }
 
@@ -137,104 +137,34 @@ const sendTestNotification = async (req, res) => {
 
 
 
-// Verify Firebase Admin SDK initialization
-try {
-  console.log('Firebase Admin SDK initialized:', admin.apps.length > 0);
-  console.log('Firestore database:', admin.firestore()._settings.databaseId);
-} catch (error) {
-  console.error('Firebase Admin SDK initialization error:', error);
-}
 
 const initiateCall = async (req, res) => {
-  const { callerId, receiverId, callId, isReceiverAdmin } = req.body;
-
-  // Validate inputs
-  if (!callerId || !receiverId || !callId) {
-    console.error('Missing required fields:', { callerId, receiverId, callId });
-    return res.status(400).json({ success: false, message: 'Missing required fields: callerId, receiverId, callId' });
-  }
-
   try {
-    // Fetch receiver's FCM token from MongoDB
-    const receiver = isReceiverAdmin
-      ? await Admin.findById(receiverId)
-      : await User.findById(receiverId);
+    const { callerId, receiverId, callId, isReceiverAdmin } = req.body;
 
-    if (!receiver || !receiver.fcmToken) {
-      console.error('Receiver not found or missing FCM token:', { receiverId, isReceiverAdmin });
-      return res.status(404).json({ success: false, message: 'Receiver not found or has no FCM token' });
+    // Save call document
+    await admin.firestore()
+      .collection('calls')
+      .doc(callId)
+      .set({
+        callerId,
+        receiverId,
+        status: 'pending',
+        duration: 0,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    // Fetch receiver's FCM token
+    const receiverDoc = await admin.firestore()
+      .collection('users')
+      .doc(receiverId)
+      .get();
+    const receiverData = receiverDoc.data();
+    if (!receiverData || !receiverData.fcmToken) {
+      throw new Error('Receiver FCM token not found');
     }
 
-    // Initialize call in Firestore with retry logic
-    const startTime = Date.now();
-    const callData = {
-      callerId,
-      receiverId,
-      startTime,
-      duration: 0,
-      status: 'active',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-
-    const maxRetries = 3;
-    let attempt = 0;
-    const callDocRef = admin.firestore().collection('calls').doc(callId);
-
-    // Test Firestore connectivity
-    try {
-      await admin.firestore().listCollections();
-      console.log('Firestore collections accessible');
-    } catch (error) {
-      console.error('Failed to list Firestore collections:', error);
-      throw new Error('Firestore database not accessible');
-    }
-
-    while (attempt < maxRetries) {
-      try {
-        console.log(`Attempt ${attempt + 1}: Writing call to Firestore`, { callId, callData });
-        await callDocRef.set(callData);
-        console.log(`Successfully wrote call to Firestore: ${callId}`);
-        break; // Success, exit retry loop
-      } catch (error) {
-        attempt++;
-        console.warn(`Retry ${attempt}/${maxRetries} for error`, {
-          code: error.code,
-          message: error.message,
-          callId,
-        });
-        if (error.code === 5 && attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
-          continue;
-        }
-        throw error; // Rethrow if not retryable or max retries reached
-      }
-    }
-
-    // Start timer to update duration
-    const timer = setInterval(async () => {
-      try {
-        const callDoc = await callDocRef.get();
-        if (!callDoc.exists || callDoc.data().status !== 'active') {
-          clearInterval(timer);
-          callTimers.delete(callId);
-          console.log(`Stopped duration timer for call: ${callId}`);
-          return;
-        }
-
-        const currentDuration = Math.floor((Date.now() - startTime) / 1000); // Duration in seconds
-        await callDocRef.update({
-          duration: currentDuration,
-        });
-      } catch (error) {
-        console.error('Error updating call duration:', error);
-        clearInterval(timer);
-        callTimers.delete(callId);
-      }
-    }, 1000);
-
-    callTimers.set(callId, timer);
-
-    // Send FCM notification to receiver
+    // Send FCM notification
     const message = {
       notification: {
         title: 'Incoming Call',
@@ -243,23 +173,19 @@ const initiateCall = async (req, res) => {
       data: {
         callId,
         callerId,
-        type: 'incoming_call',
+        receiverId,
+        type: 'call',
       },
-      token: receiver.fcmToken,
+      token: receiverData.fcmToken,
     };
 
     await admin.messaging().send(message);
-    console.log('FCM notification sent to receiver:', { receiverId, callId });
+    console.log('Notification sent to receiver:', receiverId);
 
-    res.status(200).json({ success: true, message: 'Call initiated and notification sent', callId });
+    res.json({ success: true });
   } catch (error) {
-    console.error('Error initiating call:', {
-      error: error.message,
-      code: error.code,
-      stack: error.stack,
-      requestBody: req.body,
-    });
-    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+    console.error('Error initiating call:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -294,10 +220,10 @@ const endCall = async (req, res) => {
 
     // Notify both users
     const users = await Promise.all([
-      callData.callerId.startsWith('admin') 
+      callData.callerId.startsWith('admin')
         ? Admin.findById(callData.callerId)
         : User.findById(callData.callerId),
-      callData.receiverId.startsWith('admin') 
+      callData.receiverId.startsWith('admin')
         ? Admin.findById(callData.receiverId)
         : User.findById(callData.receiverId)
     ]);
@@ -318,10 +244,10 @@ const endCall = async (req, res) => {
 
     await Promise.all(notifications.map(msg => admin.messaging().send(msg)));
 
-    res.status(200).json({ 
-      success: true, 
-      message: 'Call ended', 
-      duration: finalDuration 
+    res.status(200).json({
+      success: true,
+      message: 'Call ended',
+      duration: finalDuration
     });
   } catch (error) {
     console.error('Error ending call:', error);
