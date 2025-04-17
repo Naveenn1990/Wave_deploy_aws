@@ -23,8 +23,8 @@ exports.getUserNotifications = async (req, res) => {
 
 exports.markAsRead = async (req, res) => {
   try {
-    const notification = await Notification.findByIdAndUpdate(
-      req.params.id,
+    const notification = await Notification.updateMany(
+      {userId:req.params.id},
       { read: true },
       { new: true }
     );

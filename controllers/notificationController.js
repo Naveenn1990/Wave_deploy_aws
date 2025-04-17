@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Admin = require('../models/admin');
 const admin = require('../config/firebase');
+const callTimers = new Map();
 
 const updateFCMToken = async (req, res) => {
   try {
@@ -134,12 +135,151 @@ const sendTestNotification = async (req, res) => {
   }
 };
 
+const initiateCall = async (req, res) => {
+  const { callerId, receiverId, callId } = req.body;
 
+  try {
+    // Validate caller authentication
+    if (req.user.id !== callerId) {
+      return res.status(403).json({ success: false, message: 'Unauthorized caller' });
+    }
+
+    // Fetch receiver's FCM token from MongoDB
+    const isReceiverAdmin = req.body.isReceiverAdmin || false;
+    let receiver;
+    if (isReceiverAdmin) {
+      receiver = await Admin.findById(receiverId);
+    } else {
+      receiver = await User.findById(receiverId);
+    }
+
+    if (!receiver || !receiver.fcmToken) {
+      return res.status(404).json({ success: false, message: 'Receiver not found or has no FCM token' });
+    }
+
+    // Initialize call in Firestore
+    const startTime = Date.now();
+    await admin.firestore().collection('calls').doc(callId).set({
+      callerId,
+      receiverId,
+      startTime,
+      duration: 0,
+      status: 'active',
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Start timer to update duration
+    const timer = setInterval(async () => {
+      const callDoc = await admin.firestore().collection('calls').doc(callId).get();
+      if (!callDoc.exists || callDoc.data().status !== 'active') {
+        clearInterval(timer);
+        callTimers.delete(callId);
+        return;
+      }
+
+      const currentDuration = Math.floor((Date.now() - startTime) / 1000); // Duration in seconds
+      await admin.firestore().collection('calls').doc(callId).update({
+        duration: currentDuration
+      });
+    }, 1000);
+
+    callTimers.set(callId, timer);
+
+    // Send FCM notification to receiver
+    const message = {
+      notification: {
+        title: 'Incoming Call',
+        body: `Call from ${callerId}`
+      },
+      data: {
+        callId,
+        callerId,
+        type: 'incoming_call'
+      },
+      token: receiver.fcmToken
+    };
+
+    await admin.messaging().send(message);
+
+    res.status(200).json({ success: true, message: 'Call initiated and notification sent' });
+  } catch (error) {
+    console.error('Error initiating call:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const endCall = async (req, res) => {
+  const { callId } = req.body;
+
+  try {
+    const callDoc = await admin.firestore().collection('calls').doc(callId).get();
+    if (!callDoc.exists) {
+      return res.status(404).json({ success: false, message: 'Call not found' });
+    }
+
+    const callData = callDoc.data();
+    if (req.user.id !== callData.callerId && req.user.id !== callData.receiverId) {
+      return res.status(403).json({ success: false, message: 'Unauthorized to end this call' });
+    }
+
+    // Stop timer
+    const timer = callTimers.get(callId);
+    if (timer) {
+      clearInterval(timer);
+      callTimers.delete(callId);
+    }
+
+    // Finalize duration and update call status
+    const finalDuration = Math.floor((Date.now() - callData.startTime) / 1000);
+    await admin.firestore().collection('calls').doc(callId).update({
+      status: 'ended',
+      duration: finalDuration,
+      endTime: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Notify both users
+    const users = await Promise.all([
+      callData.callerId.startsWith('admin') 
+        ? Admin.findById(callData.callerId)
+        : User.findById(callData.callerId),
+      callData.receiverId.startsWith('admin') 
+        ? Admin.findById(callData.receiverId)
+        : User.findById(callData.receiverId)
+    ]);
+
+    const notifications = users
+      .filter(user => user && user.fcmToken)
+      .map(user => ({
+        notification: {
+          title: 'Call Ended',
+          body: `Call duration: ${finalDuration} seconds`
+        },
+        data: {
+          callId,
+          type: 'call_ended'
+        },
+        token: user.fcmToken
+      }));
+
+    await Promise.all(notifications.map(msg => admin.messaging().send(msg)));
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Call ended', 
+      duration: finalDuration 
+    });
+  } catch (error) {
+    console.error('Error ending call:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
 
 module.exports = {
   updateFCMToken,
   getNotifications,
   markNotificationsAsRead,
   markNotificationAsRead,
-  sendTestNotification
+  sendTestNotification,
+  initiateCall,
+  endCall
 };

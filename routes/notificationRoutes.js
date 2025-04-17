@@ -28,4 +28,9 @@ router.put('/:id/mark-read', authMiddleware, notificationController.markNotifica
 // @access  Private (Admin)
 router.post('/test', authMiddleware, notificationController.sendTestNotification);
 
+router.post("/initiate-call",authMiddleware,notificationController.initiateCall);
+router.post("/end-call",authMiddleware,notificationController.endCall);
+// router.post("/initiate-call",notificationController.initiateCall);
+
+
 module.exports = router;

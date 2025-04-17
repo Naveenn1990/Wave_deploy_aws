@@ -736,6 +736,7 @@ exports.acceptBooking = async (req, res) => {
       updatedBooking.partner,
       admins
     )
+    
 
     deductWallet(updatedBooking,partnerId);
   
@@ -876,11 +877,11 @@ exports.rejectBooking = async (req, res) => {
       bookingId,
       { status: "rejected", partner: partnerId }, // Added 'partner' field here
       { new: true }
-    );
+    ).populate("subService");
     await NotificationModel.create({
       userId: partnerId,
       title: "Rejected Booking",
-      message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
+      message: `Your booking for ${updatedBooking.subService.name} has been Rejected!`,
     });
     res.status(200).json({
       success: true,
