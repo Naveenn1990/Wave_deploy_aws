@@ -1,7 +1,9 @@
 const User = require('../models/User');
 const Admin = require('../models/admin');
 const admin = require('../config/firebase');
+const Partner = require("../models/Partner");
 const callTimers = new Map();
+const calls = new Map(); // { callId: { callerId, receiverId, status } }
 
 const updateFCMToken = async (req, res) => {
   try {
@@ -140,29 +142,16 @@ const sendTestNotification = async (req, res) => {
 
 const initiateCall = async (req, res) => {
   try {
-    const { callerId, receiverId, callId, isReceiverAdmin } = req.body;
+    const { callerId, receiverId, callId, isUser, offer } = req.body;
 
-    // Save call document
-    await admin.firestore()
-      .collection('calls')
-      .doc(callId)
-      .set({
-        callerId,
-        receiverId,
-        status: 'pending',
-        duration: 0,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-    // Fetch receiver's FCM token
-    const receiverDoc = await admin.firestore()
-      .collection('users')
-      .doc(receiverId)
-      .get();
-    const receiverData = receiverDoc.data();
-    if (!receiverData || !receiverData.fcmToken) {
-      throw new Error('Receiver FCM token not found');
+    // Validate caller and receiver
+    const partner = isUser ? await User.findById(receiverId) : await Partner.findById(receiverId);
+    if (!partner) {
+      throw new Error('Receiver not found');
     }
+
+    // Store call state
+    calls.set(callId, { callerId, receiverId, status: 'pending' });
 
     // Send FCM notification
     const message = {
@@ -175,8 +164,9 @@ const initiateCall = async (req, res) => {
         callerId,
         receiverId,
         type: 'call',
+        offer: JSON.stringify(offer),
       },
-      token: receiverData.fcmToken,
+      token: isUser ? partner.fcmToken : partner.fcmtoken,
     };
 
     await admin.messaging().send(message);
@@ -189,69 +179,127 @@ const initiateCall = async (req, res) => {
   }
 };
 
-const endCall = async (req, res) => {
-  const { callId } = req.body;
-
+const AnswerCall=async(req,res)=>{
   try {
-    const callDoc = await admin.firestore().collection('calls').doc(callId).get();
-    if (!callDoc.exists) {
-      return res.status(404).json({ success: false, message: 'Call not found' });
+    const { callId, senderId, receiverId, answer } = req.body;
+
+    // Validate call
+    const call = calls.get(callId);
+    if (!call || call.status !== 'pending') {
+      throw new Error('Invalid or non-pending call');
     }
 
-    const callData = callDoc.data();
-    if (req.user.id !== callData.callerId && req.user.id !== callData.receiverId) {
-      return res.status(403).json({ success: false, message: 'Unauthorized to end this call' });
+    // Find receiver (caller)
+    const receiver = await User.findById(receiverId) || await Partner.findById(receiverId);
+    if (!receiver) {
+      throw new Error('Receiver not found');
     }
 
-    // Stop timer
-    const timer = callTimers.get(callId);
-    if (timer) {
-      clearInterval(timer);
-      callTimers.delete(callId);
+    // Update call state
+    call.status = 'active';
+    calls.set(callId, call);
+
+    // Send FCM notification
+    const message = {
+      data: {
+        callId,
+        callerId: receiverId,
+        receiverId: senderId,
+        type: 'call_answer',
+        answer: JSON.stringify(answer),
+      },
+      token: receiver.fcmToken || receiver.fcmtoken,
+    };
+
+    await admin.messaging().send(message);
+    console.log('Answer sent to caller:', receiverId);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error sending answer:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+const sendIceCandidate=async(req,res)=>{
+  try {
+    const { callId, senderId, receiverId, candidate } = req.body;
+
+    // Validate call
+    const call = calls.get(callId);
+    if (!call) {
+      throw new Error('Invalid call');
     }
 
-    // Finalize duration and update call status
-    const finalDuration = Math.floor((Date.now() - callData.startTime) / 1000);
-    await admin.firestore().collection('calls').doc(callId).update({
-      status: 'ended',
-      duration: finalDuration,
-      endTime: admin.firestore.FieldValue.serverTimestamp()
-    });
+    // Find receiver
+    const receiver = await User.findById(receiverId) || await Partner.findById(receiverId);
+    if (!receiver) {
+      throw new Error('Receiver not found');
+    }
 
-    // Notify both users
-    const users = await Promise.all([
-      callData.callerId.startsWith('admin')
-        ? Admin.findById(callData.callerId)
-        : User.findById(callData.callerId),
-      callData.receiverId.startsWith('admin')
-        ? Admin.findById(callData.receiverId)
-        : User.findById(callData.receiverId)
-    ]);
+    // Send FCM notification
+    const message = {
+      data: {
+        callId,
+        callerId: receiverId,
+        receiverId: senderId,
+        type: 'ice_candidate',
+        candidate: JSON.stringify(candidate),
+      },
+      token: receiver.fcmToken || receiver.fcmtoken,
+    };
 
-    const notifications = users
-      .filter(user => user && user.fcmToken)
-      .map(user => ({
-        notification: {
-          title: 'Call Ended',
-          body: `Call duration: ${finalDuration} seconds`
-        },
-        data: {
-          callId,
-          type: 'call_ended'
-        },
-        token: user.fcmToken
-      }));
+    await admin.messaging().send(message);
+    console.log('ICE candidate sent to:', receiverId);
 
-    await Promise.all(notifications.map(msg => admin.messaging().send(msg)));
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error sending ICE candidate:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
 
-    res.status(200).json({
-      success: true,
-      message: 'Call ended',
-      duration: finalDuration
-    });
+const endCall = async (req, res) => {
+  try {
+    const { callId, senderId, receiverId } = req.body;
+
+    // Validate call
+    const call = calls.get(callId);
+    if (!call) {
+      throw new Error('Invalid call');
+    }
+
+    // Find receiver
+    const receiver = await User.findById(receiverId) || await Partner.findById(receiverId);
+    if (!receiver) {
+      throw new Error('Receiver not found');
+    }
+
+    // Update call state
+    call.status = 'ended';
+    calls.set(callId, call);
+
+    // Send FCM notification
+    const message = {
+      data: {
+        callId,
+        callerId: receiverId,
+        receiverId: senderId,
+        type: 'call_ended',
+      },
+      token: receiver.fcmToken || receiver.fcmtoken,
+    };
+
+    await admin.messaging().send(message);
+    console.log('Call ended notification sent to:', receiverId);
+
+    // Clean up
+    calls.delete(callId);
+
+    res.json({ success: true });
   } catch (error) {
     console.error('Error ending call:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -262,5 +310,7 @@ module.exports = {
   markNotificationAsRead,
   sendTestNotification,
   initiateCall,
-  endCall
+  endCall,
+  AnswerCall,
+  sendIceCandidate
 };

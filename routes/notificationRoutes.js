@@ -30,7 +30,9 @@ router.post('/test',  notificationController.sendTestNotification);
 
 router.post("/initiate-call",notificationController.initiateCall);
 router.post("/end-call",notificationController.endCall);
-// router.post("/initiate-call",notificationController.initiateCall);
+router.post("/send-ice-candidate",notificationController.sendIceCandidate);
+
+router.post("/send-answer",notificationController.AnswerCall);
 
 
 module.exports = router;
