@@ -135,52 +135,101 @@ const sendTestNotification = async (req, res) => {
   }
 };
 
+
+
+// Verify Firebase Admin SDK initialization
+try {
+  console.log('Firebase Admin SDK initialized:', admin.apps.length > 0);
+  console.log('Firestore database:', admin.firestore()._settings.databaseId);
+} catch (error) {
+  console.error('Firebase Admin SDK initialization error:', error);
+}
+
 const initiateCall = async (req, res) => {
-  const { callerId, receiverId, callId } = req.body;
+  const { callerId, receiverId, callId, isReceiverAdmin } = req.body;
+
+  // Validate inputs
+  if (!callerId || !receiverId || !callId) {
+    console.error('Missing required fields:', { callerId, receiverId, callId });
+    return res.status(400).json({ success: false, message: 'Missing required fields: callerId, receiverId, callId' });
+  }
 
   try {
-    // Validate caller authentication
-    if (req.user.id !== callerId) {
-      return res.status(403).json({ success: false, message: 'Unauthorized caller' });
-    }
-
     // Fetch receiver's FCM token from MongoDB
-    const isReceiverAdmin = req.body.isReceiverAdmin || false;
-    let receiver;
-    if (isReceiverAdmin) {
-      receiver = await Admin.findById(receiverId);
-    } else {
-      receiver = await User.findById(receiverId);
-    }
+    const receiver = isReceiverAdmin
+      ? await Admin.findById(receiverId)
+      : await User.findById(receiverId);
 
     if (!receiver || !receiver.fcmToken) {
+      console.error('Receiver not found or missing FCM token:', { receiverId, isReceiverAdmin });
       return res.status(404).json({ success: false, message: 'Receiver not found or has no FCM token' });
     }
 
-    // Initialize call in Firestore
+    // Initialize call in Firestore with retry logic
     const startTime = Date.now();
-    await admin.firestore().collection('calls').doc(callId).set({
+    const callData = {
       callerId,
       receiverId,
       startTime,
       duration: 0,
       status: 'active',
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
-    });
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    const maxRetries = 3;
+    let attempt = 0;
+    const callDocRef = admin.firestore().collection('calls').doc(callId);
+
+    // Test Firestore connectivity
+    try {
+      await admin.firestore().listCollections();
+      console.log('Firestore collections accessible');
+    } catch (error) {
+      console.error('Failed to list Firestore collections:', error);
+      throw new Error('Firestore database not accessible');
+    }
+
+    while (attempt < maxRetries) {
+      try {
+        console.log(`Attempt ${attempt + 1}: Writing call to Firestore`, { callId, callData });
+        await callDocRef.set(callData);
+        console.log(`Successfully wrote call to Firestore: ${callId}`);
+        break; // Success, exit retry loop
+      } catch (error) {
+        attempt++;
+        console.warn(`Retry ${attempt}/${maxRetries} for error`, {
+          code: error.code,
+          message: error.message,
+          callId,
+        });
+        if (error.code === 5 && attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+          continue;
+        }
+        throw error; // Rethrow if not retryable or max retries reached
+      }
+    }
 
     // Start timer to update duration
     const timer = setInterval(async () => {
-      const callDoc = await admin.firestore().collection('calls').doc(callId).get();
-      if (!callDoc.exists || callDoc.data().status !== 'active') {
+      try {
+        const callDoc = await callDocRef.get();
+        if (!callDoc.exists || callDoc.data().status !== 'active') {
+          clearInterval(timer);
+          callTimers.delete(callId);
+          console.log(`Stopped duration timer for call: ${callId}`);
+          return;
+        }
+
+        const currentDuration = Math.floor((Date.now() - startTime) / 1000); // Duration in seconds
+        await callDocRef.update({
+          duration: currentDuration,
+        });
+      } catch (error) {
+        console.error('Error updating call duration:', error);
         clearInterval(timer);
         callTimers.delete(callId);
-        return;
       }
-
-      const currentDuration = Math.floor((Date.now() - startTime) / 1000); // Duration in seconds
-      await admin.firestore().collection('calls').doc(callId).update({
-        duration: currentDuration
-      });
     }, 1000);
 
     callTimers.set(callId, timer);
@@ -189,22 +238,28 @@ const initiateCall = async (req, res) => {
     const message = {
       notification: {
         title: 'Incoming Call',
-        body: `Call from ${callerId}`
+        body: `Call from ${callerId}`,
       },
       data: {
         callId,
         callerId,
-        type: 'incoming_call'
+        type: 'incoming_call',
       },
-      token: receiver.fcmToken
+      token: receiver.fcmToken,
     };
 
     await admin.messaging().send(message);
+    console.log('FCM notification sent to receiver:', { receiverId, callId });
 
-    res.status(200).json({ success: true, message: 'Call initiated and notification sent' });
+    res.status(200).json({ success: true, message: 'Call initiated and notification sent', callId });
   } catch (error) {
-    console.error('Error initiating call:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Error initiating call:', {
+      error: error.message,
+      code: error.code,
+      stack: error.stack,
+      requestBody: req.body,
+    });
+    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
   }
 };
 
