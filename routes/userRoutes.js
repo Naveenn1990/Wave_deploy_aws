@@ -788,5 +788,5 @@ router.get(
  *         description: Server error
  */
 router.get("/api/user/bookings", auth, bookingController.getAllUserBookings);
-
+router.put("/updateFcmToken", userController.updateFcmToken);
 module.exports = router;

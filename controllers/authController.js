@@ -233,6 +233,9 @@ exports.resendOTP = async (req, res) => {
       success: true,
       otp,
       message: "OTP resent successfully",
+
+      //Added For Resend otp view in Ui
+      otp: otp.toString()
     });
   } catch (error) {
     console.error("Error in resendOTP:", error);
