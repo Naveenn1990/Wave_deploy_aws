@@ -17,6 +17,9 @@ const Booking = require("./models/booking");
 
 
 const app = express();
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -100,10 +103,68 @@ const adminSockets = {};
 
 const locationSockets = {};
 
+const User = require('./models/User');
+const Partner = require("./models/Partner");
 // Notification.injectIO(io);
+const calls = new Map();
+const rides = new Map(); // Format: { rideId: { driverId, userId, status } }
+
+const initiateCall = async (req, res) => {
+  try {
+    // console.log("req.body", req.body)
+    const { callerId, receiverId, callId, isUser, offer,user } = req.body;
+
+    // Validate caller and receiver
+    const partner = isUser
+      ? await User.findById(receiverId)
+      : await Partner.findById(receiverId);
+    if (!partner) {
+      return res.status(404).json({ success: false, message: 'Receiver not found' });
+    }
+
+    // Store call state
+    calls.set(callId, { callerId, receiverId, status: 'pending', offer });
+
+    console.log("callerId, receiverId, callId, isUser, offer,user",callerId, receiverId, callId, isUser, offer,user)
+    // Emit call initiation event to receiver's room
+    const message = {
+         notification: {
+           title: 'Incoming Call',
+           body: `Call from ${user.name}`,
+        
+         },
+         android: {
+          notification: {
+            channel_id: 'call-channel',
+            sound:"ringtone",
+          },
+        },
+         data: {
+           callId,
+           callerId,
+           receiverId,
+           type: 'call',
+           user:JSON.stringify(user),
+           offer: JSON.stringify(offer),
+         },
+         token: isUser ? partner.fcmToken : partner.fcmtoken,
+       };
+   
+       await admin.messaging().send(message);
+       console.log('Notification sent to receiver:', receiverId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error initiating call:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Register the only API
+app.post('/api/initiate-call', initiateCall);
 
 io.on("connection", (socket) => {
   console.log("User/Admin connected:", socket.id);
+
 
   // Handle text and image messages
   socket.on("chat message", async (message) => {
@@ -197,84 +258,270 @@ io.on("connection", (socket) => {
     }
   });
   
-  socket.on("joinLocation", (location) => {
-    const { userId, lat, lng } = location;
-
-    if (!userId || lat === undefined || lng === undefined) {
-      console.error("Invalid location data");
-      return;
-    }
-
-    console.log(`Service Provider ${userId} joined with socket ${socket.id}`);
-
-    // Join room based on userId
-    socket.join(userId);
-
-    // Initialize storage if not already present
-    if (!locationSockets[userId]) { 
-      locationSockets[userId] = [];
-    }
- 
-    locationSockets[userId].push({ id: socket.id, lat, lng });
-
-    console.log(`User ${userId} joined with socket ${socket.id}`);
-
-    // Broadcast location updates to all clients tracking this user
-    // io.to(userId).emit("locationUpdate", { lat, lng });
- 
-      // Handle live location updates
-    // socket.on("updateLocation", ({ userId, lat, lng }) => {
-    //   if (!userId || lat === undefined || lng === undefined) {
-    //     console.error("Invalid location update");
-    //     return;
-    //   }
-
-    // // Update partner's location
-    //   if (locationSockets[userId]) {
-    //     locationSockets[userId] = locationSockets[userId].map((socketData) =>
-    //       socketData.id === socket.id ? { id: socket.id, lat, lng } : socketData
-    //       );
-    //   }
-
-    //   console.log(`Updated location for user ${userId}: ${lat}, ${lng}`);
-
-    // // Send update to all tracking customers
-    //   io.to(userId).emit("locationUpdate", { lat, lng });
-    // });
-  }); 
-
-    // Handle live location updates
-  socket.on("updateLocation", ({ userId, lat, lng }) => {
-    if (!userId || lat === undefined || lng === undefined) {
-      console.error("Invalid location update");
-      return;
-    }
-
-    // Ensure location storage is initialized
-    if (!locationSockets[userId]) {
-      locationSockets[userId] = [];
-    }
-
-    // Find and update the existing socket
-    const existingSocket = locationSockets[userId].find(
-      (socketData) => socketData.id === socket.id
-    );
-
-    if (existingSocket) {
-      // Update only if location has changed
-      if (existingSocket.lat !== lat || existingSocket.lng !== lng) {
-        existingSocket.lat = lat;
-        existingSocket.lng = lng;
-        console.log(`Updated location for user ${userId}: ${lat}, ${lng}`);
-
-        // Send updated location to all tracking clients
-        io.to(userId).emit("locationUpdate", { lat, lng });
+  socket.on('register', ({ userId, isUser }) => {
+    try {
+      if (!userId) {
+        throw new Error('Invalid userId');
       }
-    } else {
-      // Add new socket if it doesn't exist
-      locationSockets[userId].push({ id: socket.id, lat, lng });
+      socket.userId = userId;
+      socket.isUser = isUser;
+      socket.join(userId);
+      console.log(`User ${userId} registered with socket ${socket.id}, rooms:`, socket.rooms);
+      socket.emit('registration');
+    } catch (error) {
+      console.error(`Error registering user ${userId}:`, error.message);
+      socket.emit('error', { message: error.message });
     }
   });
+
+  socket.on('call_answer', async ({ callId, senderId, receiverId, answer }) => {
+    try {
+      const call = calls.get(callId);
+      if (!call || call.status !== 'pending') {
+        console.warn(`Call answer ignored for callId ${callId}: Invalid or non-pending call`);
+        return;
+      }
+
+      call.status = 'active';
+      calls.set(callId, call);
+
+      // Verify receiver is in the room
+      const receiverSocket = Array.from(io.sockets.sockets.values()).find(
+        (s) => s.userId === receiverId && s.rooms.has(receiverId)
+      );
+      if (!receiverSocket) {
+        throw new Error('Receiver not connected');
+      }
+
+      io.to(receiverId).emit('call_answer', {
+        callId,
+        senderId,
+        receiverId,
+        answer,
+      });
+      console.log(`Answer sent to caller ${receiverId} for call ${callId}`);
+    } catch (error) {
+      console.error(`Error sending answer for call ${callId}:`, error.message);
+      io.to(senderId).to(receiverId).emit('error', { message: error.message });
+    }
+  });
+
+  socket.on('ice_candidate', async ({ callId, senderId, receiverId, candidate }) => {
+    try {
+      const call = calls.get(callId);
+      if (!call) {
+        console.warn(`ICE candidate ignored for callId ${callId}: Call not found`);
+        return;
+      }
+
+      const receiverSocket = Array.from(io.sockets.sockets.values()).find(
+        (s) => s.userId === receiverId && s.rooms.has(receiverId)
+      );
+      if (!receiverSocket) {
+        throw new Error('Receiver not connected');
+      }
+
+      io.to(receiverId).emit('ice_candidate', {
+        callId,
+        senderId,
+        receiverId,
+        candidate,
+      });
+      console.log(`ICE candidate sent to ${receiverId} for call ${callId}`);
+    } catch (error) {
+      console.error(`Error sending ICE candidate for call ${callId}:`, error.message);
+      io.to(senderId).to(receiverId).emit('error', { message: error.message });
+    }
+  });
+
+  socket.on('call_ended', async ({ callId, senderId, receiverId }) => {
+    try {
+      const call = calls.get(callId);
+      if (!call) {
+        console.warn(`Call end ignored for callId ${callId}: Call not found`);
+        return;
+      }
+
+      call.status = 'ended';
+      calls.set(callId, call);
+
+      io.to(receiverId).emit('call_ended', {
+        callId,
+        senderId,
+        receiverId,
+      });
+      console.log(`Call ended notification sent to ${receiverId} for call ${callId}`);
+
+      calls.delete(callId);
+      console.log(`Call ${callId} removed from calls Map`);
+    } catch (error) {
+      console.error(`Error ending call ${callId}:`, error.message);
+      io.to(senderId).to(receiverId).emit('error', { message: error.message });
+    }
+  });
+
+  socket.on('call_rejected', async ({ callId, senderId, receiverId }) => {
+    try {
+      const call = calls.get(callId);
+      if (!call) {
+        console.warn(`Call rejection ignored for callId ${callId}: Call not found`);
+        return;
+      }
+
+      call.status = 'rejected';
+      calls.set(callId, call);
+
+      io.to(receiverId).emit('call_rejected', {
+        callId,
+        senderId,
+        receiverId,
+      });
+      console.log(`Call rejection notification sent to ${receiverId} for call ${callId}`);
+
+      calls.delete(callId);
+      console.log(`Call ${callId} removed from calls Map`);
+    } catch (error) {
+      console.error(`Error rejecting call ${callId}:`, error.message);
+      io.to(senderId).to(receiverId).emit('error', { message: error.message });
+    }
+  });
+
+  socket.on('cleanup', ({ callId, userId }) => {
+    try {
+      if (calls.has(callId)) {
+        const call = calls.get(callId);
+        io.to(call.callerId).to(call.receiverId).emit('call_ended', {
+          callId,
+          senderId: userId,
+          receiverId: call.callerId === userId ? call.receiverId : call.callerId,
+        });
+        calls.delete(callId);
+        console.log(`Cleaned up call ${callId} for user ${userId}`);
+      } else {
+        console.log(`Cleanup ignored for call ${callId}: Call not found`);
+      }
+    } catch (error) {
+      console.error(`Error cleaning up call ${callId}:`, error.message);
+      socket.emit('error', { message: error.message });
+    }
+  });
+  socket.on('start_ride', ({ rideId, driverId, userId }) => {
+    try {
+      if (!rideId || !driverId || !userId) {
+        throw new Error('Invalid ride details');
+      }
+
+      // Store ride details
+      rides.set(rideId, {
+        driverId,
+        userId,
+        status: 'active',
+      });
+
+      // Notify user that ride has started
+      io.to(userId).emit('ride_started', {
+        rideId,
+        driverId,
+        message: 'Ride has started. Driver location tracking enabled.',
+      });
+
+      console.log(`Ride ${rideId} started. Driver: ${driverId}, User: ${userId}`);
+    } catch (error) {
+      console.error(`Error starting ride ${rideId}:`, error.message);
+      socket.emit('error', { message: error.message });
+    }
+  });
+
+  // New: Driver sends location updates
+  socket.on('driver_location', ({ rideId, latitude, longitude }) => {
+    try {
+      const ride = rides.get(rideId);
+      if (!ride || ride.status !== 'active') {
+        console.warn(`Location update ignored for rideId ${rideId}: Invalid or non-active ride`);
+        return;
+      }
+
+      // Verify driver is the one sending the update
+      if (socket.userId !== ride.driverId) {
+        throw new Error('Unauthorized location update');
+      }
+
+      // Send location to user
+      io.to(ride.userId).emit('driver_location_update', {
+        rideId,
+        driverId: ride.driverId,
+        latitude,
+        longitude,
+        timestamp: Date.now(),
+      });
+
+      console.log(`Driver location sent for ride ${rideId}: (${latitude}, ${longitude}) to user ${ride.userId}`);
+    } catch (error) {
+      console.error(`Error sending driver location for ride ${rideId}:`, error.message);
+      socket.emit('error', { message: error.message });
+    }
+  });
+
+  // New: End ride
+  socket.on('end_ride', ({ rideId }) => {
+    try {
+      const ride = rides.get(rideId);
+      if (!ride) {
+        console.warn(`End ride ignored for rideId ${rideId}: Ride not found`);
+        return;
+      }
+
+      // Update ride status
+      ride.status = 'ended';
+      rides.set(rideId, ride);
+
+      // Notify user that ride has ended
+      io.to(ride.userId).emit('ride_ended', {
+        rideId,
+        message: 'Ride has ended.',
+      });
+
+      // Optionally, remove ride from map after some time
+      setTimeout(() => {
+        rides.delete(rideId);
+        console.log(`Ride ${rideId} removed from active rides`);
+      }, 60000); // Remove after 1 minute
+
+      console.log(`Ride ${rideId} ended. Notified user ${ride.userId}`);
+    } catch (error) {
+      console.error(`Error ending ride ${rideId}:`, error.message);
+      socket.emit('error', { message: error.message });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    if (socket.userId) {
+      console.log(`User ${socket.userId} disconnected`);
+      // Optionally notify active calls
+      for (const [callId, call] of calls) {
+        if (call.callerId === socket.userId || call.receiverId === socket.userId) {
+          io.to(call.callerId).to(call.receiverId).emit('call_ended', {
+            callId,
+            senderId: socket.userId,
+            receiverId: call.callerId === socket.userId ? call.receiverId : call.callerId,
+          });
+          calls.delete(callId);
+        }
+      }
+      rides.forEach((ride, rideId) => {
+        if (ride.driverId === socket.userId && ride.status === 'active') {
+          ride.status = 'disconnected';
+          rides.set(rideId, ride);
+          io.to(ride.userId).emit('ride_disconnected', {
+            rideId,
+            message: 'Driver disconnected. Ride paused.',
+          });
+          console.log(`Ride ${rideId} paused due to driver ${socket.userId} disconnection`);
+        }
+      });
+    }
+  });
+
   // socket.on("updateLocation", ({ userId, lat, lng }) => {
   //   if (!userId || lat === undefined || lng === undefined) return;
   //   console.log(`User ${userId} updateLocation with socket ${socket.id}`);
@@ -342,8 +589,7 @@ io.on("connection", (socket) => {
   });
 });
 
-console.log("userSockets : ", userSockets);
-console.log("adminSockets : ", adminSockets);
+
 
 global.io = io; // Make socket available globally
 
@@ -366,8 +612,6 @@ app.use(
   })
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Configure helmet with necessary adjustments
 app.use(
