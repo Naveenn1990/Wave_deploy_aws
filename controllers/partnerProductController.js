@@ -1,5 +1,5 @@
 const PartnerProduct = require("../models/PartnerProductModel");
-const { errorHandler } = require("../utils/errorHandler");
+const { errorHandler } = require("../utils/ErrorHandl");
 
 // Create a new product
 exports.createProduct = async (req, res) => {
