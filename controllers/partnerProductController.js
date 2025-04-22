@@ -1,4 +1,4 @@
-const PartnerProduct = require("../models/partnerProduct");
+const PartnerProduct = require("../models/PartnerProductModel");
 const { errorHandler } = require("../utils/errorHandler");
 
 // Create a new product
