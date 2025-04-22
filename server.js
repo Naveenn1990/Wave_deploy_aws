@@ -109,7 +109,7 @@ const adminSockets = {};
 const locationSockets = {};
 
 const User = require('./models/User');
-const Partner = require("./models/Partner");
+const Partner = require("./models/PartnerModel");
 // Notification.injectIO(io);
 const calls = new Map();
 const rides = new Map(); // Format: { rideId: { driverId, userId, status } }

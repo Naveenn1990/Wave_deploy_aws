@@ -1,5 +1,5 @@
 const Admin = require("../models/admin");
-const Partner = require("../models/Partner");
+const Partner = require("../models/PartnerModel");
 const User = require("../models/User");
 const booking = require("../models/booking");
 const Review = require("../models/Review"); // Assuming Review model is defined in a separate file

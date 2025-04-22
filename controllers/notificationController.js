@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const Admin = require('../models/admin');
 const admin = require('../config/firebase');
-const Partner = require("../models/Partner");
+const Partner = require("../models/PartnerModel");
 const callTimers = new Map();
 const calls = new Map(); // { callId: { callerId, receiverId, status } }
 

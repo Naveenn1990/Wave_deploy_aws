@@ -1,5 +1,5 @@
 const Booking = require("../models/booking");
-const Partner = require("../models/Partner");
+const Partner = require("../models/PartnerModel");
 const User = require("../models/User");
 const Transaction = require("../models/Transaction");
 

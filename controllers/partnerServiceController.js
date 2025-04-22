@@ -1,6 +1,6 @@
 const PartnerService = require("../models/PartnerService");
 const ServiceCategory = require("../models/ServiceCategory");
-const Partner = require("../models/Partner");
+const Partner = require("../models/PartnerModel");
 const Booking = require("../models/booking");
 const PartnerProfile = require("../models/PartnerProfile");
 const jwt = require("jsonwebtoken");

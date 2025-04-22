@@ -1,4 +1,4 @@
-const Partner = require("../models/Partner");
+const Partner = require("../models/PartnerModel");
 const Booking = require("../models/booking");
 const SubService = require("../models/SubService");
 const Wallet = require("../models/Wallet");

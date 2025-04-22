@@ -1,4 +1,4 @@
-const Partner = require("../models/Partner");
+const Partner = require("../models/PartnerModel");
 const PartnerProfile = require("../models/PartnerProfile");
 const jwt = require("jsonwebtoken");
 const { sendOTP } = require("../utils/sendOTP");

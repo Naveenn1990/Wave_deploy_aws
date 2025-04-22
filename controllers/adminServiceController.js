@@ -7,7 +7,7 @@ const path = require('path');
 
 const SubCategory = require("../models/SubCategory");
 const Product = require("../models/product");
-const Partner = require("../models/Partner");
+const Partner = require("../models/PartnerModel");
 const { uploadFile2 } = require('../middleware/aws');
 // Get all services
 exports.getAllServices = async (req, res) => {

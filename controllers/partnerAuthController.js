@@ -1,4 +1,4 @@
-const Partner = require("../models/Partner");
+const Partner = require("../models/PartnerModel");
 const PartnerProfile = require("../models/PartnerProfile");
 const PartnerWallet = require("../models/PartnerWallet");
 const jwt = require("jsonwebtoken");

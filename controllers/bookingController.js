@@ -6,7 +6,7 @@ const Review = require("../models/Review");
 // const mongoose = require("mongoose");
 const SubService = require("../models/SubService");
 const Admin = require("../models/admin");
-const PartnerModel = require("../models/Partner");
+const PartnerModel = require("../models/PartnerModel");
 const Notification = require("../models/Notification");
 const admin = require("firebase-admin");
 

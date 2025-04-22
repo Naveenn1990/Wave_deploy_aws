@@ -4,7 +4,7 @@ const Booking = require('../models/booking');
 const SubService = require('../models/SubService');
 const Wallet = require("../models/Wallet");
 const { v4: uuidv4 } = require("uuid");
-const Partner = require("../models/Partner");
+const Partner = require("../models/PartnerModel");
 const Contact = require("../models/Contact");
 
 // Submit a new review

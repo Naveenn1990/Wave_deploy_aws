@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const admin = require('firebase-admin');
-const Partner = require('./Partner'); // Adjust path to your Partner model
+const Partner = require('./PartnerModel'); // Adjust path to your Partner model
 
 const notificationSchema = new mongoose.Schema(
   {
