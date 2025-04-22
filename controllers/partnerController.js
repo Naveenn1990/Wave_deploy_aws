@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const { sendOTP } = require("../utils/sendOTP");
 const path = require("path");
 const Booking = require("../models/booking");
+const { uploadFile2 } = require("../middleware/aws");
 
 const sendLoginOTP = async (req, res) => {
   try {
@@ -189,7 +190,7 @@ const updateProfile = async (req, res) => {
 
     // Handle profile picture if uploaded
     if (req.file) {
-      partner.profile.profilePicture = path.basename(req.file.path);
+      partner.profile.profilePicture = await uploadFile2(req.file,"partner");
     }
 
     partner.profileCompleted = true;
@@ -270,12 +271,21 @@ const uploadKYCDocuments = async (req, res) => {
     }
 
     const partner = await Partner.findById(req.partner._id);
+   let panCard=  await uploadFile2(req.files.panCard[0],"partnerdoc");
+   let aadhaarCard= await uploadFile2(req.files.aadhaarCard[0],"partnerdoc");
+   let cancelledCheque=await uploadFile2(req.files.cancelledCheque[0],"partnerdoc");
+
+   let drivingLicence= await uploadFile2(req.files.drivingLicence[0],"partnerdoc");
+   let bill=await uploadFile2(req.files.bill[0],"partnerdoc");
+
 
     // Update KYC documents
     partner.kycDetails = {
-      panCard: req.files.panCard[0].path,
-      aadhaarCard: req.files.aadhaarCard[0].path,
-      cancelledCheque: req.files.cancelledCheque[0].path,
+      panCard: panCard,
+      aadhaarCard: aadhaarCard,
+      cancelledCheque: cancelledCheque,
+      drivingLicence:drivingLicence,
+      bill:bill,
       bankDetails: {
         accountNumber,
         ifscCode,
@@ -307,13 +317,20 @@ const getKYCStatus = async (req, res) => {
 
 const completeBooking = async (req, res) => {
   const bookingId = req.params.id;
-  const photos = req.files;
+
 
   try {
     // Update the booking status to completed
+       const imageUploadPromises = req.files.map(async (file) => {
+          return await uploadFile2(file, "jobstart");
+      });
+      
+      // Wait for all uploads to complete
+      const imagePaths = await Promise.all(imageUploadPromises);
+      
     const booking = await Booking.findByIdAndUpdate(
       bookingId,
-      { status: "completed", photos: photos.map((file) => file.path) },
+      { status: "completed", photos: imagePaths },
       { new: true }
     );
 

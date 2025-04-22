@@ -3,9 +3,7 @@ const PartnerProfile = require("../models/PartnerProfile");
 const PartnerWallet = require("../models/PartnerWallet");
 const jwt = require("jsonwebtoken");
 const { sendOTP } = require("../utils/sendOTP");
-const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
-const path = require("path");
+
 const ServiceCategory = require("../models/ServiceCategory");
 const SubCategory = require("../models/SubCategory");
 const Service = require("../models/Service");

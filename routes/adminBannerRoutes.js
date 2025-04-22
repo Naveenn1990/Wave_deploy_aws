@@ -54,13 +54,13 @@ const fileFilter = (req, file, cb) => {
 };
 
 const promotionalBannerUpload = multer({
-    storage: promotionalBannerStorage,
+
     fileFilter: fileFilter,
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 }).single('bannerImage');
 
 const companyBannerUpload = multer({
-    storage: companyBannerStorage,
+    
     fileFilter: fileFilter,
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 }).single('bannerImage');

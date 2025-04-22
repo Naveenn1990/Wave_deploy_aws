@@ -4,6 +4,7 @@ const { sendOTP } = require("../utils/sendOTP");
 const path = require("path");
 const Booking = require("../models/booking"); // Ensure the correct model is imported
 const SubService = require("../models/SubService");
+const { uploadFile2 } = require("../middleware/aws");
 
 // Register new user
 exports.register = async (req, res) => {
@@ -458,7 +459,7 @@ exports.updateProfile = async (req, res) => {
     console.log("Req BOdy", req.body);
     // Handle profile picture if uploaded
     if (req.file) {
-      updates.profilePicture = path.basename(req.file.path);
+      updates.profilePicture =await uploadFile2(req.file,"profile");
     }
 
     const user = await User.findByIdAndUpdate(

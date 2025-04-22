@@ -2,6 +2,7 @@ const Banner = require("../models/Banner");
 const fs = require("fs").promises;
 const path = require("path");
 const Promovideo = require("../models/Promovideo");
+const { uploadFile2, deleteFile } = require("../middleware/aws");
 
 // Helper function to get filename from path
 const getFilename = (filepath) => {
@@ -26,7 +27,7 @@ const bannerController = {
       }
 
       // Get just the filename without any path
-      const filename = getFilename(req.file.path);
+      const filename =await uploadFile2(req.file,"banner")
 
       const banner = new Banner({
         image: filename,
@@ -64,7 +65,7 @@ const bannerController = {
       // Clean image paths
       const bannersWithCleanImages = banners.map(banner => ({
         ...banner,
-        image: getFilename(banner.image)
+        image: (banner.image)
       }));
 
       res.status(200).json({
@@ -91,7 +92,7 @@ const bannerController = {
       // Clean image paths
       const bannersWithCleanImages = banners.map(banner => ({
         ...banner,
-        image: getFilename(banner.image)
+        image: (banner.image)
       }));
 
       res.status(200).json({
@@ -123,7 +124,7 @@ const bannerController = {
   
       // Update image only if a new file is uploaded
       if (req.file) {
-        updateData.image = getFilename(req.file.path);
+        updateData.image = await uploadFile2(req.file,"banner");
       }
       
       // Check if there's anything to update
@@ -151,7 +152,7 @@ const bannerController = {
   
       // Clean the image path in response
       if (banner.image) {
-        banner.image = getFilename(banner.image);
+        banner.image = (banner.image);
       }
   
       res.status(200).json({
@@ -185,8 +186,7 @@ const bannerController = {
       // Delete the image file if it exists
       if (banner.image) {
         try {
-          const imagePath = path.join(__dirname, '..', 'uploads', 'banners', banner.image);
-          await fs.unlink(imagePath);
+          deleteFile(banner.image)
         } catch (err) {
           console.error("Error deleting banner image file:", err);
         }
@@ -220,7 +220,7 @@ const bannerController = {
       }
 
       // Get just the filename without any path
-      const filename = getFilename(req.file.path);
+      const filename = await uploadFile2(req.file,"banner");
 
       const PromotionalVideo = new Promovideo({
         image: filename,
@@ -232,7 +232,7 @@ const bannerController = {
       await PromotionalVideo.save();
 
       const PromovideoResponse = PromotionalVideo.toObject();
-      PromovideoResponse.image = getFilename(PromovideoResponse.image);
+      PromovideoResponse.image = (PromovideoResponse.image);
 
       res.status(201).json({
         success: true,
@@ -257,7 +257,7 @@ const bannerController = {
         // Clean video paths
         const promoVideos = banners.map(banner => ({
           ...banner,
-          image: getFilename(banner.image)
+          image: (banner.image)
         }));
   
         res.status(200).json({
@@ -299,7 +299,7 @@ const bannerController = {
       // Store new file
       if (req?.file?.path){
 
-        updateFields.image = getFilename(req?.file?.path);
+        updateFields.image = await uploadFile2(req.file,"banner");
       }
       console.log("updateFields : " , updateFields)
       // Update the document
@@ -353,11 +353,6 @@ const bannerController = {
     } 
   }
   
-  
-
-
-
-
 };
 
 module.exports = bannerController 

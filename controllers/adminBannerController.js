@@ -1,6 +1,7 @@
 const PromotionalBanner = require('../models/PromotionalBanner');
 const CompanyBanner = require('../models/CompanyBanner');
 const path = require('path');
+const { uploadFile2 } = require('../middleware/aws');
 
 const adminBannerController = {
     // Promotional Banner Controllers
@@ -13,10 +14,11 @@ const adminBannerController = {
                 });
             }
 
+            let image=await uploadFile2(req.file,"promotionalbanner")
             const banner = new PromotionalBanner({
                 title: req.body.title,
                 description: req.body.description,
-                image: path.basename(req.file.path),
+                image: image,
                 order: req.body.order || 0,
                 link: req.body.link
             });
@@ -62,11 +64,11 @@ const adminBannerController = {
                     message: "No banner image provided"
                 });
             }
-
+            let image=await uploadFile2(req.file,"companybanner")
             const banner = new CompanyBanner({
                 title: req.body.title,
                 description: req.body.description,
-                image: path.basename(req.file.path),
+                image: image,
                 order: req.body.order || 0
             });
 

@@ -4,10 +4,11 @@ const Service = require("../models/Service");
 const Booking = require("../models/booking");
 const SubService = require('../models/SubService');
 const path = require('path');
-const { stripUrl } = require('../middleware/upload');
+
 const SubCategory = require("../models/SubCategory");
 const Product = require("../models/product");
 const Partner = require("../models/Partner");
+const { uploadFile2 } = require('../middleware/aws');
 // Get all services
 exports.getAllServices = async (req, res) => {
   try {
@@ -64,12 +65,12 @@ exports.createService = async (req, res) => {
         message: 'Category not found'
       });
     }
-
+    let image=await uploadFile2(req.file,"service")
     const service = new Service({
       subCategory: req.body.subCategory,
       name: req.body.name,
       description: req.body.description,
-      icon: path.basename(req.file.path), 
+      icon:image, 
     });
 
     await service.save();
@@ -167,7 +168,7 @@ exports.addSubService = async (req, res) => {
         message: "Icon file is required"
       });
     }
-
+ 
     // Find parent service
     const service = await Service.findById(serviceId);
     if (!service) {
@@ -177,7 +178,7 @@ exports.addSubService = async (req, res) => {
       });
     }
 
-
+   let image=await uploadFile2(req.file,"subservice")
     
 
     // Create sub-service
@@ -187,7 +188,7 @@ exports.addSubService = async (req, res) => {
       description: description.trim(),
       basePrice: Number(basePrice),
       duration: Number(duration),
-      icon: path.basename(req.file.path),
+      icon: image,
       status: 'active'
     });
 
@@ -246,7 +247,7 @@ exports.updateServiceCategory = async (req, res) => {
     // Prepare update object (only update fields that are provided)
     const updateData = {};
     if (name) updateData.name = name; // Update only if name is provided
-    if (icon) updateData.icon = path.basename(icon); // Update only if icon is uploaded
+    if (icon) updateData.icon =  await uploadFile2(req.file,"servicecategory") // Update only if icon is uploaded
 
     // Perform the update
     const category = await ServiceCategory.findByIdAndUpdate(
@@ -364,12 +365,12 @@ exports.createCategory = async (req, res) => {
                 message: 'Name and description are required'
             });
         }
-
+        let image=await uploadFile2(req.file,"servicecategory")
         // Create new category with just the filename
         const category = new ServiceCategory({
             name: req.body.name.trim(),
             description: req.body.description.trim(),
-            icon: req.file.filename, // Store only the filename
+            icon: image, // Store only the filename
             status: 'active',
             subtitle: req.body.subtitle.trim()
         });
@@ -556,8 +557,13 @@ exports.createSubService = async (req, res) => {
     }
 
     // Extract file paths
-    const imagePaths = req.files.map(file => file.filename); 
-
+    const imageUploadPromises = req.files.map(async (file) => {
+      return await uploadFile2(file, "subservice");
+  });
+  
+  // Wait for all uploads to complete
+  const imagePaths = await Promise.all(imageUploadPromises);
+  
     // Ensure city field is an array
     const cities = Array.isArray(req.body.city) ? req.body.city : req.body.city.split(",");
 
@@ -618,7 +624,7 @@ exports.updateService = async (req, res) => {
 
     // Update icon if provided
     if (req.file) {
-      service.icon = path.basename(req.file.path);
+      service.icon =await uploadFile2(req.file,"service")
     }
 
     await service.save();
@@ -694,9 +700,13 @@ exports.updateSubService = async (req, res) => {
         message: "At least 4 images are required" 
       });
     }
-    // Extract file paths
-    const imagePaths = req.files.map(file => file.filename); 
-
+    const imageUploadPromises = req.files.map(async (file) => {
+      return await uploadFile2(file, "subservice");
+  });
+  
+  // Wait for all uploads to complete
+  const imagePaths = await Promise.all(imageUploadPromises);
+  
     const service = await Service.findById(serviceId);
     if (!service) {
       return res.status(404).json({
@@ -1054,7 +1064,7 @@ exports.addProduct = async (req, res) => {
 
     // Extract only the filename from the image path
     if (imagePath) {
-      imagePath = imagePath.split("/").pop(); // Extracts '1741171846734-220232475.png'
+      imagePath =  await uploadFile2( req.file, "products");
     }
 
     const newProduct = new Product({
@@ -1131,7 +1141,7 @@ exports.updateProduct = async (req, res) => {
 
     // Handle image update
     if (req.file) {
-      updateFields.image = path.basename(req.file.path);
+      updateFields.image =   imagePath =  await uploadFile2( req.file, "products");
     }
 
     // Remove empty values to ensure partial update

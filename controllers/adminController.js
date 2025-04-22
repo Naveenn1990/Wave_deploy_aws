@@ -11,6 +11,7 @@ const path = require('path');
 const SubCategory = require("../models/SubCategory"); // Assuming SubCategory model is defined in a separate file
 const PartnerProfile = require("../models/PartnerProfile");
 const mongoose = require("mongoose");
+const { uploadFile2 } = require("../middleware/aws");
 
 // Admin login
 // exports.loginAdmin = async (req, res) => {
@@ -902,7 +903,7 @@ exports.createServiceCategory = async (req, res) => {
     }
 
     // Create icon path
-    const iconPath = path.basename(req.file.path);
+    const iconPath = await uploadFile2(req.file,"category");
 
     const category = new ServiceCategory({
       name: name.trim(),
@@ -987,7 +988,8 @@ exports.createService = async (req, res) => {
     }
 
     // Create icon path
-    const iconPath = path.basename(req.file.path);
+    const iconPath = await uploadFile2(req.file,"service");
+
 
     const service = new Service({
       category,
@@ -1063,11 +1065,12 @@ exports.addSubService = async (req, res) => {
     if (!service) {
       return res.status(404).json({ message: "Service not found" });
     }
+let icon=await uploadFile2(req.file,"subservice");
 
     service.subServices.push({
       name,
       description,
-      icon: path.basename(req.file.path),
+      icon: icon,
       basePrice,
       duration
     });
@@ -1365,11 +1368,11 @@ exports.addSubCategory = async (req, res) => {
     console.log(name , category , "test")
       return res.status(400).json({ message: "Name and category are required." });
   }
-
+ let image= await uploadFile2(req.file,"category");
   const subCategory = new SubCategory({
       name,
       category,
-      image: req.file?.filename // Assuming the image is uploaded similarly
+      image: image // Assuming the image is uploaded similarly
   });
 
   await subCategory.save();
@@ -1380,7 +1383,7 @@ exports.addSubCategory = async (req, res) => {
 exports.updateSubCategory = async (req, res) => {
   try {
     const { name } = req.body;
-    let image = req.file ? req.file.filename : undefined; // Handle uploaded file
+    let image = req.file ? await uploadFile2(req.file,"category") : undefined; // Handle uploaded file
     console.log(name, image);
 
     // Find the existing category
@@ -1395,7 +1398,7 @@ exports.updateSubCategory = async (req, res) => {
     // Prepare update object (only update fields that are provided)
     const updateData = {};
     if (name) updateData.name = name; // Update only if name is provided
-    if (image) updateData.image = path.basename(image); // Update only if icon is uploaded
+    if (image) updateData.image = (image); // Update only if icon is uploaded
 
     // Perform the update
     const subCategory = await SubCategory.findByIdAndUpdate(

@@ -334,11 +334,11 @@ router.put('/user-status', adminController.updateUserStatus);
 
  
 // Create Offer with image upload
-router.post('/offers', upload.single('promotionalImage'), processFilePath,createOffer);
+router.post('/offers', upload.single('promotionalImage'),createOffer);
 
 
 // Edit Offer
-router.put('/offers/:id', upload.single('promotionalImage'), processFilePath,  editOffer);
+router.put('/offers/:id', upload.single('promotionalImage'),  editOffer);
 
 // Delete Offer
 router.delete('/offers/:id', deleteOffer);

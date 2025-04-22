@@ -52,7 +52,7 @@ router.post(
   "/service-category",
   adminAuth,
   upload.single("icon"),
-  processFilePath,
+ 
   adminServiceController.createCategory
 );
 router.get(
@@ -79,7 +79,7 @@ router.put(
   "/service-category/:categoryId",
   adminAuth,
   upload.single("icon"),
-  processFilePath,
+
   adminServiceController.updateServiceCategory
 );
 router.delete(
@@ -93,14 +93,14 @@ router.post(
   "/sub-category",
   adminAuth,
   upload.single("image"),
-  processFilePath,
+
   adminController.addSubCategory
 );
 router.put(
   "/sub-category/:subcategoryId",
   adminAuth,
   upload.single("image"),
-  processFilePath,
+
   adminController.updateSubCategory
 );
 router.delete(
@@ -114,7 +114,7 @@ router.post(
   "/service",
   adminAuth,
   upload.single("icon"),
-  processFilePath,
+
   adminServiceController.createService
 );
 router.get("/services", adminAuth, adminServiceController.getAllServices);
@@ -127,7 +127,7 @@ router.put(
   "/service/:serviceId",
   adminAuth,
   upload.single("icon"),
-  processFilePath,
+
   adminServiceController.updateService
 );
 router.delete(
@@ -165,7 +165,7 @@ router.post(
   "/service/:serviceId/sub-service/create",
   adminAuth,
   upload.single("icon"),
-  processFilePath,
+
   adminServiceController.createSubService
 );
 
@@ -190,9 +190,9 @@ router.put(
 // router.post("/book-subservice", adminAuth, userServiceController.bookSubService);
 
 // Promotional Video Management
-router.post("/promovideo", adminAuth, upload.single("image"), processFilePath, bannerController.uploadPromovideo);
+router.post("/promovideo", adminAuth, upload.single("image"), bannerController.uploadPromovideo);
 router.get("/promovideo", bannerController.getAllPromovideos);
-router.put("/promovideo/:id", adminAuth, upload.single("image"), processFilePath, bannerController.updatePromoVideo);
+router.put("/promovideo/:id", adminAuth, upload.single("image"), bannerController.updatePromoVideo);
 router.delete("/promovideo/:id", adminAuth, bannerController.deletePromoVideo);
 
 // Banner Management
@@ -200,7 +200,7 @@ router.post(
   "/banners",
   adminAuth,
   upload.single("image"),
-  processFilePath,
+
   bannerController.uploadBanner
 );
 router.get("/banners", adminAuth, bannerController.getAllBanners);
@@ -208,7 +208,7 @@ router.put(
   "/banners/:bannerId",
   adminAuth,
   upload.single("image"),
-  processFilePath,
+
   bannerController.updateBanner
 );
 router.delete("/banners/:bannerId", adminAuth, bannerController.deleteBanner);

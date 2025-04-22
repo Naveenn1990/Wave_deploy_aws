@@ -2,6 +2,7 @@
 const Offer = require('../models/offer');
 const path = require('path');
 const multer = require('multer');
+const { uploadFile2 } = require('../middleware/aws');
 
 
 // Set up storage for uploaded images
@@ -20,7 +21,7 @@ const upload = multer({ storage });
 exports.createOffer = async (req, res) => {
     try {
         const { couponCode, discount, startDate, endDate, offerTitle } = req.body;
-        const promotionalImage = req.file.path; // Get the path of the uploaded image
+        const promotionalImage = req.file? await uploadFile2(req.file,"offer"):""; // Get the path of the uploaded image
 
         const newOffer = new Offer({ couponCode, discount, startDate, endDate, promotionalImage, offerTitle });
         await newOffer.save();
@@ -123,7 +124,7 @@ exports.editOffer = async (req, res) => {
 
     // Handling the image separately (if provided)
     if (req.file && req.file.path) {
-        updateFields.promotionalImage = req.file.path;
+        updateFields.promotionalImage = await uploadFile2(req.file,"offer");
     }
     // console.log('Update fields:', updateFields);
 

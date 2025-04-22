@@ -41,32 +41,33 @@ app.use(
   })
 );
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = "uploads/booking-chat/";
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, "chat-" + uniqueSuffix + path.extname(file.originalname));
-  },
-});
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     const uploadPath = "uploads/booking-chat/";
+//     if (!fs.existsSync(uploadPath)) {
+//       fs.mkdirSync(uploadPath, { recursive: true });
+//     }
+//     cb(null, uploadPath);
+//   },
+//   filename: function (req, file, cb) {
+//     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+//     cb(null, "chat-" + uniqueSuffix + path.extname(file.originalname));
+//   },
+// });
 
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Please upload an image file"));
-    }
-  },
-});
+// const upload = multer({
+//   storage: storage,
+//   limits: { fileSize: 5 * 1024 * 1024 },
+//   fileFilter: (req, file, cb) => {
+//     if (file.mimetype.startsWith("image/")) {
+//       cb(null, true);
+//     } else {
+//       cb(new Error("Please upload an image file"));
+//     }
+//   },
+// });
 
+const upload=multer()
 app.post("/upload-image", upload.single("image"), async (req, res) => {
   try {
     let chat = await Booking.findById(req.body.bookingId);
@@ -74,7 +75,11 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
       return res.status(404).json({ error: "Booking not found." });
     }
 
-    const imageUrl = `${req.file.filename}`;
+    let imageUrl = ""
+    if(req.file){
+      imageUrl=await uploadFile2(req.file,"chat");
+    }
+  
     const imageMessage = {
       event: "chat image",
       data: {
@@ -210,7 +215,10 @@ io.on("connection", (socket) => {
           return callback({ error: "Booking not found." });
         }
 
-        const imageUrl = `${data.req.file.filename}`;
+        let imageUrl = ""
+    if(req.file){
+      imageUrl=await uploadFile2(req.file,"chat");
+    }
         const imageMessage = {
           event: "chat image",
           data: {
@@ -621,38 +629,38 @@ app.use(
 );
 
 // Create uploads directories if they don't exist
-const dirs = [
-  path.join(__dirname, "uploads"),
-  path.join(__dirname, "uploads", "banners"),
-  path.join(__dirname, "uploads", "promotional-banners"),
-  path.join(__dirname, "uploads", "company-banners"),
-];
+// const dirs = [
+//   path.join(__dirname, "uploads"),
+//   path.join(__dirname, "uploads", "banners"),
+//   path.join(__dirname, "uploads", "promotional-banners"),
+//   path.join(__dirname, "uploads", "company-banners"),
+// ];
 
-dirs.forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
+// dirs.forEach((dir) => {
+//   if (!fs.existsSync(dir)) {
+//     fs.mkdirSync(dir, { recursive: true });
+//   }
+// });
 
 // Serve static files with proper headers
-const staticDirs = [
-  { url: "/uploads", dir: "uploads" },
-  { url: "/uploads/banners", dir: "uploads/banners" },
-  { url: "/uploads/promotional-banners", dir: "uploads/promotional-banners" },
-  { url: "/uploads/company-banners", dir: "uploads/company-banners" },
-];
+// const staticDirs = [
+//   { url: "/uploads", dir: "uploads" },
+//   { url: "/uploads/banners", dir: "uploads/banners" },
+//   { url: "/uploads/promotional-banners", dir: "uploads/promotional-banners" },
+//   { url: "/uploads/company-banners", dir: "uploads/company-banners" },
+// ];
 
-staticDirs.forEach(({ url, dir }) => {
-  app.use(
-    url,
-    (req, res, next) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-      next();
-    },
-    express.static(path.join(__dirname, dir))
-  );
-});
+// staticDirs.forEach(({ url, dir }) => {
+//   app.use(
+//     url,
+//     (req, res, next) => {
+//       res.setHeader("Access-Control-Allow-Origin", "*");
+//       res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+//       next();
+//     },
+//     express.static(path.join(__dirname, dir))
+//   );
+// });
 
 // Import routes
 const userRoutes = require("./routes/userRoutes");
@@ -672,6 +680,7 @@ const notificationRoute = require('./routes/notificationRoute');
 const partnerNotification=require('./routes/partnerNotification');
 const firbasecall=require('./routes/notificationRoutes')
 const admin = require('firebase-admin');
+const { uploadFile2 } = require("./middleware/aws");
 
 // Initialize Firebase Admin
 // const serviceAccount = require('./firebase-admin.json');   

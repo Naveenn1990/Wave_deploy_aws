@@ -33,7 +33,6 @@ const storage = multer.diskStorage({
 
 // Create multer upload middleware
 const upload = multer({
-    storage: storage,
     fileFilter: (req, file, cb) => {
         // Accept images only
         if (!file.originalname.match(/\.(jpg|jpeg|png|gif|mp4)$/)) {
