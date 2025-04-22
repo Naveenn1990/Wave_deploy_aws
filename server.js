@@ -34,11 +34,7 @@ app.use(morgan("dev"));
 // app.use(bodyParser.json());
 // app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
+  cors()
 );
 
 // const storage = multer.diskStorage({
@@ -622,11 +618,11 @@ app.use(
 
 
 // Configure helmet with necessary adjustments
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-  })
-);
+// app.use(
+//   helmet({
+//     crossOriginResourcePolicy: { policy: "cross-origin" },
+//   })
+// );
 
 // Create uploads directories if they don't exist
 // const dirs = [
@@ -708,12 +704,16 @@ app.use('/api/firebase',firbasecall);
 app.use('/api/user/notifications', notificationRoute);
 app.use("/api/notification", partnerNotification);
 // Root route for WebSocket server
-app.get("/", (req, res) => {
-  res.send("WebSocket Server is Running");
-});
 
 app.get("/admin/bookings", adminBookingController.getAllBookings);
 
+app.use(express.static(path.join(__dirname, 'build'))); // Change 'build' to your frontend folder if needed
+
+// Redirect all requests to the index.html file
+
+app.get("*", (req, res) => {
+  return  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
 // 404 handler
 app.use((req, res, next) => {
   console.log(`404 - Route not found: ${req.method} ${req.originalUrl}`);
