@@ -51,9 +51,6 @@ exports.register = async (req, res) => {
         user.fcmToken = req.body.fcmToken;
       }
 
-      if (fcmToken) {
-        user.fcmToken = fcmToken;
-      }
 
       await user.save();
     } else {
