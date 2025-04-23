@@ -63,20 +63,20 @@ notificationSchema.post('save', async function (doc) {
         timestamp: new Date().toISOString(),
       },
       token: partner.fcmtoken,
-      android: {
-        priority: 'high',
-        ttl: 60 * 60 * 24, // 24 hours
+      "android": {
+        "priority": "high",
+        "ttl": 86400
       },
-      apns: {
-        payload: {
-          aps: {
-            contentAvailable: true,
-          },
+      "apns": {
+        "payload": {
+          "aps": {
+            "contentAvailable": true
+          }
         },
-        headers: {
-          'apns-priority': '5',
-        },
-      },
+        "headers": {
+          "apns-priority": "5"
+        }
+      }
     };
 
     // Validate payload size (4KB = 4096 bytes)

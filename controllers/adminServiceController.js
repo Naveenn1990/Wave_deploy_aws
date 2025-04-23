@@ -412,17 +412,8 @@ exports.getAllCategories = async (req, res) => {
         // Transform to ensure clean data
         const transformedCategories = categories.map(category => {
             let icon = category.icon;
-            
-            // Handle all possible URL formats
-            if (icon.includes('http://localhost:9000/uploads/')) {
-                icon = icon.split('/uploads/')[1];
-            } else if (icon.includes('http://localhost:9000/')) {
-                icon = icon.split('http://localhost:9000/')[1];
-            } else if (icon.includes('/')) {
-                icon = icon.split('/').pop();
-            }
-            
-            return {
+         
+                    return {
                 _id: category._id,
                 name: category.name,
                 subtitle: category.subtitle,
