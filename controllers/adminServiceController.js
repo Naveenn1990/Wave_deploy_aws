@@ -8,7 +8,7 @@ const path = require('path');
 const SubCategory = require("../models/SubCategory");
 const Product = require("../models/product");
 const Partner = require("../models/PartnerModel");
-const { uploadFile2 } = require('../middleware/aws');
+const { uploadFile2, multifileUpload } = require('../middleware/aws');
 // Get all services
 exports.getAllServices = async (req, res) => {
   try {
@@ -546,12 +546,12 @@ exports.createSubService = async (req, res) => {
         message: "At least 4 images are required" 
       });
     }
-
+ 
     // Extract file paths
     const imageUploadPromises = req.files.map(async (file) => {
       return await uploadFile2(file, "subservice");
   });
-  
+ 
   // Wait for all uploads to complete
   const imagePaths = await Promise.all(imageUploadPromises);
   
@@ -590,9 +590,59 @@ exports.createSubService = async (req, res) => {
   }
 };
 
+exports.multiimages = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
 
+    // ✅ No need to wrap file inside [file], directly send files array
+    const imagePaths = await multifileUpload(req.files, "subservice");
 
+    console.log("imagePaths:", imagePaths);
 
+    return res.status(201).json({ 
+      message: "Images uploaded successfully",
+      urls: imagePaths 
+    });
+  } catch (err) {
+    console.error("Error uploading Images: ", err);
+    res.status(500).json({ 
+      message: "Failed to upload images", 
+      error: err.message 
+    });
+  }
+};
+
+// Create Bulk Sub-Services
+exports.bulkCreateSubServices = async (req, res) => {
+  try {
+    const subServices = req.body;
+
+    if (!Array.isArray(subServices) || subServices.length === 0) {
+      return res.status(400).json({ success: false, message: "No sub-services data provided" });
+    }
+
+    // Optional: Validate each sub-service entry (name, price etc.)
+
+    const savedSubServices = await SubService.insertMany(subServices);
+
+    res.status(201).json({
+      success: true,
+      message: `${savedSubServices.length} Sub-Services created successfully`,
+      data: savedSubServices,
+    });
+
+  } catch (error) {
+    console.error("Error in Bulk Upload:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error bulk creating sub-services",
+      error: error.message,
+    });
+  }
+};
+ 
 // Update service
 exports.updateService = async (req, res) => {
   try {
