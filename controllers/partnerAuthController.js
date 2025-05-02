@@ -302,6 +302,33 @@ exports.completeProfile = async (req, res) => {
   }
 };
 
+exports.updateLocation = async (req, res) => {
+  try {
+    let partner = await Partner.findById(req.partner._id);
+    if (!partner) {
+      return res.status(404).json({
+        success: false,
+        message: "Partner not found",
+      });
+    }
+
+    partner.latitude = req.body.latitude;
+    partner.longitude = req.body.longitude;
+    await partner.save();
+
+    res.json({
+      success: true,
+      message: "Location updated successfully",
+    });
+  }catch(error){
+    console.error("Update Location Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating location",
+    });
+  }
+}
+
 //select service and category
 exports.selectCategoryAndServices = async (req, res) => {
   try {

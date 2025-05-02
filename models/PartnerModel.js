@@ -137,6 +137,12 @@ const partnerSchema = new mongoose.Schema(
     fcmtoken: {
       type: String,
     },
+    latitude:{
+      type: Number
+    },
+    longitude:{
+      type: Number
+    },
     // Add Reviews Field
     reviews: [
       {

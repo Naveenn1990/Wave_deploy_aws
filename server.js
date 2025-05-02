@@ -31,39 +31,14 @@ const io = socketIo(server, {
 
 // Middleware
 app.use(morgan("dev"));
-// app.use(bodyParser.json());
-// app.use(bodyParser.urlencoded({ extended: true }));
+
 app.use(
   cors()
 );
 
-// const storage = multer.diskStorage({
-//   destination: function (req, file, cb) {
-//     const uploadPath = "uploads/booking-chat/";
-//     if (!fs.existsSync(uploadPath)) {
-//       fs.mkdirSync(uploadPath, { recursive: true });
-//     }
-//     cb(null, uploadPath);
-//   },
-//   filename: function (req, file, cb) {
-//     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-//     cb(null, "chat-" + uniqueSuffix + path.extname(file.originalname));
-//   },
-// });
 
-// const upload = multer({
-//   storage: storage,
-//   limits: { fileSize: 5 * 1024 * 1024 },
-//   fileFilter: (req, file, cb) => {
-//     if (file.mimetype.startsWith("image/")) {
-//       cb(null, true);
-//     } else {
-//       cb(new Error("Please upload an image file"));
-//     }
-//   },
-// });
 
-const upload=multer()
+const upload = multer()
 app.post("/upload-image", upload.single("image"), async (req, res) => {
   try {
     let chat = await Booking.findById(req.body.bookingId);
@@ -72,10 +47,10 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
     }
 
     let imageUrl = ""
-    if(req.file){
-      imageUrl=await uploadFile2(req.file,"chat");
+    if (req.file) {
+      imageUrl = await uploadFile2(req.file, "chat");
     }
-  
+
     const imageMessage = {
       event: "chat image",
       data: {
@@ -102,18 +77,18 @@ const userSockets = {};
 
 const adminSockets = {};
 
-const locationSockets = {};
-
 const User = require('./models/User');
 const Partner = require("./models/PartnerModel");
 // Notification.injectIO(io);
 const calls = new Map();
 const rides = new Map(); // Format: { rideId: { driverId, userId, status } }
 
+
+
 const initiateCall = async (req, res) => {
   try {
     // console.log("req.body", req.body)
-    const { callerId, receiverId, callId, isUser, offer,user } = req.body;
+    const { callerId, receiverId, callId, isUser, offer, user } = req.body;
 
     // Validate caller and receiver
     const partner = isUser
@@ -126,33 +101,33 @@ const initiateCall = async (req, res) => {
     // Store call state
     calls.set(callId, { callerId, receiverId, status: 'pending', offer });
 
-    console.log("callerId, receiverId, callId, isUser, offer,user",callerId, receiverId, callId, isUser, offer,user)
+    console.log("callerId, receiverId, callId, isUser, offer,user", callerId, receiverId, callId, isUser, offer, user)
     // Emit call initiation event to receiver's room
     const message = {
-         notification: {
-           title: 'Incoming Call',
-           body: `Call from ${user.name}`,
-        
-         },
-         android: {
-          notification: {
-            channel_id: 'call-channel',
-            sound:"ringtone",
-          },
+      notification: {
+        title: 'Incoming Call',
+        body: `Call from ${user.name}`,
+
+      },
+      android: {
+        notification: {
+          channel_id: 'call-channel',
+          sound: "ringtone",
         },
-         data: {
-           callId,
-           callerId,
-           receiverId,
-           type: 'call',
-           user:JSON.stringify(user),
-           offer: JSON.stringify(offer),
-         },
-         token: isUser ? partner.fcmToken : partner.fcmtoken,
-       };
-   
-       await admin.messaging().send(message);
-       console.log('Notification sent to receiver:', receiverId);
+      },
+      data: {
+        callId,
+        callerId,
+        receiverId,
+        type: 'call',
+        user: JSON.stringify(user),
+        offer: JSON.stringify(offer),
+      },
+      token: isUser ? partner.fcmToken : partner.fcmtoken,
+    };
+
+    await admin.messaging().send(message);
+    console.log('Notification sent to receiver:', receiverId);
     res.json({ success: true });
   } catch (error) {
     console.error('Error initiating call:', error);
@@ -212,9 +187,9 @@ io.on("connection", (socket) => {
         }
 
         let imageUrl = ""
-    if(req.file){
-      imageUrl=await uploadFile2(req.file,"chat");
-    }
+        if (req.file) {
+          imageUrl = await uploadFile2(req.file, "chat");
+        }
         const imageMessage = {
           event: "chat image",
           data: {
@@ -261,7 +236,7 @@ io.on("connection", (socket) => {
       socket.emit("error", "Error retrieving chat messages.");
     }
   });
-  
+
   socket.on('register', ({ userId, isUser }) => {
     try {
       if (!userId) {
@@ -409,12 +384,12 @@ io.on("connection", (socket) => {
       socket.emit('error', { message: error.message });
     }
   });
-  socket.on('start_ride', ({ rideId, driverId, userId }) => {
+  socket.on('start_ride', async ({ rideId, driverId, userId }) => {
     try {
       if (!rideId || !driverId || !userId) {
         throw new Error('Invalid ride details');
       }
-
+      socket.join(driverId);
       // Store ride details
       rides.set(rideId, {
         driverId,
@@ -429,6 +404,7 @@ io.on("connection", (socket) => {
         message: 'Ride has started. Driver location tracking enabled.',
       });
 
+      await Booking.findByIdAndUpdate(rideId, { rideStart: true });
       console.log(`Ride ${rideId} started. Driver: ${driverId}, User: ${userId}`);
     } catch (error) {
       console.error(`Error starting ride ${rideId}:`, error.message);
@@ -437,7 +413,7 @@ io.on("connection", (socket) => {
   });
 
   // New: Driver sends location updates
-  socket.on('driver_location', ({ rideId, latitude, longitude }) => {
+  socket.on('driver_location', async ({ rideId, latitude, longitude }) => {
     try {
       const ride = rides.get(rideId);
       if (!ride || ride.status !== 'active') {
@@ -446,8 +422,10 @@ io.on("connection", (socket) => {
       }
 
       // Verify driver is the one sending the update
-      if (socket.userId !== ride.driverId) {
-        throw new Error('Unauthorized location update');
+      if (ride.userId === ride.driverId) {
+        throw new Error('Unauthorized location update ' + ride.userId +
+          " " + ride.driverId
+        );
       }
 
       // Send location to user
@@ -458,16 +436,121 @@ io.on("connection", (socket) => {
         longitude,
         timestamp: Date.now(),
       });
-
+      await Partner.findByIdAndUpdate(ride.driverId, { latitude, longitude });
       console.log(`Driver location sent for ride ${rideId}: (${latitude}, ${longitude}) to user ${ride.userId}`);
     } catch (error) {
-      console.error(`Error sending driver location for ride ${rideId}:`, error.message);
+      console.error(`Error sending driver location for ride ${rideId}:`, error.message, latitude,
+        longitude);
       socket.emit('error', { message: error.message });
     }
   });
+  socket.on('ride_check', async ({ rideId }) => {
+    try {
+      const ride = rides.get(rideId);
+      if (!ride) {
+        console.warn(`Ride check ignored for rideId ${rideId}: Ride not found`);
+        return;
+      }
+      console.log(`Ride ${rideId} is active`);
+      io.to(ride.driverId).emit('ride_check', {
+        rideId,
+        message: 'Ride is active',
+      });
+      let driver = await Partner.findById(ride.driverId);
+      io.to(ride.userId).emit(' ', {
+        rideId,
+        message: 'Ride is active',
+        driverLocation: {
+          latitude: driver.latitude,
+          longitude: driver.longitude,
+        },
+      });
+      console.log(`Ride ${rideId} is active`);
+    } catch (error) {
+      console.error(`Error checking ride ${rideId}:`, error.message);
+      socket.emit('error', { message: error.message });
+    }
+  })
 
+  socket.on('route_created', (data) => {
+    console.log('Route created:', data);
+    try {
+      const { rideId, userId, initialEta, destination } = data;
+      const ride = rides.get(rideId);
+      // Store route info in database
+      // ...
+
+      // Forward to user
+
+      if (ride && ride.userId) {
+        io.to(ride.userId).emit('route_info', {
+          rideId,
+          eta: initialEta,
+          destination,
+          status: 'active'
+        });
+      }
+    } catch (error) {
+      console.error(`Error creating route ${rideId}:`, error.message);
+      socket.emit('error', { message: error.message });
+    }
+
+  });
+
+  socket.on('eta_update', (data) => {
+    const { rideId, userId, etaInfo } = data;
+    const ride = rides.get(rideId);
+    // Update ETA in database
+    // ...
+
+    // Forward ETA to user
+
+    if (userId) {
+      io.to(userId).emit('eta_update', {
+        rideId,
+        eta: etaInfo,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  socket.on('route_changed', (data) => {
+    const { rideId, userId } = data;
+    const ride = rides.get(rideId);
+    // Record route change in database
+    // ...
+
+    // Notify user about route change
+    const userSocketId = ride[userId];
+    if (userSocketId) {
+      io.to(userSocketId).emit('route_changed', {
+        rideId,
+        message: 'Driver has taken a different route',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  socket.on('driver_arrived', (data) => {
+    const { rideId, userId, isFinalDestination } = data;
+    // Update ride status in database
+    // ...
+    // Notify user
+    const ride = rides.get(rideId);
+    const userSocketId = ride[userId];
+    if (userSocketId) {
+      io.to(userSocketId).emit('driver_arrived', {
+        rideId,
+        isFinalDestination,
+        message: isFinalDestination ?
+          'You have arrived at your destination' :
+          'Approaching waypoint',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
   // New: End ride
-  socket.on('end_ride', ({ rideId }) => {
+  socket.on('end_ride', async ({ rideId }) => {
     try {
       const ride = rides.get(rideId);
       if (!ride) {
@@ -484,7 +567,7 @@ io.on("connection", (socket) => {
         rideId,
         message: 'Ride has ended.',
       });
-
+      await Booking.findByIdAndUpdate(rideId, { rideStart: false });
       // Optionally, remove ride from map after some time
       setTimeout(() => {
         rides.delete(rideId);
@@ -496,6 +579,60 @@ io.on("connection", (socket) => {
       console.error(`Error ending ride ${rideId}:`, error.message);
       socket.emit('error', { message: error.message });
     }
+  });
+
+  socket.on('route_polyline', (data) => {
+    const { rideId, userId, polyline, polylineCoordinates } = data;
+
+    // console.log(`Received route polyline data for ride ${rideId} from user ${userId} polyline: ${polyline} polylineCoordinates: ${polylineCoordinates}`);
+
+    // Store polyline in database (optional)
+    // This can be useful for ride history or analytics
+    // storeRoutePolyline(rideId, polyline || polylineCoordinates)
+    //   .catch(err => console.error('Error storing polyline:', err));
+    try {
+      const ride = rides.get(rideId);
+      const userSocketId = ride.userId;
+      if (userSocketId) {
+        io.to(userSocketId).emit('route_polyline_update', {
+          rideId,
+          // If we received an encoded polyline, send it as is
+          polyline: polyline,
+          // If we received coordinates array, send it as is
+          polylineCoordinates: polylineCoordinates,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error(`Error storing polyline for ride ${rideId}:`, error.message);
+      socket.emit('error', { message: error.message });
+    }
+    // Forward to user
+
+  });
+
+
+  socket.on("join", (userId) => {
+    console.log(`Received join event from user ${userId}`);
+    socket.join(userId);
+
+    if (!userSockets[userId]) {
+      userSockets[userId] = [];
+    }
+    userSockets[userId].push(socket.id);
+    console.log(`User ${userId} joined with socket ${socket.id}`);
+  });
+
+  socket.on("join admin", (adminId) => {
+    console.log(`Received join event from admin ${adminId}`);
+    socket.join(adminId); // Join the admin-specific room
+
+    if (!adminSockets[adminId]) {
+      adminSockets[adminId] = [];
+    }
+    adminSockets[adminId].push(socket.id);
+
+    console.log(`Admin ${adminId} joined with socket ${socket.id}`);
   });
 
   socket.on('disconnect', () => {
@@ -523,71 +660,23 @@ io.on("connection", (socket) => {
           console.log(`Ride ${rideId} paused due to driver ${socket.userId} disconnection`);
         }
       });
-    }
-  });
-
-  // socket.on("updateLocation", ({ userId, lat, lng }) => {
-  //   if (!userId || lat === undefined || lng === undefined) return;
-  //   console.log(`User ${userId} updateLocation with socket ${socket.id}`);
-  //   if (locationSockets[userId]) {
-  //     locationSockets[userId] = locationSockets[userId].map((socketData) =>
-  //       socketData.id === socket.id ? { id: socket.id, lat, lng } : socketData
-  //     );
-
-  //     // Broadcast updated driver location
-  //     io.to(userId).emit("locationUpdate", { lat, lng });
-  //   }
-  // });
-
-
-
-  socket.on("join", (userId) => {
-    console.log(`Received join event from user ${userId}`);
-    socket.join(userId);  
-
-    if (!userSockets[userId]) {
-      userSockets[userId] = []; 
-    }
-    userSockets[userId].push(socket.id); 
-    console.log(`User ${userId} joined with socket ${socket.id}`);
-  });
-
-  socket.on("join admin", (adminId) => {
-    console.log(`Received join event from admin ${adminId}`);
-    socket.join(adminId); // Join the admin-specific room
-
-    if (!adminSockets[adminId]) {
-      adminSockets[adminId] = [];
-    }
-    adminSockets[adminId].push(socket.id);
-
-    console.log(`Admin ${adminId} joined with socket ${socket.id}`);
-  });
-
-  // socket.on("disconnect", () => {
-  //   console.log("User disconnected:", socket.id);
-  // });
-
-  socket.on("disconnect", () => {
-    console.log("User/Admin disconnected:", socket.id);
-
-    // Cleanup userSockets
-    for (const userId in userSockets) {
-      userSockets[userId] = userSockets[userId].filter(
-        (id) => id !== socket.id
-      );
-      if (userSockets[userId].length === 0) {
-        delete userSockets[userId];
+      for (const userId in userSockets) {
+        userSockets[userId] = userSockets[userId].filter(
+          (id) => id !== socket.id
+        );
+        if (userSockets[userId].length === 0) {
+          delete userSockets[userId];
+        }
       }
-    }
 
-    // Cleanup adminSockets
-    for (const adminId in adminSockets) {
-      adminSockets[adminId] = adminSockets[adminId].filter(
-        (id) => id !== socket.id
-      );
-      if (adminSockets[adminId].length === 0) {
-        delete adminSockets[adminId];
+      // Cleanup adminSockets
+      for (const adminId in adminSockets) {
+        adminSockets[adminId] = adminSockets[adminId].filter(
+          (id) => id !== socket.id
+        );
+        if (adminSockets[adminId].length === 0) {
+          delete adminSockets[adminId];
+        }
       }
     }
   });
@@ -673,8 +762,8 @@ const userBannerRoutes = require("./routes/userBannerRoutes");
 const adminBookingRoutes = require("./routes/adminBookingRoutes");
 const adminBookingController = require("./controllers/adminBookingController");
 const notificationRoute = require('./routes/notificationRoute');
-const partnerNotification=require('./routes/partnerNotification');
-const firbasecall=require('./routes/notificationRoutes')
+const partnerNotification = require('./routes/partnerNotification');
+const firbasecall = require('./routes/notificationRoutes')
 const admin = require('firebase-admin');
 const { uploadFile2 } = require("./middleware/aws");
 
@@ -688,7 +777,7 @@ const { uploadFile2 } = require("./middleware/aws");
 
 
 // Routes
-app.use("/api/user", userRoutes); 
+app.use("/api/user", userRoutes);
 app.use("/api/user", userServiceRoutes);
 app.use("/api/user", userBookingRoutes);
 app.use("/api/user/account", userAccountRoutes);
@@ -699,8 +788,8 @@ app.use("/api/banners", bannerRoutes);
 app.use("/api/public", serviceHierarchyRoutes);
 app.use("/api/admin/banners", adminBannerRoutes);
 app.use("/api/user/banners", userBannerRoutes);
-app.use("/api/admin/bookings", adminBookingRoutes); 
-app.use('/api/firebase',firbasecall);
+app.use("/api/admin/bookings", adminBookingRoutes);
+app.use('/api/firebase', firbasecall);
 app.use('/api/user/notifications', notificationRoute);
 app.use("/api/notification", partnerNotification);
 // Root route for WebSocket server
@@ -712,7 +801,7 @@ app.use(express.static(path.join(__dirname, 'build'))); // Change 'build' to you
 // Redirect all requests to the index.html file
 
 app.get("*", (req, res) => {
-  return  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  return res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 // 404 handler
 app.use((req, res, next) => {

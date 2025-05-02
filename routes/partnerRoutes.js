@@ -45,17 +45,10 @@ const {
   completeKYC,
   getAllPartnerProfile,
   updateKYCStatus,
+  updateLocation
 } = require("../controllers/partnerAuthController");
 
-const { completeBooking } = require("../controllers/partnerServiceController");
 
-const {
-  createProduct,
-  getPartnerProducts,
-  getProduct,
-  updateProduct,
-  deleteProduct,
-} = require("../controllers/partnerProductController");
 
 const {
   getAllCategories,
@@ -323,6 +316,8 @@ router.post("/reviews/user", auth, partnerServiceController.reviewUser);
 
 router.get("/getWalletbypartner", auth, partnerAuthController.getWallet);
 router.put("/updateTokenFmc",auth,partnerAuthController.updateTokenFmc);
+router.put("/updateLocation",auth,partnerAuthController.updateLocation);
+
 router.post(
   "/addtransactionwallet",
   auth,
