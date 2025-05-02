@@ -110,13 +110,7 @@ router.delete(
 );
 
 // Service Management
-router.post(
-  "/service",
-  adminAuth,
-  upload.single("icon"),
-
-  adminServiceController.createService
-);
+router.post("/service",adminAuth, upload.single("icon"), adminServiceController.createService);
 router.get("/services", adminAuth, adminServiceController.getAllServices);
 router.get(
   "/category/:categoryId/services",
@@ -143,6 +137,13 @@ router.post(
   adminAuth,
   upload.array("images", 4),
   adminServiceController.createSubService
+);
+router.post("/sub-service/mutiimages",adminAuth, upload.any(), adminServiceController.multiimages);
+// Bulk Create Sub-Services
+router.post(
+  '/sub-service/bulk', 
+  adminAuth,  
+  adminServiceController.bulkCreateSubServices
 );
 router.post(
   "/service/:serviceId/sub-service",

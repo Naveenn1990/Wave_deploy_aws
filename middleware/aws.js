@@ -113,7 +113,6 @@ const multifileUpload = async (files, bucketname) => {
   return Promise.all(
     files.map((file) => {
       const params = {
-     
         Bucket: process.env.AWS_S3_BUCKET_NAME,
         Key: `${bucketname}/${Date.now()}_${file.originalname}`,
         Body: file.buffer,
