@@ -9,6 +9,7 @@ const SubCategory = require("../models/SubCategory");
 const Service = require("../models/Service");
 const mongoose = require("mongoose");
 const NotificationModel = require("../models/Notification");
+const { uploadFile2 } = require("../middleware/aws");
 // Send OTP for partner login/registration
 exports.sendLoginOTP = async (req, res) => {
   try {
@@ -555,12 +556,18 @@ exports.completeKYC = async (req, res) => {
     // console.log("Uploaded Files:", req.files);
 
     // Extract filenames safely
-    const panCard = req.files?.panCard?.[0]?.filename || null;
-    const aadhaar = req.files?.aadhaar?.[0]?.filename || null;
-    const chequeImage = req.files?.chequeImage?.[0]?.filename || null;
-    const drivingLicence = req.files?.drivingLicence?.[0]?.filename || null;
-    const bill = req.files?.bill?.[0]?.filename || null;
-
+    // const panCard = req.files?.panCard?.[0]?.filename || null;
+    // const aadhaar = req.files?.aadhaar?.[0]?.filename || null;
+    // const chequeImage = req.files?.chequeImage?.[0]?.filename || null;
+    // const drivingLicence = req.files?.drivingLicence?.[0]?.filename || null;
+    // const bill = req.files?.bill?.[0]?.filename || null;
+    let panCard=  await uploadFile2(req.files.panCard[0],"partnerdoc");
+    let aadhaar= await uploadFile2(req.files.aadhaar[0],"partnerdoc");
+    let chequeImage=await uploadFile2(req.files.chequeImage[0],"partnerdoc");
+ 
+    let drivingLicence= await uploadFile2(req.files.drivingLicence[0],"partnerdoc");
+    let bill=await uploadFile2(req.files.bill[0],"partnerdoc");
+ 
     // Validate required fields
     if (!accountNumber || !ifscCode || !accountHolderName || !bankName) {
       return res.status(400).json({
