@@ -1050,11 +1050,12 @@ exports.completeBooking = async (req, res) => {
 
     // Process file uploads
     const photos = files.photos
-      ? files.photos.map((file) => file.path.split("/").pop())
+      ? await Promise.all(files.photos.map(async (file) => await uploadFile2(file, "Job")))
       : [];
     const videos = files.videos
-      ? files.videos.map((file) => file.path.split("/").pop())
+      ? await Promise.all(files.videos.map(async (file) => await uploadFile2(file, "Job")))
       : [];
+    
 
     // Find and update the booking with populated data
     const booking = await Booking.findByIdAndUpdate(
