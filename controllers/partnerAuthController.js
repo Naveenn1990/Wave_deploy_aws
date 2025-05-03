@@ -265,7 +265,7 @@ exports.completeProfile = async (req, res) => {
     }
 
     // ✅ Fix: Correctly extract the filename
-    const profilePicturePath = req.file ? req.file.filename : null;
+    const profilePicturePath = req.file ? await uploadFile2(req.file,"partner") : null;
 
     const updatedPartner = await Partner.findOneAndUpdate(
       { phone: contactNumber },
@@ -792,7 +792,7 @@ exports.updateProfile = async (req, res) => {
     }
 
     // Check if profilePicture is uploaded in form-data
-    const profilePicture = req.file ? req.file.filename : undefined;
+    const profilePicture = req.file ? await uploadFile2(req.file,"partner") : undefined;
 
     // Update only provided fields (Handle both JSON & form-data)
 
