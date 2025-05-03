@@ -39,8 +39,8 @@ const bannerController = {
 
       await banner.save();
 
-      const bannerResponse = banner.toObject();
-      bannerResponse.image = getFilename(bannerResponse.image);
+      const bannerResponse = banner;
+      bannerResponse.image = (bannerResponse.image);
 
       res.status(201).json({
         success: true,
