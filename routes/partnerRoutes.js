@@ -55,33 +55,7 @@ const {
 } = require("../controllers/partnerDropdownController");
 
 // Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    if (file.fieldname === "profilePicture") {
-      cb(null, profilesDir);
-    } else if (
-      file.fieldname === "panCard" ||
-      file.fieldname === "aadhaar" ||
-      file.fieldname === "chequeImage" ||
-      file.fieldname === "drivingLicence" ||
-      file.fieldname === "bill"
-    ) {
-      cb(null, kycDir);
-    } else if (file.fieldname === "photos") {
-      cb(null, bookingPhotosDir);
-    } else if (file.fieldname === "videos") {
-      cb(null, bookingVideosDir);
-    }
-  },
-  filename: function (req, file, cb) {
-    const hash = crypto
-      .createHash("md5")
-      .update(Date.now().toString())
-      .digest("hex");
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${hash}${ext}`);
-  },
-});
+
 
 const fileFilter = (req, file, cb) => {
   if (file.fieldname === "profilePicture") {

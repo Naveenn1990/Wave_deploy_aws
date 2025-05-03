@@ -13,6 +13,7 @@ const NotificationModel = require("../models/Notification");
 const PartnerWallet = require("../models/PartnerWallet");
 // Get all available services for partners
 const admin = require('firebase-admin');
+const { uploadFile2 } = require("../middleware/aws");
 
 const sendBookingAcceptanceNotifications = async (booking, user, subService, partner, admins) => {
   try {
