@@ -384,6 +384,7 @@ io.on("connection", (socket) => {
       socket.emit('error', { message: error.message });
     }
   });
+  
   socket.on('start_ride', async ({ rideId, driverId, userId }) => {
     try {
       if (!rideId || !driverId || !userId) {

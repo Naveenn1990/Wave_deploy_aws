@@ -143,6 +143,17 @@ const partnerSchema = new mongoose.Schema(
     longitude:{
       type: Number
     },
+    currentLocation: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point',
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      default: [0, 0],
+    },
+  },
     // Add Reviews Field
     reviews: [
       {

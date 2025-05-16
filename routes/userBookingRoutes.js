@@ -9,6 +9,9 @@ const {
   getAllBookings
 } = require('../controllers/bookingController');
 
+const {driverBooking,getByUserId,}=require('../controllers/DriverBooking')
+
+
 /**
  * @swagger
  * tags:
@@ -174,5 +177,9 @@ router.get('/bookings/:bookingId', isAuthenticatedUser, getBookingById);
  *         description: Server error
  */
 router.get('/bookings/status/:status', isAuthenticatedUser, getBookingsByStatus);
+
+router.post("/driverbooking",isAuthenticatedUser,driverBooking);
+router.get("/getbookingbyuser",isAuthenticatedUser,getByUserId);
+
 
 module.exports = router;

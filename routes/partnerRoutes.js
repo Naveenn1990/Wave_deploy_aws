@@ -48,7 +48,7 @@ const {
   updateLocation
 } = require("../controllers/partnerAuthController");
 
-
+const {acceptBookingDriver,rejectBookingDriver,getByDriverId}=require('../controllers/DriverBooking')
 
 const {
   getAllCategories,
@@ -302,5 +302,9 @@ router.get(
   auth,
   partnerAuthController.getAllwalletTransaction
 );
+
+router.put("/acceptdriver",auth,acceptBookingDriver);
+router.put("rejectdriver",auth,rejectBookingDriver);
+router.get("/getByDriver",auth,getByDriverId)
 
 module.exports = router;
