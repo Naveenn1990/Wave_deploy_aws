@@ -20,12 +20,7 @@ const DriverFare = new mongoose.Schema({
         default: 0,
         min: 0,
     },
-    nightBaseFare: {
-        type: Number,
-        default: 0,
-        min: 0,
-    },
-    
+
     surgeMultiplier: {
         type: Number,
         default: 1,
