@@ -38,20 +38,24 @@ const partnerSchema = new mongoose.Schema(
       bankName: String,
       chequeImage: String,
     },
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "ServiceCategory",
-      required: function () {
-        return this.profileCompleted;
+    category: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ServiceCategory",
+        required: function () {
+          return this.profileCompleted;
+        },
       },
-    },
-    subcategory: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "SubCategory",
-      required: function () {
-        return this.profileCompleted;
+    ],
+    subcategory:[
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "SubCategory",
+        required: function () {
+          return this.profileCompleted;
+        },
       },
-    },
+    ] ,
     service: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -152,6 +156,14 @@ const partnerSchema = new mongoose.Schema(
     coordinates: {
       type: [Number], // [longitude, latitude]
       default: [0, 0],
+    },
+    drive: {
+      type: Boolean,
+      default : false,
+    },
+    tempoTraveller: {
+      type: Boolean,
+      default : false,
     },
   },
     // Add Reviews Field

@@ -14,6 +14,7 @@ const PartnerWallet = require("../models/PartnerWallet");
 // Get all available services for partners
 const admin = require('firebase-admin');
 const { uploadFile2 } = require("../middleware/aws");
+const DriverBooking = require("../models/DriverBooking");
 
 const sendBookingAcceptanceNotifications = async (booking, user, subService, partner, admins) => {
   try {
@@ -488,6 +489,13 @@ exports.getMatchingBookings = async (req, res) => {
       });
     }
 
+    let driveBookings = [] 
+
+    if (profile.drive || profile.tempoTraveller){
+      driveBookings = await DriverBooking.find({})
+
+    } 
+
     // Get partner's selected category, sub-category, and services
     const { category, subcategory, service } = profile;
 
@@ -586,6 +594,7 @@ exports.getMatchingBookings = async (req, res) => {
       subCategory: {
         name: booking.subCategory?.name || "N/A",
       },
+      driveBookings,
     }));
 
     res.json({

@@ -333,7 +333,7 @@ exports.updateLocation = async (req, res) => {
 //select service and category
 exports.selectCategoryAndServices = async (req, res) => {
   try {
-    const { partnerId, category, subcategory, service, modeOfService } =
+    const { partnerId, category, subcategory, service, modeOfService , drive , tempoTraveller } =
       req.body;
 
     if (!partnerId || !category || !subcategory || !service || !modeOfService) {
@@ -396,6 +396,8 @@ exports.selectCategoryAndServices = async (req, res) => {
         service: serviceIds,
         modeOfService,
         profileCompleted: true, // Mark profile as complete
+        drive, 
+        tempoTraveller
       },
       { new: true }
     );
@@ -780,6 +782,7 @@ exports.updateProfile = async (req, res) => {
       service,
       modeOfService,
       city,
+      
     } = req.body;
     // console.log("req.body : ", req.body);
 
