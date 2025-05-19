@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const DriverFare = new mongoose.Schema({
+    name: {
+        type: String,
+        trim: true,
+    },
     shift: {
         type: String,
         trim: true,

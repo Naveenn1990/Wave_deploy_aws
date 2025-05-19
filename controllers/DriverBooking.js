@@ -5,6 +5,8 @@ const User = require('../models/User'); // Assuming User model exists
 const calculateDistance = require('../config/calculateDistance');
 const generateBookingId = require('../config/generateBookingId');
 const Notification = require('../models/Notification'); // Assuming you have a Notification model
+// const { sendBookingConfirmation } = require('../services/emailService');
+// const { generateInvoice } = require('../services/invoiceService');
 
 const sendNotification = async ({ userId, title, body, data, fcmtoken }) => {
   try {
@@ -23,7 +25,9 @@ const sendNotification = async ({ userId, title, body, data, fcmtoken }) => {
 };
 // Create a booking (user)
 exports.driverBooking = async (req, res) => {
-  const { pickupLocation, dropoffLocation } = req.body;
+  const { pickupLocation, dropoffLocation, userId,
+          paymentMode, amount, scheduledTime, scheduledDate, 
+        } = req.body;
 
   try {
     // Validate vehicle type
@@ -101,6 +105,130 @@ exports.driverBooking = async (req, res) => {
     res.status(500).json({ msg: 'Server error' });
   }
 };
+// exports.driverBooking = async (req , res) => {
+//       try {
+//       const {
+//         userId,
+//         pickupLocation,
+//         dropoffLocation,
+//         date,
+//         time,
+//         passengers,
+//         luggage,
+//         paymentMethod,
+//         notes
+//       } = req.body;
+
+//       // Validate required fields
+//       if (!userId || !pickupLocation || !date || !time) {
+//         return res.status(400).json({
+//           success: false,
+//           message: 'Missing required fields: userId, pickupLocation, date, time'
+//         });
+//       }
+
+//       // Validate user exists
+//       const user = await User.findById(userId);
+//       if (!user) {
+//         return res.status(404).json({
+//           success: false,
+//           message: 'User not found'
+//         });
+//       }
+
+//       // Get Tempo Traveller vehicle type
+//       const vehicleType = await VehicleType.findOne({ name: 'Tempo Traveller' });
+//       if (!vehicleType) {
+//         return res.status(404).json({
+//           success: false,
+//           message: 'Tempo Traveller vehicle type not configured'
+//         });
+//       }
+
+//       // Calculate distance and estimated time (you would typically use Google Maps API here)
+//       // For this example, we'll use the values from the frontend
+//       const { distance, estimatedTime } = req.body;
+
+//       // Calculate price
+//       const baseFare = vehicleType.basePrice;
+//       const distanceCost = distance * vehicleType.pricePerKm;
+//       const timeCost = estimatedTime * (vehicleType.pricePerMinute || 0);
+      
+//       // Apply night surcharge if booking is during night hours (10PM to 6AM)
+//       const bookingDateTime = new Date(date);
+//       const [hours, minutes] = time.split(':').map(Number);
+//       bookingDateTime.setHours(hours, minutes);
+      
+//       const bookingHour = bookingDateTime.getHours();
+//       const isNightBooking = bookingHour >= 22 || bookingHour < 6;
+//       const nightSurchargeCost = isNightBooking ? baseFare * 0.2 : 0; // 20% surcharge
+      
+//       // Calculate total price
+//       const subtotal = baseFare + distanceCost + timeCost + nightSurchargeCost;
+//       const tax = subtotal * 0.05; // 5% tax
+//       const total = subtotal + tax;
+
+//       // Create new booking
+//       const newBooking = new DriverBooking({
+//         userId,
+//         vehicleType: vehicleType._id,
+//         pickupLocation: {
+//           address: pickupLocation.address,
+//           coordinates: [pickupLocation.lng, pickupLocation.lat]
+//         },
+//         dropoffLocation: dropoffLocation ? {
+//           address: dropoffLocation.address,
+//           coordinates: [dropoffLocation.lng, dropoffLocation.lat]
+//         } : null,
+//         bookingDetails: {
+//           date,
+//           time,
+//           passengers: passengers || 1,
+//           luggage: luggage || 0
+//         },
+//         distance,
+//         estimatedTime,
+//         price: {
+//           total,
+//           breakdown: {
+//             baseFare,
+//             distanceCost,
+//             timeCost,
+//             nightSurchargeCost,
+//             tax
+//           }
+//         },
+//         isNightBooking,
+//         paymentMethod,
+//         notes,
+//         status: 'pending'
+//       });
+
+//       // Save booking to database
+//       const savedBooking = await newBooking.save();
+
+//       // Generate invoice
+//       const invoice = await generateInvoice(savedBooking, user);
+
+//       // Send booking confirmation email
+//       await sendBookingConfirmation(user, savedBooking, invoice);
+
+//       res.status(201).json({
+//         success: true,
+//         message: 'Booking created successfully',
+//         booking: savedBooking,
+//         invoiceUrl: invoice.url
+//       });
+
+//     } catch (error) {
+//       console.error('Error creating booking:', error);
+//       res.status(500).json({
+//         success: false,
+//         message: 'Failed to create booking',
+//         error: error.message
+//       });
+//     }
+// }
 
 // Accept a booking (driver)
 exports.acceptBookingDriver = async (req, res) => {

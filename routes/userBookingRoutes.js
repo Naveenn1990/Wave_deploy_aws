@@ -9,7 +9,8 @@ const {
   getAllBookings
 } = require('../controllers/bookingController');
 
-const {driverBooking,getByUserId,}=require('../controllers/DriverBooking')
+const {driverBooking,getByUserId,}=require('../controllers/DriverBooking');
+const travelBooking = require('../controllers/travelBooking');
 
 
 /**
@@ -181,5 +182,18 @@ router.get('/bookings/status/:status', isAuthenticatedUser, getBookingsByStatus)
 router.post("/driverbooking",isAuthenticatedUser,driverBooking);
 router.get("/getbookingbyuser",isAuthenticatedUser,getByUserId);
 
+//Travel Bookings : 
+
+// Create booking
+router.post('/booktravel', isAuthenticatedUser, travelBooking.createBooking);
+
+// Get booking by ID
+// router.get('/:id', isAuthenticatedUser, travelBooking.getBooking);
+
+// Update booking status
+// router.patch('/:id/status', isAuthenticatedUser, travelBooking.updateBookingStatus);
+
+// Get user bookings
+router.get('/travelbookings', isAuthenticatedUser, travelBooking.getUserTravelBookings);
 
 module.exports = router;
