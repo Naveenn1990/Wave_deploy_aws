@@ -71,11 +71,11 @@ exports.sendLoginOTP = async (req, res) => {
 
 exports.updateTokenFmc = async (req, res) => {
   try {
-    let {token}=req.body;
+    let { token } = req.body;
     // console.log("Partner ID:", req.partner._id);
     let data = await Partner.findById(req.partner._id);
     if (!data) return res.status(200).json({ error: "Data not found" });
-    data.fcmtoken=token;
+    data.fcmtoken = token;
     await data.save()
     return res.status(200).json({ success: "Successfully updated" });
 
@@ -265,7 +265,7 @@ exports.completeProfile = async (req, res) => {
     }
 
     // ✅ Fix: Correctly extract the filename
-    const profilePicturePath = req.file ? await uploadFile2(req.file,"partner") : null;
+    const profilePicturePath = req.file ? await uploadFile2(req.file, "partner") : null;
 
     const updatedPartner = await Partner.findOneAndUpdate(
       { phone: contactNumber },
@@ -315,13 +315,17 @@ exports.updateLocation = async (req, res) => {
 
     partner.latitude = req.body.latitude;
     partner.longitude = req.body.longitude;
+    partner.currentLocation={
+      type:'Point',
+      coordinates:[req.body.latitude,req.body.longitude]
+    }
     await partner.save();
 
     res.json({
       success: true,
       message: "Location updated successfully",
     });
-  }catch(error){
+  } catch (error) {
     console.error("Update Location Error:", error);
     res.status(500).json({
       success: false,
@@ -333,53 +337,62 @@ exports.updateLocation = async (req, res) => {
 //select service and category
 exports.selectCategoryAndServices = async (req, res) => {
   try {
-    const { partnerId, category, subcategory, service, modeOfService , drive , tempoTraveller } =
-      req.body;
+    const { partnerId, category, subcategory, service, modeOfService, drive, tempoTraveller } = req.body;
+    // console.log("resss", req.body);
 
-    console.log(req.body);
-    
-    if (!partnerId || !category || !subcategory || !service || !modeOfService) {
+
+    const obj = {
+      modeOfService,
+      profileCompleted: true, // Mark profile as complete
+      drive,
+      tempoTraveller
+    }
+    if (!partnerId || (!category.length && !drive && !tempoTraveller)) {
       return res
         .status(400)
-        .json({ success: false, message: "Missing required fields" });
+        .json({ success: false, message: "Please select your job preference" });
     }
 
-   
-    // ✅ Validate services under the selected subcategory
-    let serviceIds = Array.isArray(service) ? service : JSON.parse(service);
-    // console.log("Service IDs to check:", serviceIds);
+    if (category.length && (!subcategory.length || !service.length)) {
+      return res.status(400).json({ success: false, message: "Please select subcategory and service" });
+    } else if (category.length && subcategory.length && service.length) {
+      let serviceIds = Array.isArray(service) ? service : JSON.parse(service);
+      // console.log("Service IDs to check:", serviceIds);
 
-    // const validServices = await Service.find({ _id: { $in: serviceIds }, subcategory });
-    const validServices = await Service.find({
-      _id: { $in: serviceIds.map((id) => new mongoose.Types.ObjectId(id)) },
-      subCategory: subcategory,
-    });
-
-    // console.log("Valid services found:", validServices);
-
-    if (validServices.length !== serviceIds.length) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid service IDs",
-        details: {
-          requested: serviceIds,
-          found: validServices.map((s) => s._id),
-        },
+      // const validServices = await Service.find({ _id: { $in: serviceIds }, subcategory });
+      const validServices = await Service.find({
+        _id: { $in: serviceIds.map((id) => new mongoose.Types.ObjectId(id)) },
+        subCategory: subcategory,
       });
+
+      // console.log("Valid services found:", validServices);
+
+      if (validServices.length !== serviceIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid service IDs",
+          details: {
+            requested: serviceIds,
+            found: validServices.map((s) => s._id),
+          },
+        });
+      }
+      obj.category = category;
+      obj.subcategory = subcategory;
+      obj.service = serviceIds;
+    } else if (!category.length && !subcategory.length && !service.length) {
+      obj.category = [];
+      obj.subcategory = [];
+      obj.service = [];
+
     }
+    // ✅ Validate services under the selected subcategory
+
 
     // ✅ Update partner profile
     const updatedPartner = await Partner.findByIdAndUpdate(
       partnerId,
-      {
-        category,
-        subcategory,
-        service: serviceIds,
-        modeOfService,
-        profileCompleted: true, // Mark profile as complete
-        drive, 
-        tempoTraveller
-      },
+      { $set: obj },
       { new: true }
     );
 
@@ -544,13 +557,13 @@ exports.completeKYC = async (req, res) => {
     // const chequeImage = req.files?.chequeImage?.[0]?.filename || null;
     // const drivingLicence = req.files?.drivingLicence?.[0]?.filename || null;
     // const bill = req.files?.bill?.[0]?.filename || null;
-    let panCard=  await uploadFile2(req.files.panCard[0],"partnerdoc");
-    let aadhaar= await uploadFile2(req.files.aadhaar[0],"partnerdoc");
-    let chequeImage=await uploadFile2(req.files.chequeImage[0],"partnerdoc");
- 
-    let drivingLicence= await uploadFile2(req.files.drivingLicence[0],"partnerdoc");
-    let bill=await uploadFile2(req.files.bill[0],"partnerdoc");
- 
+    let panCard = await uploadFile2(req.files.panCard[0], "partnerdoc");
+    let aadhaar = await uploadFile2(req.files.aadhaar[0], "partnerdoc");
+    let chequeImage = await uploadFile2(req.files.chequeImage[0], "partnerdoc");
+
+    let drivingLicence = await uploadFile2(req.files.drivingLicence[0], "partnerdoc");
+    let bill = await uploadFile2(req.files.bill[0], "partnerdoc");
+
     // Validate required fields
     if (!accountNumber || !ifscCode || !accountHolderName || !bankName) {
       return res.status(400).json({
@@ -721,14 +734,14 @@ exports.getProfile = async (req, res) => {
         whatsappNumber: profile.whatsappNumber,
         qualification: profile.qualification,
         experience: profile.experience,
-        subcategory:profile.subcategory,
+        subcategory: profile.subcategory,
         category: profile.category,
         service: profile.service,
         modeOfService: profile.modeOfService,
         profilePicture: profile.profilePicture,
         status: profile.profileCompleted ? "Completed" : "Incomplete",
-         drive:profile.drive,
-        tempoTraveller:profile.tempoTraveller
+        drive: profile.drive,
+        tempoTraveller: profile.tempoTraveller
       },
     });
   } catch (error) {
@@ -767,7 +780,7 @@ exports.updateProfile = async (req, res) => {
       service,
       modeOfService,
       city,
-      
+
     } = req.body;
     // console.log("req.body : ", req.body);
 
@@ -780,7 +793,7 @@ exports.updateProfile = async (req, res) => {
     }
 
     // Check if profilePicture is uploaded in form-data
-    const profilePicture = req.file ? await uploadFile2(req.file,"partner") : undefined;
+    const profilePicture = req.file ? await uploadFile2(req.file, "partner") : undefined;
 
     // Update only provided fields (Handle both JSON & form-data)
 
@@ -825,8 +838,8 @@ exports.updateProfile = async (req, res) => {
         verificationStatus: profile.verificationStatus,
         status: profile.status,
         dutyStatus: profile.dutyStatus,
-        drive:profile.drive,
-        tempoTraveller:profile.tempoTraveller
+        drive: profile.drive,
+        tempoTraveller: profile.tempoTraveller
       },
     });
   } catch (error) {
@@ -858,10 +871,10 @@ exports.getWallet = async (req, res) => {
         message: `You have top up your wallet and get jobs`,
       })
       return res
-      .status(200)
-      .json({ success: true, message: "Wallet details", data: data });
+        .status(200)
+        .json({ success: true, message: "Wallet details", data: data });
     }
-    if(data.balance<100){
+    if (data.balance < 100) {
       await NotificationModel.create({
         title: "New Wallet Alert",
         userId: partnerId,
