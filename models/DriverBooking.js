@@ -1,52 +1,3 @@
-// const mongoose = require('mongoose');
-
-// const DriverBooking = new mongoose.Schema({
-//   bookingId: {
-//     type: String,
-//     unique: true,
-//     required: [true, 'Booking ID is required'],
-//     match: [/^WAVED\d+$/, 'Booking ID must follow WAVED format'],
-//   },
-//   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-//   driverId: { type: mongoose.Schema.Types.ObjectId, ref: 'Driver' },
-//   vehicleType: { type: mongoose.Schema.Types.ObjectId, ref: 'VehicleType', required: true },
-//   pickupLocation: {
-//     type: { type: String, enum: ['Point'], default: 'Point' },
-//     coordinates: { type: [Number], required: true },
-//   },
-//   dropoffLocation: {
-//     type: { type: String, enum: ['Point'], default: 'Point' },
-//     coordinates: { type: [Number]},
-//   },
-//   status: {
-//     type: String,
-//     enum: ['pending', 'accepted', 'in_progress', 'completed', 'cancelled'],
-//     default: 'pending',
-//   },
-//   price: {
-//     total: { type: Number, default: 0, min: 0 },
-//     breakdown: {
-//       baseFare: { type: Number, default: 0 },
-//       distanceCost: { type: Number, default: 0 },
-//       timeCost: { type: Number, default: 0 },
-//       surgeCost: { type: Number, default: 0 },
-//       nightSurchargeCost: { type: Number, default: 0 },
-//       tax: { type: Number, default: 0 },
-//     },
-//   },
-//   distance: { type: Number, default: 0, min: 0 },
-//   estimatedTime: { type: Number, default: 0, min: 0 },
-//   isNightBooking: { type: Boolean, default: false },
-//   createdAt: { type: Date, default: Date.now },
-//   updatedAt: { type: Date, default: Date.now },
-// });
-
-// DriverBooking.pre('save', function (next) {
-//   this.updatedAt = Date.now();
-//   next();
-// });
-
-// module.exports = mongoose.model('DriverBooking', DriverBooking);
 const mongoose = require('mongoose');
 
 const DriverBooking = new mongoose.Schema({
@@ -58,6 +9,7 @@ const DriverBooking = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   driverId: { type: mongoose.Schema.Types.ObjectId, ref: 'Driver' },
   vehicleType: { type: mongoose.Schema.Types.ObjectId, ref: 'VehicleType', required: true },
+  carType: {type: String, required : false},
   pickupLocation: {
     address: { type: String, required: true },
     type: { type: String, enum: ['Point'], default: 'Point' },
@@ -75,9 +27,7 @@ const DriverBooking = new mongoose.Schema({
   },
   bookingDetails: {
     date: { type: Date, required: true },
-    time: { type: String, required: true },
-    passengers: { type: Number, default: 1, min: 1, max: 12 },
-    luggage: { type: Number, default: 0 },
+    time: { type: String, required: true }, 
   },
   price: {
     total: { type: Number, default: 0, min: 0 },
@@ -93,13 +43,14 @@ const DriverBooking = new mongoose.Schema({
   distance: { type: Number, default: 0, min: 0 }, // in km
   estimatedTime: { type: Number, default: 0, min: 0 }, // in minutes
   isNightBooking: { type: Boolean, default: false },
+  tempoTraveller: { type: Boolean, default: false },
+  currentBooking: { type: Boolean, default: false },
   paymentStatus: {
     type: String,
     enum: ['pending', 'paid', 'failed', 'refunded'],
     default: 'pending'
   },
-  paymentMethod: String,
-  notes: String,
+  paymentMethod: String, 
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

@@ -8,7 +8,7 @@ const travelBooking = {
   /**
    * Create a new Tempo Traveller booking
    */
-  createBooking: async (req, res) => {
+  createTTBooking: async (req, res) => {
     try {
       const { 
         pickupLocation,
@@ -18,7 +18,8 @@ const travelBooking = {
         passengers,
         luggage,
         paymentMethod,
-        notes
+        notes,
+        tempoTraveller,
       } = req.body;
       const userId = req.user._id
       console.log("Req.user" , req.user._id)
@@ -29,16 +30,7 @@ const travelBooking = {
           message: 'Missing required fields: userId, pickupLocation, date, time'
         });
       }
-
-      // Validate user exists
-      const user = await User.findById(userId);
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'User not found'
-        });
-      }
-
+ 
       // Get Tempo Traveller vehicle type
       const vehicleType = await VehicleType.findOne({ name: 'Tempo Traveller' });
       if (!vehicleType) {
@@ -59,8 +51,7 @@ const travelBooking = {
           message: 'distance and estimatedTime are required and must be numbers'
         });
       }
-
-
+ 
       // Calculate price
       const baseFare = vehicleType.baseFare;
       const distanceCost = distance * vehicleType.perKmRate;
@@ -114,6 +105,129 @@ const travelBooking = {
         isNightBooking,
         paymentMethod,
         notes,
+        tempoTraveller,
+        status: 'pending'
+      });
+
+      // Save booking to database
+      const savedBooking = await newBooking.save();
+ 
+      res.status(201).json({
+        success: true,
+        message: 'Booking created successfully',
+        booking: savedBooking, 
+      });
+
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create booking',
+        error: error.message
+      });
+    }
+  },
+
+  createDriverBooking: async (req, res) => {
+    try {
+      const { 
+        pickupLocation,
+        dropoffLocation,
+        date,
+        time,
+        passengers,
+        luggage,
+        paymentMethod,
+        notes,
+        tempoTraveller,
+        currentBooking,
+      } = req.body;
+      const userId = req.user._id
+      console.log("Req.user" , req.user._id)
+      // Validate required fields
+      if (!req.user._id || !pickupLocation || !date || !time) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: userId, pickupLocation, date, time'
+        });
+      }
+ 
+      // Get Tempo Traveller vehicle type
+      const vehicleType = await VehicleType.findOne({ name: 'Driver' });
+      if (!vehicleType) {
+        return res.status(404).json({
+          success: false,
+          message: 'Driver vehicle type not configured'
+        });
+      }
+
+      // Calculate distance and estimated time (you would typically use Google Maps API here)
+      // For this example, we'll use the values from the frontend
+      let { distance, estimatedTime } = req.body;
+      distance      = Number(distance);
+      estimatedTime = Number(estimatedTime);
+      if (!distance || !estimatedTime) {
+        return res.status(400).json({
+          success: false,
+          message: 'distance and estimatedTime are required and must be numbers'
+        });
+      }
+ 
+      // Calculate price
+      const baseFare = vehicleType.baseFare;
+      const distanceCost = distance * vehicleType.perKmRate;
+      const timeCost = estimatedTime * (vehicleType.perMinuteRate || 0);
+      
+      // Apply night surcharge if booking is during night hours (10PM to 6AM)
+      const bookingDateTime = new Date(date);
+      const [hours, minutes] = time.split(':').map(Number);
+      bookingDateTime.setHours(hours, minutes);
+      
+      const bookingHour = bookingDateTime.getHours();
+      const isNightBooking = bookingHour >= 22 || bookingHour < 6;
+      const nightSurchargeCost = isNightBooking ? baseFare * 0.2 : 0; // 20% surcharge
+      
+      // Calculate total price
+      const subtotal = baseFare + distanceCost + timeCost + nightSurchargeCost;
+      const tax = subtotal * 0.05; // 5% tax
+      const total = subtotal + tax;
+
+      // Create new booking
+      const newBooking = new DriverBooking({
+        // bookingId,
+        userId,
+        vehicleType: vehicleType._id,
+        pickupLocation: {
+          address: pickupLocation.address,
+          coordinates: [pickupLocation.lng, pickupLocation.lat]
+        },
+        dropoffLocation: dropoffLocation ? {
+          address: dropoffLocation.address,
+          coordinates: [dropoffLocation.lng, dropoffLocation.lat]
+        } : null,
+        bookingDetails: {
+          date,
+          time,
+          
+          passengers: passengers || 1,
+          luggage: luggage || 0
+        },
+        distance,
+        estimatedTime,
+        price: {
+          total,
+          breakdown: {
+            baseFare,
+            distanceCost,
+            timeCost,
+            nightSurchargeCost,
+            tax
+          }
+        },
+        isNightBooking,
+        paymentMethod,
+        notes,
+        tempoTraveller,
         status: 'pending'
       });
 

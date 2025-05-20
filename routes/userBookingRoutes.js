@@ -185,7 +185,8 @@ router.get("/getbookingbyuser",isAuthenticatedUser,getByUserId);
 //Travel Bookings : 
 
 // Create booking
-router.post('/booktravel', isAuthenticatedUser, travelBooking.createBooking);
+router.post('/booktravel', isAuthenticatedUser, travelBooking.createTTBooking);
+router.post('/bookdriver', isAuthenticatedUser, travelBooking.createDriverBooking);
 
 // Get booking by ID
 // router.get('/:id', isAuthenticatedUser, travelBooking.getBooking);

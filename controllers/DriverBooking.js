@@ -25,6 +25,7 @@ const sendNotification = async ({ userId, title, body, data, fcmtoken }) => {
 };
 // Create a booking (user)
 exports.driverBooking = async (req, res) => {
+
   const { pickupLocation, dropoffLocation, userId,
           paymentMode, amount, scheduledTime, scheduledDate, 
         } = req.body;
@@ -105,6 +106,7 @@ exports.driverBooking = async (req, res) => {
     res.status(500).json({ msg: 'Server error' });
   }
 };
+
 // exports.driverBooking = async (req , res) => {
 //       try {
 //       const {
