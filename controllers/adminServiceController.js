@@ -1316,7 +1316,7 @@ exports.updatePartnerStatus = async (req, res) => {
 exports.getPartnerEarnings = async (req, res) => {
     try {
         const { partnerId } = req.params;
-        console.log("Request Params : " , req.params)
+        // console.log("Request Params : " , req.params)
         // Fetch all completed bookings for the partner
         const bookings = await Booking.find({ partner: partnerId, status: "completed" })
             .populate("user", "name email")
@@ -1334,19 +1334,19 @@ exports.getPartnerEarnings = async (req, res) => {
         let transactions = bookings.map(booking => {
             const subService = booking.subService;
             const totalAmount = booking.amount;
-            const commissionAmount = (subService.commission / 100) * totalAmount;
+            const commissionAmount = ((subService?.commission||0) / 100) * totalAmount;
             const partnerEarnings = totalAmount - commissionAmount;
             totalEarnings += partnerEarnings;
 
             return {
                 bookingId: booking._id,
                 user: booking.user,
-                subService: subService.name,
+                subService: subService?.name,
                 service: booking.service?.name,
                 subCategory: booking.subCategory?.name,
                 category: booking.category?.name,
                 totalAmount,
-                commissionPercentage: subService.commission,
+                commissionPercentage: subService?.commission||0,
                 commissionAmount,
                 partnerEarnings,
                 paymentMode: booking.paymentMode,
