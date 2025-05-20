@@ -701,7 +701,7 @@ exports.getProfile = async (req, res) => {
       .populate("service", "name description basePrice duration")
       .populate("subcategory")
 
-    console.log("Fetched Profile:", profile);
+    // console.log("Fetched Profile:", profile);
 
     if (!profile) {
       return res.status(404).json({
@@ -727,6 +727,8 @@ exports.getProfile = async (req, res) => {
         modeOfService: profile.modeOfService,
         profilePicture: profile.profilePicture,
         status: profile.profileCompleted ? "Completed" : "Incomplete",
+         drive:profile.drive,
+        tempoTraveller:profile.tempoTraveller
       },
     });
   } catch (error) {
@@ -788,7 +790,7 @@ exports.updateProfile = async (req, res) => {
     if (whatsappNumber) profile.whatsappNumber = whatsappNumber;
     if (contactNumber) profile.contactNumber = contactNumber;
     if (qualification) profile.qualification = qualification;
-    if (experience) profile.experience = parseFloat(experience);
+    if (experience) profile.experience = (experience);
     if (category) profile.category = category;
     if (service) profile.service = service;
     if (modeOfService) profile.modeOfService = modeOfService;
@@ -823,6 +825,8 @@ exports.updateProfile = async (req, res) => {
         verificationStatus: profile.verificationStatus,
         status: profile.status,
         dutyStatus: profile.dutyStatus,
+        drive:profile.drive,
+        tempoTraveller:profile.tempoTraveller
       },
     });
   } catch (error) {
