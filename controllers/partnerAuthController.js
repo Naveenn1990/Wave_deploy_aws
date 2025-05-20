@@ -336,34 +336,15 @@ exports.selectCategoryAndServices = async (req, res) => {
     const { partnerId, category, subcategory, service, modeOfService , drive , tempoTraveller } =
       req.body;
 
+    console.log(req.body);
+    
     if (!partnerId || !category || !subcategory || !service || !modeOfService) {
       return res
         .status(400)
         .json({ success: false, message: "Missing required fields" });
     }
 
-    // Log received data for debugging
-    // console.log("Received data:", req.body);
-
-    // ✅ Validate category
-    const validCategory = await ServiceCategory.findById(category);
-    if (!validCategory) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid category ID" });
-    }
-
-    // ✅ Validate subcategory
-    const validSubcategory = await SubCategory.findOne({
-      _id: subcategory,
-      category,
-    });
-    if (!validSubcategory) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid subcategory ID" });
-    }
-
+   
     // ✅ Validate services under the selected subcategory
     let serviceIds = Array.isArray(service) ? service : JSON.parse(service);
     // console.log("Service IDs to check:", serviceIds);
@@ -717,7 +698,8 @@ exports.getProfile = async (req, res) => {
 
     const profile = await Partner.findOne({ _id: partnerId })
       .populate("category", "name description")
-      .populate("service", "name description basePrice duration");
+      .populate("service", "name description basePrice duration")
+      .populate("subcategory")
 
     // console.log("Fetched Profile:", profile);
 
@@ -739,11 +721,14 @@ exports.getProfile = async (req, res) => {
         whatsappNumber: profile.whatsappNumber,
         qualification: profile.qualification,
         experience: profile.experience,
+        subcategory:profile.subcategory,
         category: profile.category,
         service: profile.service,
         modeOfService: profile.modeOfService,
         profilePicture: profile.profilePicture,
         status: profile.profileCompleted ? "Completed" : "Incomplete",
+         drive:profile.drive,
+        tempoTraveller:profile.tempoTraveller
       },
     });
   } catch (error) {
@@ -805,7 +790,7 @@ exports.updateProfile = async (req, res) => {
     if (whatsappNumber) profile.whatsappNumber = whatsappNumber;
     if (contactNumber) profile.contactNumber = contactNumber;
     if (qualification) profile.qualification = qualification;
-    if (experience) profile.experience = parseFloat(experience);
+    if (experience) profile.experience = (experience);
     if (category) profile.category = category;
     if (service) profile.service = service;
     if (modeOfService) profile.modeOfService = modeOfService;
@@ -840,6 +825,8 @@ exports.updateProfile = async (req, res) => {
         verificationStatus: profile.verificationStatus,
         status: profile.status,
         dutyStatus: profile.dutyStatus,
+        drive:profile.drive,
+        tempoTraveller:profile.tempoTraveller
       },
     });
   } catch (error) {

@@ -47,7 +47,7 @@ const partnerSchema = new mongoose.Schema(
         },
       },
     ],
-    subcategory:[
+    subcategory: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "SubCategory",
@@ -55,7 +55,7 @@ const partnerSchema = new mongoose.Schema(
           return this.profileCompleted;
         },
       },
-    ] ,
+    ],
     service: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -141,31 +141,32 @@ const partnerSchema = new mongoose.Schema(
     fcmtoken: {
       type: String,
     },
-    latitude:{
+    latitude: {
       type: Number
     },
-    longitude:{
+    longitude: {
       type: Number
     },
     currentLocation: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point',
-    },
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      default: [0, 0],
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        default: [0, 0],
+      },
+
     },
     drive: {
       type: Boolean,
-      default : false,
+      default: false,
     },
     tempoTraveller: {
       type: Boolean,
-      default : false,
+      default: false,
     },
-  },
     // Add Reviews Field
     reviews: [
       {
