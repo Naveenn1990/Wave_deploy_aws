@@ -14,9 +14,7 @@ const travelBooking = {
         pickupLocation,
         dropoffLocation,
         date,
-        time,
-        passengers,
-        luggage,
+        time, 
         paymentMethod,
         notes,
         tempoTraveller,
@@ -86,9 +84,7 @@ const travelBooking = {
         } : null,
         bookingDetails: {
           date,
-          time,
-          passengers: passengers || 1,
-          luggage: luggage || 0
+          time, 
         },
         distance,
         estimatedTime,
@@ -130,90 +126,86 @@ const travelBooking = {
 
   createDriverBooking: async (req, res) => {
     try {
-      const { 
+      const {
         pickupLocation,
         dropoffLocation,
         date,
         time,
-        passengers,
-        luggage,
         paymentMethod,
-        notes,
         tempoTraveller,
+        carModel,
+        carType,
         currentBooking,
+        distance,
+        estimatedTime,
       } = req.body;
-      const userId = req.user._id
-      console.log("Req.user" , req.user._id)
-      // Validate required fields
-      if (!req.user._id || !pickupLocation || !date || !time) {
+
+      const userId = req.user._id;
+      console.log("Req.user", req.user._id);
+
+      if (!userId || !pickupLocation) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: userId, pickupLocation, date, time'
+          message: 'Missing required fields: userId, pickupLocation',
         });
       }
- 
-      // Get Tempo Traveller vehicle type
+
       const vehicleType = await VehicleType.findOne({ name: 'Driver' });
       if (!vehicleType) {
         return res.status(404).json({
           success: false,
-          message: 'Driver vehicle type not configured'
+          message: 'Driver type fare not configured',
         });
       }
 
-      // Calculate distance and estimated time (you would typically use Google Maps API here)
-      // For this example, we'll use the values from the frontend
-      let { distance, estimatedTime } = req.body;
-      distance      = Number(distance);
-      estimatedTime = Number(estimatedTime);
-      if (!distance || !estimatedTime) {
+      const parsedDistance = Number(distance);
+      const parsedEstimatedTime = Number(estimatedTime);
+
+      if (!parsedDistance || !parsedEstimatedTime) {
         return res.status(400).json({
           success: false,
-          message: 'distance and estimatedTime are required and must be numbers'
+          message: 'distance and estimatedTime are required and must be numbers',
         });
       }
- 
-      // Calculate price
-      const baseFare = vehicleType.baseFare;
-      const distanceCost = distance * vehicleType.perKmRate;
-      const timeCost = estimatedTime * (vehicleType.perMinuteRate || 0);
-      
-      // Apply night surcharge if booking is during night hours (10PM to 6AM)
-      const bookingDateTime = new Date(date);
-      const [hours, minutes] = time.split(':').map(Number);
-      bookingDateTime.setHours(hours, minutes);
-      
+
+      // === Safely set date and time ===
+      const now = new Date();
+      const bookingDateTime = date ? new Date(date) : new Date(now);
+      const timeString = time || now.toTimeString().split(':').slice(0, 2).join(':'); // "HH:mm"
+
+      const [hours, minutes] = timeString.split(':').map(Number);
+      bookingDateTime.setHours(hours, minutes, 0, 0);
+
+      // Night check
       const bookingHour = bookingDateTime.getHours();
       const isNightBooking = bookingHour >= 22 || bookingHour < 6;
-      const nightSurchargeCost = isNightBooking ? baseFare * 0.2 : 0; // 20% surcharge
-      
-      // Calculate total price
+
+      // Pricing logic
+      const baseFare = vehicleType.baseFare;
+      const distanceCost = parsedDistance * vehicleType.perKmRate;
+      const timeCost = parsedEstimatedTime * (vehicleType.perMinuteRate || 0);
+      const nightSurchargeCost = isNightBooking ? baseFare * 0.2 : 0;
       const subtotal = baseFare + distanceCost + timeCost + nightSurchargeCost;
-      const tax = subtotal * 0.05; // 5% tax
+      const tax = subtotal * 0.05;
       const total = subtotal + tax;
 
-      // Create new booking
       const newBooking = new DriverBooking({
-        // bookingId,
         userId,
         vehicleType: vehicleType._id,
         pickupLocation: {
           address: pickupLocation.address,
-          coordinates: [pickupLocation.lng, pickupLocation.lat]
+          coordinates: [pickupLocation.lng, pickupLocation.lat],
         },
         dropoffLocation: dropoffLocation ? {
           address: dropoffLocation.address,
-          coordinates: [dropoffLocation.lng, dropoffLocation.lat]
-        } : null,
+          coordinates: [dropoffLocation.lng, dropoffLocation.lat],
+        } : undefined,
         bookingDetails: {
-          date,
-          time,
-          
-          passengers: passengers || 1,
-          luggage: luggage || 0
+          date: bookingDateTime,
+          time: timeString,
         },
-        distance,
-        estimatedTime,
+        distance: parsedDistance,
+        estimatedTime: parsedEstimatedTime,
         price: {
           total,
           breakdown: {
@@ -221,23 +213,24 @@ const travelBooking = {
             distanceCost,
             timeCost,
             nightSurchargeCost,
-            tax
-          }
+            tax,
+          },
         },
         isNightBooking,
         paymentMethod,
-        notes,
         tempoTraveller,
-        status: 'pending'
+        carModel,
+        carType,
+        currentBooking,
+        status: 'pending',
       });
 
-      // Save booking to database
       const savedBooking = await newBooking.save();
- 
+
       res.status(201).json({
         success: true,
-        message: 'Booking created successfully',
-        booking: savedBooking, 
+        message: 'Driver booked successfully',
+        booking: savedBooking,
       });
 
     } catch (error) {
@@ -245,11 +238,11 @@ const travelBooking = {
       res.status(500).json({
         success: false,
         message: 'Failed to create booking',
-        error: error.message
+        error: error.message,
       });
     }
-  },
-
+  }, 
+  
   /**
    * Get booking by ID
    */

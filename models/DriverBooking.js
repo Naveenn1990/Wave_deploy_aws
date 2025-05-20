@@ -10,6 +10,7 @@ const DriverBooking = new mongoose.Schema({
   driverId: { type: mongoose.Schema.Types.ObjectId, ref: 'Driver' },
   vehicleType: { type: mongoose.Schema.Types.ObjectId, ref: 'VehicleType', required: true },
   carType: {type: String, required : false},
+  carModel: {type: String, required : false},
   pickupLocation: {
     address: { type: String, required: true },
     type: { type: String, enum: ['Point'], default: 'Point' },
