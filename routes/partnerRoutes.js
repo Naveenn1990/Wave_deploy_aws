@@ -290,7 +290,7 @@ router.get(
 );
 
 router.put("/acceptdriver",auth,acceptBookingDriver);
-router.put("rejectdriver",auth,rejectBookingDriver);
+router.put("/rejectdriver",auth,rejectBookingDriver);
 router.get("/getByDriver",auth,getByDriverId)
 
 module.exports = router;

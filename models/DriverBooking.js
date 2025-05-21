@@ -7,7 +7,7 @@ const DriverBooking = new mongoose.Schema({
     match: [/^WAVED\d+$/, 'Booking ID must follow WAVED format'],
   },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  driverId: { type: mongoose.Schema.Types.ObjectId, ref: 'Driver' },
+  driverId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
   vehicleType: { type: mongoose.Schema.Types.ObjectId, ref: 'VehicleType', required: true },
   carType: {type: String, required : false},
   carModel: {type: String, required : false},
@@ -23,7 +23,7 @@ const DriverBooking = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'accepted', 'in_progress', 'completed', 'cancelled'],
+    enum: ['pending', 'accepted', 'in_progress', 'completed', 'cancelled','rejected'],
     default: 'pending',
   },
   bookingDetails: {
@@ -51,6 +51,9 @@ const DriverBooking = new mongoose.Schema({
     enum: ['pending', 'paid', 'failed', 'refunded'],
     default: 'pending'
   },
+  rejectedDrivers:[{
+    type: mongoose.Schema.Types.ObjectId, ref: 'Partner' 
+  }],
   paymentMethod: String, 
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
