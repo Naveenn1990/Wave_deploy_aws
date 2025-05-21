@@ -242,7 +242,7 @@ const travelBooking = {
       });
     }
   }, 
-  
+
   /**
    * Get booking by ID
    */
@@ -320,12 +320,34 @@ const travelBooking = {
   /**
    * Get bookings for a user
    */// .populate('vehicleType');
+  // getUserTravelBookings: async (req, res) => {  
+  //   console.log("Req.user" , req.user._id)
+  //   try {
+  //     const bookings = await DriverBooking.find({ userId: req.user._id })
+  //       .sort({ createdAt: -1 })
+         
+  //     res.json({
+  //       success: true,
+  //       count: bookings.length,
+  //       bookings
+  //     });
+  //   } catch (error) {
+  //     console.log("Error : " , error)
+  //     res.status(500).json({
+  //       success: false,
+  //       message: 'Failed to fetch user bookings',
+  //       error: error
+  //     });
+  //   }
+  // }
   getUserTravelBookings: async (req, res) => {  
-    console.log("Req.user" , req.user._id)
+    console.log("Req.user", req.user._id);
     try {
       const bookings = await DriverBooking.find({ userId: req.user._id })
         .sort({ createdAt: -1 })
-        
+        .populate('userId')           // populate user data
+        .populate('driverId')         // populate driver data (if assigned)
+        .populate('vehicleType');     // populate vehicle type info
 
       res.json({
         success: true,
@@ -333,14 +355,15 @@ const travelBooking = {
         bookings
       });
     } catch (error) {
-      console.log("Error : " , error)
+      console.log("Error:", error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch user bookings',
-        error: error
+        error: error.message
       });
     }
   }
+  
 };
 
 module.exports = travelBooking;
