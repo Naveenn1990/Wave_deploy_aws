@@ -235,17 +235,18 @@ exports.driverBooking = async (req, res) => {
 // Accept a booking (driver)
 exports.acceptBookingDriver = async (req, res) => {
   try {
-    const booking = await Booking.findOne({ bookingId: req.params.bookingId });
+    const {bookingId,driverId}=req.body;
+    const booking = await Booking.findOne({ _id: bookingId });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
-    if (booking.driverId.toString() !== req.partner._id.toString()) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
+    // if (booking.driverId.toString() !== req.partner._id.toString()) {
+    //   return res.status(403).json({ error: 'Not authorized' });
+    // }
 
-    if (booking.status !== 'assigned') {
-      return res.status(400).json({ error: 'Booking cannot be accepted' });
+    if (booking.status == 'accepted') {
+      return res.status(400).json({ error: 'Booking cannot be accepted beacouse already accepted' });
     }
-
+    booking.driverId=driverId
     booking.status = 'accepted';
     await booking.save();
 
@@ -275,14 +276,17 @@ exports.acceptBookingDriver = async (req, res) => {
 // Reject a booking (driver)
 exports.rejectBookingDriver = async (req, res) => {
   try {
-    const booking = await Booking.findOne({ bookingId: req.params.bookingId });
+      const {bookingId}=req.body;
+      console.log(bookingId);
+      
+    const booking = await Booking.findOne({ _id: bookingId });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
-    if (booking.driverId.toString() !== req.partner._id.toString()) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
+    // if (booking.driverId.toString() !== req.partner._id.toString()) {
+    //   return res.status(403).json({ error: 'Not authorized' });
+    // }
 
-    if (booking.status !== 'assigned') {
+    if (booking.status == 'accepted') {
       return res.status(400).json({ error: 'Booking cannot be rejected' });
     }
 
@@ -370,8 +374,15 @@ exports.getByUserId = async (req, res) => {
 // Get bookings by driver ID
 exports.getByDriverId = async (req, res) => {
   try {
-    const data = await Booking.find({ driverId: req.partner._id }).sort({ _id: -1 });
-    return res.status(200).json({ data });
+   
+    const pending = await Booking.find({status:"pending" }).sort({ _id: -1 }).populate("userId");
+    const accepted = await Booking.find({status:"accepted" }).sort({ _id: -1 }).populate("userId");
+    const rejected = await Booking.find({status:"rejected" }).sort({ _id: -1}).populate("userId");
+    const completed = await Booking.find({status:"completed" }).sort({ _id: -1 }).populate("userId");
+    const in_progress=await Booking.find({status:"in_progress" }).sort({ _id: -1 }).populate("userId");
+    return res.status(200).json({
+   pending,accepted,rejected,completed,in_progress
+    } );
   } catch (error) {
     console.error(error);
     res.status(500).json({ msg: 'Server error' });
