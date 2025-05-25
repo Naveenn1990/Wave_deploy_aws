@@ -197,4 +197,6 @@ router.post('/bookdriver', isAuthenticatedUser, travelBooking.createDriverBookin
 // Get user bookings
 router.get('/travelbookings', isAuthenticatedUser, travelBooking.getUserTravelBookings);
 
+router.put('/travelbookings/:bookingId/cancel', isAuthenticatedUser, travelBooking.cancelUserTravelBooking);
+
 module.exports = router;

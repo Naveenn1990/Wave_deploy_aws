@@ -8,7 +8,7 @@ const DriverBooking = new mongoose.Schema({
   },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   driverId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
-  vehicleType: { type: mongoose.Schema.Types.ObjectId, ref: 'VehicleType', required: true },
+  vehicleType: { type: mongoose.Schema.Types.ObjectId, ref: 'Driverfare', required: true },
   carType: {type: String, required : false},
   carModel: {type: String, required : false},
   pickupLocation: {
@@ -54,7 +54,8 @@ const DriverBooking = new mongoose.Schema({
   rejectedDrivers:[{
     type: mongoose.Schema.Types.ObjectId, ref: 'Partner' 
   }],
-  paymentMethod: String, 
+  paymentMethod: String,
+  cancellationReason: String, 
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

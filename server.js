@@ -140,8 +140,7 @@ app.post('/api/initiate-call', initiateCall);
 
 io.on("connection", (socket) => {
   console.log("User/Admin connected:", socket.id);
-
-
+ 
   // Handle text and image messages
   socket.on("chat message", async (message) => {
     console.log("Message received:", message);
@@ -445,6 +444,7 @@ io.on("connection", (socket) => {
       socket.emit('error', { message: error.message });
     }
   });
+  
   socket.on('ride_check', async ({ rideId }) => {
     try {
       const ride = rides.get(rideId);
@@ -550,7 +550,7 @@ io.on("connection", (socket) => {
       });
     }
   });
-  // New: End ride
+ 
   socket.on('end_ride', async ({ rideId }) => {
     try {
       const ride = rides.get(rideId);
@@ -682,9 +682,7 @@ io.on("connection", (socket) => {
     }
   });
 });
-
-
-
+ 
 global.io = io; // Make socket available globally
 
 connectDB()

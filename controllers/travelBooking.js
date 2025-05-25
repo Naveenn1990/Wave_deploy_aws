@@ -316,30 +316,7 @@ const travelBooking = {
       });
     }
   },
-
-  /**
-   * Get bookings for a user
-   */// .populate('vehicleType');
-  // getUserTravelBookings: async (req, res) => {  
-  //   console.log("Req.user" , req.user._id)
-  //   try {
-  //     const bookings = await DriverBooking.find({ userId: req.user._id })
-  //       .sort({ createdAt: -1 })
-         
-  //     res.json({
-  //       success: true,
-  //       count: bookings.length,
-  //       bookings
-  //     });
-  //   } catch (error) {
-  //     console.log("Error : " , error)
-  //     res.status(500).json({
-  //       success: false,
-  //       message: 'Failed to fetch user bookings',
-  //       error: error
-  //     });
-  //   }
-  // }
+ 
   getUserTravelBookings: async (req, res) => {  
     console.log("Req.user", req.user._id);
     try {
@@ -362,8 +339,127 @@ const travelBooking = {
         error: error.message
       });
     }
-  }
-  
+  },
+
+  cancelUserTravelBooking: async (req, res) => {
+    // const session = await mongoose.startSession();
+    // session.startTransaction();
+    
+    try {
+      const { bookingId } = req.params;
+      const { cancellationReason } = req.body;
+      const userId = req.user._id.toString()
+
+      // Validate input
+      if (!cancellationReason || !userId) {
+        // await session.abortTransaction();
+        // session.endSession();
+        return res.status(400).json({
+          success: false,
+          message: 'Cancellation reason and user ID are required'
+        });
+      }
+
+      // Find the booking
+      const booking = await DriverBooking.findById(bookingId)  
+      if (!booking) {
+        // await session.abortTransaction();
+        // session.endSession();
+        return res.status(404).json({
+          success: false,
+          message: 'Booking not found'
+        });
+      }
+      console.log("booking : " , booking)
+      console.log("booking.userId.toString() : " , booking.userId.toString() , userId)
+      // Check if user owns the booking
+      if (booking.userId.toString() !== userId) {
+        // await session.abortTransaction();
+        // session.endSession();
+        return res.status(403).json({
+          success: false,
+          message: 'Unauthorized to cancel this booking'
+        });
+      }
+
+      // Check if booking can be cancelled
+      const cancellableStatuses = ['pending', 'accepted'];
+      if (!cancellableStatuses.includes(booking.status)) {
+        // await session.abortTransaction();
+        // session.endSession();
+        return res.status(400).json({
+          success: false,
+          message: `Booking cannot be cancelled in its current state (${booking.status})`
+        });
+      }
+
+      // Update booking status
+      booking.status = 'cancelled';
+      booking.cancellationReason = cancellationReason;
+      booking.updatedAt = new Date();
+
+      // Process refund if payment was made
+      // if (booking.paymentStatus === 'paid') {
+      //   try {
+      //     const refundResult = await refundPayment(booking._id);
+      //     if (refundResult.success) {
+      //       booking.paymentStatus = 'refunded';
+      //     } else {
+      //       booking.paymentStatus = 'refund_pending';
+      //     }
+      //   } catch (error) {
+      //     console.error('Refund processing error:', error);
+      //     booking.paymentStatus = 'refund_failed';
+      //   }
+      // }
+
+      // Save the updated booking
+      await booking.save();
+
+      // Notify driver if booking was accepted
+      // if (booking.driverId) {
+      //   await sendNotification({
+      //     userId: booking.driverId,
+      //     type: 'booking_cancelled',
+      //     title: 'Booking Cancelled',
+      //     message: `Booking ${booking.bookingId} has been cancelled by user`,
+      //     data: { bookingId: booking._id }
+      //   });
+      // }
+
+      // Update user's booking history
+      // await User.findByIdAndUpdate(
+      //   userId,
+      //   { $inc: { cancelledBookings: 1 } },
+      //   { session }
+      // );
+
+      // await session.commitTransaction();
+      // session.endSession();
+
+      res.status(200).json({
+        success: true,
+        message: 'Booking cancelled successfully',
+        data: {
+          bookingId: booking._id,
+          status: booking.status,
+          paymentStatus: booking.paymentStatus
+        }
+      });
+
+    } catch (error) {
+      // await session.abortTransaction();
+      // session.endSession();
+      
+      console.error('Error cancelling booking:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to cancel booking',
+        error: error.message
+      });
+    }
+  },
+
 };
 
 module.exports = travelBooking;
