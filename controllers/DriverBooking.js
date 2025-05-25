@@ -27,8 +27,8 @@ const sendNotification = async ({ userId, title, body, data, fcmtoken }) => {
 exports.driverBooking = async (req, res) => {
 
   const { pickupLocation, dropoffLocation, userId,
-          paymentMode, amount, scheduledTime, scheduledDate, 
-        } = req.body;
+    paymentMode, amount, scheduledTime, scheduledDate,
+  } = req.body;
 
   try {
     // Validate vehicle type
@@ -155,16 +155,16 @@ exports.driverBooking = async (req, res) => {
 //       const baseFare = vehicleType.basePrice;
 //       const distanceCost = distance * vehicleType.pricePerKm;
 //       const timeCost = estimatedTime * (vehicleType.pricePerMinute || 0);
-      
+
 //       // Apply night surcharge if booking is during night hours (10PM to 6AM)
 //       const bookingDateTime = new Date(date);
 //       const [hours, minutes] = time.split(':').map(Number);
 //       bookingDateTime.setHours(hours, minutes);
-      
+
 //       const bookingHour = bookingDateTime.getHours();
 //       const isNightBooking = bookingHour >= 22 || bookingHour < 6;
 //       const nightSurchargeCost = isNightBooking ? baseFare * 0.2 : 0; // 20% surcharge
-      
+
 //       // Calculate total price
 //       const subtotal = baseFare + distanceCost + timeCost + nightSurchargeCost;
 //       const tax = subtotal * 0.05; // 5% tax
@@ -235,7 +235,7 @@ exports.driverBooking = async (req, res) => {
 // Accept a booking (driver)
 exports.acceptBookingDriver = async (req, res) => {
   try {
-    const {bookingId,driverId}=req.body;
+    const { bookingId, driverId } = req.body;
     const booking = await Booking.findOne({ _id: bookingId });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
@@ -246,7 +246,7 @@ exports.acceptBookingDriver = async (req, res) => {
     if (booking.status == 'accepted') {
       return res.status(400).json({ error: 'Booking cannot be accepted beacouse already accepted' });
     }
-    booking.driverId=driverId
+    booking.driverId = driverId
     booking.status = 'accepted';
     await booking.save();
 
@@ -276,9 +276,9 @@ exports.acceptBookingDriver = async (req, res) => {
 // Reject a booking (driver)
 exports.rejectBookingDriver = async (req, res) => {
   try {
-      const {bookingId}=req.body;
-      console.log(bookingId);
-      
+    const { bookingId } = req.body;
+    console.log(bookingId);
+
     const booking = await Booking.findOne({ _id: bookingId });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
@@ -290,70 +290,76 @@ exports.rejectBookingDriver = async (req, res) => {
       return res.status(400).json({ error: 'Booking cannot be rejected' });
     }
 
-    booking.status = 'rejected';
-    booking.driverId = null; // Clear driver assignment
+    if (!booking.rejectedDrivers.includes(req.partner._id)) {
+      booking.rejectedDrivers.push(req.partner._id);
+    }
+
+
+    booking.driverId = null; // Unassign driver
+
     await booking.save();
+
 
     // Make original driver available again
-    const originalDriver = await Driver.findById(req.partner._id);
-    originalDriver.isAvailable = true;
-    await originalDriver.save();
+    // const originalDriver = await Driver.findById(req.partner._id);
+    // originalDriver.isAvailable = true;
+    // await originalDriver.save();
 
-    // Find another available driver
-    const newDriver = await Driver.findOne({
-      isAvailable: true,
-      vehicleType: booking.vehicleType,
-      currentLocation: {
-        $near: {
-          $geometry: { type: 'Point', coordinates: booking.pickupLocation.coordinates },
-          $maxDistance: 5000,
-        },
-      },
-    });
+    // // Find another available driver
+    // const newDriver = await Driver.findOne({
+    //   isAvailable: true,
+    //   vehicleType: booking.vehicleType,
+    //   currentLocation: {
+    //     $near: {
+    //       $geometry: { type: 'Point', coordinates: booking.pickupLocation.coordinates },
+    //       $maxDistance: 5000,
+    //     },
+    //   },
+    // });
 
-    if (newDriver) {
-      booking.driverId = newDriver._id;
-      booking.status = 'assigned';
-      newDriver.isAvailable = false;
-      await newDriver.save();
+    // if (newDriver) {
+    //   booking.driverId = newDriver._id;
+    //   booking.status = 'pending';
+    //   newDriver.isAvailable = false;
+    //   await newDriver.save();
 
-      // Send notification to new driver
-      await sendNotification({
-        userId: newDriver._id,
-        title: 'New Booking Assigned',
-        body: `Booking ${booking.bookingId} has been assigned to you.`,
-        data: {
-          type: 'new-booking',
-          bookingId: booking._id.toString(),
-          pickup: JSON.stringify(booking.pickupLocation),
-          dropoff: JSON.stringify(booking.dropoffLocation),
-        },
-        fcmtoken: newDriver.fcmtoken,
-      });
-      booking.notificationSent = true;
-    } else {
-      booking.status = 'pending'; // No drivers available
-    }
+    //   // Send notification to new driver
+    //   await sendNotification({
+    //     userId: newDriver._id,
+    //     title: 'New Booking Assigned',
+    //     body: `Booking ${booking.bookingId} has been assigned to you.`,
+    //     data: {
+    //       type: 'new-booking',
+    //       bookingId: booking._id.toString(),
+    //       pickup: JSON.stringify(booking.pickupLocation),
+    //       dropoff: JSON.stringify(booking.dropoffLocation),
+    //     },
+    //     fcmtoken: newDriver.fcmtoken,
+    //   });
+    //   booking.notificationSent = true;
+    // } else {
+    //   booking.status = 'pending'; // No drivers available
+    // }
 
-    await booking.save();
+    // await booking.save();
 
-    // Send notification to user
-    const user = await User.findById(booking.userId);
-    if (user.fcmtoken) {
-       sendNotification({
-        userId: booking.driverId,
-        title: 'Booking Update',
-        body: `Your booking ${booking.bookingId} was rejected. ${newDriver ? 'A new driver has been assigned.' : 'Awaiting new driver.'}`,
-        data: {
-          type: 'booking-update',
-          bookingId: booking._id.toString(),
-          status: booking.status,
-        },
-        fcmtoken: user.fcmtoken,
-      });
-    }
+    // // Send notification to user
+    // const user = await User.findById(booking.userId);
+    // if (user.fcmtoken) {
+    //   sendNotification({
+    //     userId: booking.driverId,
+    //     title: 'Booking Update',
+    //     body: `Your booking ${booking.bookingId} was rejected. ${newDriver ? 'A new driver has been assigned.' : 'Awaiting new driver.'}`,
+    //     data: {
+    //       type: 'booking-update',
+    //       bookingId: booking._id.toString(),
+    //       status: booking.status,
+    //     },
+    //     fcmtoken: user.fcmtoken,
+    //   });
+    // }
 
-    res.json(booking);
+    return res.json(booking);
   } catch (error) {
     console.error(error);
     res.status(500).json({ msg: 'Server error' });
@@ -374,15 +380,39 @@ exports.getByUserId = async (req, res) => {
 // Get bookings by driver ID
 exports.getByDriverId = async (req, res) => {
   try {
-   
-    const pending = await Booking.find({status:"pending" }).sort({ _id: -1 }).populate("userId");
-    const accepted = await Booking.find({status:"accepted" }).sort({ _id: -1 }).populate("userId");
-    const rejected = await Booking.find({status:"rejected" }).sort({ _id: -1}).populate("userId");
-    const completed = await Booking.find({status:"completed" }).sort({ _id: -1 }).populate("userId");
-    const in_progress=await Booking.find({status:"in_progress" }).sort({ _id: -1 }).populate("userId");
+    let driverId = req.partner._id;
+    let driverD = await Driver.findById(driverId);
+
+    let pending = [];
+
+    if (driverD.drive || driverD.tempoTraveller) {
+      let bookingFilter = {
+        status: "pending",
+        rejectedDrivers: { $ne: driverId },
+      };
+
+      // Adjust filter based on driver's capabilities
+      if (driverD.drive && !driverD.tempoTraveller) {
+        bookingFilter.tempoTraveller = false;
+      } else if (!driverD.drive && driverD.tempoTraveller) {
+        bookingFilter.tempoTraveller = true;
+      }
+
+      pending = await Booking.find(bookingFilter)
+        .sort({ _id: -1 })
+        .populate("userId");
+    }
+
+    // pending will be [] if driver can't take any type of booking
+
+
+    const accepted = await Booking.find({ status: "accepted", driverId: driverId }).sort({ _id: -1 }).populate("userId");
+    const rejected = await Booking.find({ rejectedDrivers: driverId }).sort({ _id: -1 }).populate("userId");
+    const completed = await Booking.find({ status: "completed", driverId: driverId }).sort({ _id: -1 }).populate("userId");
+    const in_progress = await Booking.find({ status: "in_progress", driverId: driverId }).sort({ _id: -1 }).populate("userId");
     return res.status(200).json({
-   pending,accepted,rejected,completed,in_progress
-    } );
+      pending, accepted, rejected, completed, in_progress
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ msg: 'Server error' });
