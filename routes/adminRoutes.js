@@ -188,7 +188,9 @@ router.put(
   adminAuth,
   adminController.completeBooking
 );
-// router.post("/book-subservice", adminAuth, userServiceController.bookSubService);
+
+
+router.put("/bookings/assign-partner", adminAuth, adminController.assignedbooking);
 
 // Promotional Video Management
 router.post("/promovideo", adminAuth, upload.single("image"), bannerController.uploadPromovideo);
