@@ -169,7 +169,7 @@ exports.verifyOTP = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+      expiresIn: "10y",
     });
 
     res.status(200).json({
@@ -327,7 +327,7 @@ exports.verifyPasswordResetOTP = async (req, res) => {
 
     // Generate token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+      expiresIn: "10y",
     });
 
     res.status(200).json({
