@@ -725,15 +725,7 @@ exports.updateSubService = async (req, res) => {
   try {
     const { serviceId, subServiceId } = req.params;
     const { name, description, price , includes , excludes} = req.body;
-
-    // Find service and sub-service
-    // if (!req.files || req.files.length < 4) {
-    //   return res.status(400).json({ 
-    //     success: false, 
-    //     message: "At least 4 images are required" 
-    //   });
-    // }
-
+  
     if (req.files.length < 4 && req.files.length >= 1) {
       console.log("Only 1 image is there")
       return res.status(400).json({ 
@@ -774,15 +766,7 @@ exports.updateSubService = async (req, res) => {
     subService.gst = req.body.gst || subService.gst
     subService.commission = req.body.commission || subService.commission
     subService.icon = imagePaths || subService.icon
-
-    // subService.icon: imagePaths, // Store array of image filenames
-    // subService.duration = duration || subService.duration;
-
-    // Update icon if provided
-    // if (req.file) {
-    //   subService.icon = path.basename(req.file.path);
-    // }
-
+  
     await subService.save();
 
     res.json({

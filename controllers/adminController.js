@@ -819,25 +819,84 @@ exports.getPartnerDetails = async (req, res) => {
 }; 
 
 // Update Partner Status
+// exports.updatePartnerStatus = async (req, res) => {
+//   try {
+//     const { partnerId } = req.params;
+//     let { status, remarks } = req.body;
+//     console.log(req.body , "req body")
+//     // Convert status to lowercase and replace spaces with underscores
+//     status = status?.trim().replace(/\s+/g, '_');
+
+//     // Validate status
+//     const validStatuses = ["pending", "under_review", "Approved", "Rejected", "blocked"];
+//     if (!status || !validStatuses.includes(status)) {
+//       console.log(status , validStatuses.includes(status))
+//       return res.status(400).json({
+//         success: false,
+//         message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+//         note: "Status is case-sensitive and uses underscores. For example: 'under_review'"
+//       });
+//     }
+
+//     const partner = await Partner.findById(partnerId);
+//     if (!partner) {
+//       return res.status(404).json({ 
+//         success: false,
+//         message: "Partner not found" 
+//       });
+//     }
+ 
+//     const updateData = {
+//       $set: {
+//         status: status,
+//         statusRemarks: remarks || ''
+//       }
+//     };
+
+//     const updatedPartner = await Partner.findByIdAndUpdate(
+//       partnerId,
+//       updateData,
+//       { new: true, runValidators: true }
+//     )  
+//     res.json({
+//       success: true,
+//       message: `Partner status updated to ${status} successfully`,
+//       data: {
+//         partnerId: updatedPartner._id,
+//         name: updatedPartner.name,
+//         status: updatedPartner.status
+//       }
+//     });
+//   } catch (error) {
+//     console.error("Update Partner Status Error:", error);
+//     res.status(500).json({ 
+//       success: false,
+//       message: "Error updating partner status",
+//       error: error.message 
+//     });
+//   }
+// };
+// Update Partner KYC Status
 exports.updatePartnerStatus = async (req, res) => {
   try {
     const { partnerId } = req.params;
     let { status, remarks } = req.body;
-    console.log(req.body , "req body")
-    // Convert status to lowercase and replace spaces with underscores
-    status = status?.trim().replace(/\s+/g, '_');
+
+    console.log(req.body, "req body");
+
+    // Clean and normalize status
+    status = status?.trim().toLowerCase();
 
     // Validate status
-    const validStatuses = ["pending", "under_review", "Approved", "Rejected", "blocked"];
+    const validStatuses = ["pending", "approved", "rejected"];
     if (!status || !validStatuses.includes(status)) {
-      console.log(status , validStatuses.includes(status))
       return res.status(400).json({
         success: false,
         message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
-        note: "Status is case-sensitive and uses underscores. For example: 'under_review'"
       });
     }
 
+    // Check if partner exists
     const partner = await Partner.findById(partnerId);
     if (!partner) {
       return res.status(404).json({ 
@@ -845,37 +904,38 @@ exports.updatePartnerStatus = async (req, res) => {
         message: "Partner not found" 
       });
     }
- 
-    const updateData = {
-      $set: {
-        status: status,
-        statusRemarks: remarks || ''
-      }
-    };
 
+    // Perform update to nested kyc fields
     const updatedPartner = await Partner.findByIdAndUpdate(
       partnerId,
-      updateData,
+      {
+        $set: {
+          'kyc.status': status,
+          'kyc.remarks': remarks || ''
+        }
+      },
       { new: true, runValidators: true }
-    )  
+    );
+
     res.json({
       success: true,
-      message: `Partner status updated to ${status} successfully`,
+      message: `KYC status updated to "${status}" successfully`,
       data: {
         partnerId: updatedPartner._id,
-        name: updatedPartner.name,
-        status: updatedPartner.status
+        kycStatus: updatedPartner.kyc.status,
+        kycRemarks: updatedPartner.kyc.remarks
       }
     });
   } catch (error) {
     console.error("Update Partner Status Error:", error);
     res.status(500).json({ 
       success: false,
-      message: "Error updating partner status",
+      message: "Error updating KYC status",
       error: error.message 
     });
   }
 };
+
 
 // Create Service Category
 exports.createServiceCategory = async (req, res) => {
