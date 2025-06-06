@@ -1085,12 +1085,14 @@ exports.addProduct = async (req, res) => {
   try {
     const { name, category, brand, description, price, stock, specifications, howToUse, hsnCode, gstPercentage, discountPercentage, model } = req.body;
     
-    let imagePath = req.file ? req.file.path : ""; // Get uploaded image path
+    let imagePath = req.file ? req.file : ""; // Get uploaded image path
 
     // Extract only the filename from the image path
     if (imagePath) {
       imagePath =  await uploadFile2( req.file, "products");
     }
+
+
 
     const newProduct = new Product({
       name,

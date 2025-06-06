@@ -69,7 +69,7 @@ exports.register = async (req, res) => {
 
     // Generate token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+      expiresIn: "10y",
     });
 
     res.status(200).json({
@@ -154,7 +154,7 @@ exports.loginWithPassword = async (req, res) => {
 
     // Generate token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+      expiresIn: "10y",
     });
 
     res.status(200).json({
@@ -265,7 +265,7 @@ exports.verifyLoginOTP = async (req, res) => {
 
     // Generate token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+      expiresIn: "10y",
     });
 
     res.json({

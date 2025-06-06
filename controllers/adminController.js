@@ -1330,7 +1330,33 @@ exports.completeBooking = async (req, res) => {
     });
   }
 };
+//Assigned Booking
 
+exports.assignedbooking = async (req, res) => {
+  try {
+    const { partnerId ,bookingId} = req.body;
+    const book = await booking.findById(bookingId);
+console.log("partnerId ,bookingId",partnerId ,bookingId)
+    if (!book) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // if (booking.status !== "pending") {
+    //   return res
+    //     .status(400)
+    //     .json({ message: "This job is no longer available" });
+    // }
+
+    book.partner = partnerId;
+    book.status="accepted"
+    await book.save();
+
+    res.json({ message: "Job accepted successfully", book });
+  } catch (error) {
+    console.error("Accept Job Error:", error);
+    res.status(500).json({ message: "Error accepting job" });
+  }
+};
 // Get all reviews
 // Get all reviews
 exports.getAllReviews = async (req, res) => {
