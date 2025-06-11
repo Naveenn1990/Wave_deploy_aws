@@ -141,6 +141,9 @@ const partnerSchema = new mongoose.Schema(
     fcmtoken: {
       type: String,
     },
+    agentName: {
+      type: String,
+    },
     latitude: {
       type: Number
     },

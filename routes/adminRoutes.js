@@ -34,6 +34,10 @@ router.get(
   adminAuth,
   adminController.getPartnerDetails
 );
+
+//get partner details
+router.put("/partners/:id", adminController.getPartnerProfile); 
+
 router.put("/partners/:partnerId/status", adminController.updatePartnerStatus);
 router.get("/partners/kyc/pending", adminAuth, adminController.getPendingKYC);
 router.get(

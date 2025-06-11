@@ -699,6 +699,7 @@ exports.getAllPartners = async (req, res) => {
             qualification: partner.qualification || "N/A",
             modeOfService: partner.modeOfService || "N/A",
             profileCompleted: partner.profileCompleted,
+            agentName: partner.agentName,
             profilePicture: partner.profilePicture || "N/A",
             createdAt: partner.createdAt,
             updatedAt: partner.updatedAt,
@@ -775,6 +776,10 @@ exports.getPartnerDetails = async (req, res) => {
         path: "subService",
         select: "name price duration description",
       })
+      .populate({
+        path: "service",
+        select: "name",
+      })
       .select("-__v");
 
     if (!partner) {
@@ -818,64 +823,65 @@ exports.getPartnerDetails = async (req, res) => {
   }
 }; 
 
-// Update Partner Status
-// exports.updatePartnerStatus = async (req, res) => {
-//   try {
-//     const { partnerId } = req.params;
-//     let { status, remarks } = req.body;
-//     console.log(req.body , "req body")
-//     // Convert status to lowercase and replace spaces with underscores
-//     status = status?.trim().replace(/\s+/g, '_');
+//get partner details 
+exports.getPartnerProfile = async (req, res) => {
+  try {
+    const {id} = req.body
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Partner ID is missing",
+      });
+    } 
 
-//     // Validate status
-//     const validStatuses = ["pending", "under_review", "Approved", "Rejected", "blocked"];
-//     if (!status || !validStatuses.includes(status)) {
-//       console.log(status , validStatuses.includes(status))
-//       return res.status(400).json({
-//         success: false,
-//         message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
-//         note: "Status is case-sensitive and uses underscores. For example: 'under_review'"
-//       });
-//     }
+    const partnerId = new mongoose.Types.ObjectId(id);
 
-//     const partner = await Partner.findById(partnerId);
-//     if (!partner) {
-//       return res.status(404).json({ 
-//         success: false,
-//         message: "Partner not found" 
-//       });
-//     }
- 
-//     const updateData = {
-//       $set: {
-//         status: status,
-//         statusRemarks: remarks || ''
-//       }
-//     };
+    const profile = await Partner.findOne({ _id: partnerId })
+      .populate("category", "name description")
+      .populate("service", "name description basePrice duration")
+      // .populate("subcategory")
+      .populate("subcategory", "name description")
 
-//     const updatedPartner = await Partner.findByIdAndUpdate(
-//       partnerId,
-//       updateData,
-//       { new: true, runValidators: true }
-//     )  
-//     res.json({
-//       success: true,
-//       message: `Partner status updated to ${status} successfully`,
-//       data: {
-//         partnerId: updatedPartner._id,
-//         name: updatedPartner.name,
-//         status: updatedPartner.status
-//       }
-//     });
-//   } catch (error) {
-//     console.error("Update Partner Status Error:", error);
-//     res.status(500).json({ 
-//       success: false,
-//       message: "Error updating partner status",
-//       error: error.message 
-//     });
-//   }
-// };
+
+    // console.log("Fetched Profile:", profile);
+
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: "Profile not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      profile: {
+        city: profile.profile.city,
+        id: profile._id,
+        name: profile.profile?.name || "N/A",
+        email: profile.profile?.email || "N/A",
+        phone: profile.phone,
+        whatsappNumber: profile.whatsappNumber,
+        qualification: profile.qualification,
+        experience: profile.experience,
+        subcategory: profile.subcategory,
+        category: profile.category,
+        service: profile.service,
+        modeOfService: profile.modeOfService,
+        profilePicture: profile.profilePicture,
+        status: profile.profileCompleted ? "Completed" : "Incomplete",
+        drive: profile.drive,
+        tempoTraveller: profile.tempoTraveller
+      },
+    });
+  } catch (error) {
+    console.error("Get Profile Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching profile",
+    });
+  }
+};
+
 // Update Partner KYC Status
 exports.updatePartnerStatus = async (req, res) => {
   try {

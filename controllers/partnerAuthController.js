@@ -647,7 +647,7 @@ exports.completeKYC = async (req, res) => {
 exports.updateKYCStatus = async (req, res) => {
   try {
     const { partnerId } = req.params;
-    const { status, remarks } = req.body;
+    const { status, remarks, agent } = req.body;
     // console.log("Req body : " , req.body)
 
     if (!["pending", "approved", "rejected"].includes(status)) {
@@ -668,6 +668,7 @@ exports.updateKYCStatus = async (req, res) => {
     // Update KYC status
     partner.kyc.status = status;
     partner.kyc.remarks = remarks || null;
+    partner.agentName = agent || null;
 
     await partner.save();
     // console.log("Partner : " , partner)
