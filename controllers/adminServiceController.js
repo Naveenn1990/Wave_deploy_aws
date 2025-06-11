@@ -717,29 +717,32 @@ exports.deleteService = async (req, res) => {
     });
   }
 };
-
+ 
 // Update sub-service
 exports.updateSubService = async (req, res) => {
   console.log("Req BOdy : " , req.body)
   console.log("Req Files : " , req.files)
   try {
     const { serviceId, subServiceId } = req.params;
-    const { name, description, price , includes , excludes} = req.body;
-  
-    if (req.files.length < 4 && req.files.length >= 1) {
-      console.log("Only 1 image is there")
-      return res.status(400).json({ 
-        success: false, 
-        message: "At least 4 images are required" 
+    const { name, description, price , includes , excludes } = req.body;
+   
+    let imagePaths = undefined;
+
+    if (req.files && req.files.length > 0) {
+      if (req.files.length < 4) {
+        console.log("Only 1 image is there")
+        return res.status(400).json({ 
+          success: false, 
+          message: "At least 4 images are required" 
+        });
+      }
+
+      const imageUploadPromises = req.files.map(async (file) => {
+        return await uploadFile2(file, "subservice");
       });
+      imagePaths = await Promise.all(imageUploadPromises);
     }
-    const imageUploadPromises = req.files.map(async (file) => {
-      return await uploadFile2(file, "subservice");
-  });
-  
-  // Wait for all uploads to complete
-  const imagePaths = await Promise.all(imageUploadPromises);
-  
+   
     const service = await Service.findById(serviceId);
     if (!service) {
       return res.status(404).json({
@@ -757,15 +760,23 @@ exports.updateSubService = async (req, res) => {
     }
 
     // Update fields
-    subService.name = name || subService.name
-    subService.description = description || subService.description
-    subService.price = price || subService.price
-    subService.includes = includes || subService.includes
-    subService.excludes = excludes || subService.excludes 
-    subService.discount =  req.body.discount || subService.discount
-    subService.gst = req.body.gst || subService.gst
-    subService.commission = req.body.commission || subService.commission
-    subService.icon = imagePaths || subService.icon
+    subService.name = name || subService.name;
+    subService.description = description || subService.description;
+    subService.price = price || subService.price;
+    subService.includes = includes || subService.includes;
+    subService.excludes = excludes || subService.excludes;
+    subService.discount = req.body.discount || subService.discount;
+    subService.gst = req.body.gst || subService.gst;
+    subService.commission = req.body.commission || subService.commission;
+    // subService.service = req.body.service || subService.service;  
+    if (req.body.service && req.body.service !== 'null') {
+      subService.service = req.body.service;
+    }
+
+
+    if (imagePaths !== undefined) {
+      subService.icon = imagePaths;
+    }
   
     await subService.save();
 
@@ -782,106 +793,7 @@ exports.updateSubService = async (req, res) => {
     });
   }
 };
-
-// Update sub-service
-// exports.updateSubService = async (req, res) => {
-//   try {
-//     console.log("Received Update Data:", req.body , req.params);
-//     console.log("Uploaded Files:", req.files || "No files uploaded");
-
-//     const { subServiceId } = req.params; // Get sub-service ID from URL
-//     const updateData = { ...req.body };
-
-//     // Check if the sub-service exists
-//     const existingSubService = await SubService.findById(subServiceId);
-//     if (!existingSubService) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Sub-service not found"
-//       });
-//     }
-
-//     // Handle image update
-//     if (req.files && req.files.length > 0) {
-//       if (req.files.length !== 4) {
-//         return res.status(400).json({
-//           success: false,
-//           message: "If updating images, exactly 4 images must be provided"
-//         });
-//       }
-//       updateData.icon = req.files.map(file => file.filename); // Store new images
-//       console.log("updateData" , updateData)
-//     }
-
-//     // Update only provided fields (partial update allowed)
-//     const updatedSubService = await SubService.findByIdAndUpdate(
-//       subServiceId,
-//       { $set: updateData },
-//       { new: true, runValidators: true }
-//     );
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Sub-Service updated successfully",
-//       subService: updatedSubService
-//     });
-
-//   } catch (error) {
-//     console.error("Error:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: "Error updating sub-service",
-//       error: error.message
-//     });
-//   }
-// };
-
-// exports.updateSubService = async (req, res) => {
-//   try {
-//     console.log("Received Update Data:", req.body);
-//     console.log("Uploaded Files:", req.files || "No files uploaded");
-
-//     const { subServiceId } = req.params;
-//     const updateData = { ...req.body };
-
-//     // Find the existing sub-service
-//     const existingSubService = await SubService.findById(subServiceId);
-//     if (!existingSubService) {
-//       return res.status(404).json({ success: false, message: "Sub-service not found" });
-//     }
-
-//     // Check if images need to be updated
-//     if (req.files && req.files.length > 0) {
-//       if (req.files.length !== 4) {
-//         return res.status(400).json({ success: false, message: "If updating images, exactly 4 images must be provided" });
-//       }
-//       updateData.icon = req.files.map(file => file.filename); // Store new images
-//     } else {
-//       delete updateData.icon; // Do not update images if no new ones are provided
-//     }
-
-//     // Update only provided fields
-//     const updatedSubService = await SubService.findByIdAndUpdate(subServiceId, { $set: updateData }, { new: true, runValidators: true });
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Sub-Service updated successfully",
-//       subService: updatedSubService
-//     });
-
-//   } catch (error) {
-//     console.error("Error:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: "Error updating sub-service",
-//       error: error.message
-//     });
-//   }
-// };
-
-
-// Delete sub-service
-
+  
 exports.deleteSubService = async (req, res) => {
   try {
     const { serviceId, subServiceId } = req.params;

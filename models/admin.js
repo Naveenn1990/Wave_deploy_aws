@@ -120,6 +120,9 @@ const adminSchema = new mongoose.Schema(
       promotionalVideo: { type: Boolean, default: false },
       verifiedProvider: { type: Boolean, default: false },
       enquiry: { type: Boolean, default: false },
+      sales: { type: Boolean, default: false },
+      revenue: { type: Boolean, default: false },
+      register: { type: Boolean, default: false },
     },
   },
   {
