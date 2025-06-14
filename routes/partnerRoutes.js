@@ -80,7 +80,7 @@ const upload = multer({
     fileSize: (file) =>
       file.fieldname === "videos" ? 100 * 1024 * 1024 : 5 * 1024 * 1024, // 100MB for videos, 5MB for images
   },
-  fileFilter: fileFilter,
+
 });
 
 // Partner Authentication Routes
