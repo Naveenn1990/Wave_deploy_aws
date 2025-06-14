@@ -79,6 +79,7 @@ const partnerSchema = new mongoose.Schema(
       required: function () {
         return this.profileCompleted;
       },
+      default: "offline",
     },
     profileCompleted: {
       type: Boolean,

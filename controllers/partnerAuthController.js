@@ -162,7 +162,7 @@ exports.verifyLoginOTP = async (req, res) => {
         category: partner?.category, // Ensure this field exists
         subcategory: partner?.subcategory, // Ensure this field exists
         service: partner?.service, // Ensure this field exists
-        modeOfService: partner?.modeOfService, // Ensure this field exists
+        modeOfService: partner?.modeOfService||"offline", // Ensure this field exists
         status: partner?.status,
         // kycStatus: partner?.kycStatus,
         profileCompleted: partner?.profileCompleted,
@@ -738,7 +738,7 @@ exports.getProfile = async (req, res) => {
         subcategory: profile.subcategory,
         category: profile.category,
         service: profile.service,
-        modeOfService: profile.modeOfService,
+        modeOfService: profile?.modeOfService|| "offline",
         profilePicture: profile.profilePicture,
         status: profile.profileCompleted ? "Completed" : "Incomplete",
         drive: profile.drive,
@@ -834,7 +834,7 @@ exports.updateProfile = async (req, res) => {
         experience: profile.experience,
         category: profile.category,
         service: profile.service,
-        modeOfService: profile.modeOfService,
+        modeOfService: profile?.modeOfService||"offline",
         profilePicture: profile.profilePicture,
         verificationStatus: profile.verificationStatus,
         status: profile.status,
