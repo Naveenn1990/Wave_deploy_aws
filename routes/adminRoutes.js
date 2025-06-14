@@ -149,6 +149,11 @@ router.post(
   adminAuth,  
   adminServiceController.bulkCreateSubServices
 );
+router.put(
+  '/sub-service/bulk', 
+  adminAuth,  
+  adminServiceController.bulkUpdateSubServices
+);
 router.post(
   "/service/:serviceId/sub-service",
   adminAuth,

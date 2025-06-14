@@ -642,6 +642,97 @@ exports.bulkCreateSubServices = async (req, res) => {
     });
   }
 };
+
+// Bulk partial update for sub-services
+exports.bulkUpdateSubServices = async (req, res) => {
+  try {
+    const updates = req.body; // Expecting an array of sub-services with subServiceId and fields to update
+    // const files = req.files || []; // Assuming files are received as multipart form data
+
+    const updateResults = [];
+
+    for (let i = 0; i < updates.length; i++) {
+      const update = updates[i];
+      const { subServiceId } = update;
+
+      if (!subServiceId) {
+        updateResults.push({ subServiceId: null, success: false, message: "subServiceId is required" });
+        continue;
+      }
+
+      const subService = await SubService.findById(subServiceId);
+      if (!subService) {
+        updateResults.push({ subServiceId, success: false, message: "Sub-service not found" });
+        continue;
+      }
+
+      // Filter matching images from files
+      // const imageFiles = files.filter(file => file.originalname.startsWith(subServiceId + '_'));
+      const imageFiles = update.icon;
+      let imagePaths;
+
+      if (imageFiles.length > 0 && imageFiles.length < 4) {
+        updateResults.push({
+          subServiceId,
+          success: false,
+          message: "At least 4 images are required to update images"
+        });
+        continue;
+      }
+
+      if (imageFiles.length >= 4) {
+        // const uploadPromises = imageFiles.map(file => uploadFile2(file, "subservice"));
+        // imagePaths = await Promise.all(uploadPromises);
+        subService.icon = update.icon;
+      }
+
+      // Update only the provided fields
+      const fields = [
+        "name", "description", "price", "includes", "excludes",
+        "discount", "gst", "commission", "service", "city", "subService"
+      ];
+      fields.forEach(field => {
+        // if (update[field] !== undefined && update[field] !== null) {
+        //   if (field === "city" || field === "includes" || field === "excludes") {
+        //     subService[field] = Array.isArray(update[field]) ? update[field] : update[field].split(',').map(e => e.trim());
+        //   } 
+        //   else {
+        //     subService[field] = update[field];
+        //   }
+        // }
+        if (update[field] !== undefined && update[field] !== null) {
+            if (field === "city" || field === "includes" || field === "excludes") {
+              const processed = Array.isArray(update[field])
+                ? update[field].map(e => e.trim())
+                : update[field].split(',').map(e => e.trim()).filter(Boolean);
+
+              if (processed.length > 0) {
+                subService[field] = processed;
+              }
+            } else {
+              subService[field] = update[field];
+            }
+          }
+        });
+
+      await subService.save();
+      updateResults.push({ subServiceId, success: true, message: "Sub-service updated" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Bulk update completed",
+      results: updateResults
+    });
+  } catch (error) {
+    console.error("Bulk update error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
  
 // Update service
 exports.updateService = async (req, res) => {
@@ -767,8 +858,7 @@ exports.updateSubService = async (req, res) => {
     subService.excludes = excludes || subService.excludes;
     subService.discount = req.body.discount || subService.discount;
     subService.gst = req.body.gst || subService.gst;
-    subService.commission = req.body.commission || subService.commission;
-    // subService.service = req.body.service || subService.service;  
+    subService.commission = req.body.commission || subService.commission; 
     if (req.body.service && req.body.service !== 'null') {
       subService.service = req.body.service;
     }
