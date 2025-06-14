@@ -148,28 +148,28 @@ exports.verifyLoginOTP = async (req, res) => {
       message: "Login successful",
       partner: {
         _id: partner._id,
-        partnerId: partner.partnerId, // Ensure this field exists in the database
-        phone: partner.phone,
-        name: partner.name,
-        email: partner.email,
-        whatsappNumber: partner.whatsappNumber,
-        qualification: partner.qualification,
-        experience: partner.experience,
-        contactNumber: partner.contactNumber,
-        address: partner.address,
-        landmark: partner.landmark,
-        pincode: partner.pincode,
-        category: partner.category, // Ensure this field exists
-        subcategory: partner.subcategory, // Ensure this field exists
-        service: partner.service, // Ensure this field exists
-        modeOfService: partner.modeOfService, // Ensure this field exists
-        status: partner.status,
-        // kycStatus: partner.kycStatus,
-        profileCompleted: partner.profileCompleted,
-        profile: partner.profile,
+        partnerId: partner?.partnerId, // Ensure this field exists in the database
+        phone: partner?.phone,
+        name: partner?.name,
+        email: partner?.email,
+        whatsappNumber: partner?.whatsappNumber,
+        qualification: partner?.qualification,
+        experience: partner?.experience,
+        contactNumber: partner?.contactNumber,
+        address: partner?.address,
+        landmark: partner?.landmark,
+        pincode: partner?.pincode,
+        category: partner?.category, // Ensure this field exists
+        subcategory: partner?.subcategory, // Ensure this field exists
+        service: partner?.service, // Ensure this field exists
+        modeOfService: partner?.modeOfService, // Ensure this field exists
+        status: partner?.status,
+        // kycStatus: partner?.kycStatus,
+        profileCompleted: partner?.profileCompleted,
+        profile: partner?.profile,
         token,
-        profilePicture: partner.profilePicture,
-        kycStatus: partner.kyc,
+        profilePicture: partner?.profilePicture,
+        kycStatus: partner?.kyc,
       },
     });
   } catch (error) {
@@ -315,9 +315,9 @@ exports.updateLocation = async (req, res) => {
 
     partner.latitude = req.body.latitude;
     partner.longitude = req.body.longitude;
-    partner.currentLocation={
-      type:'Point',
-      coordinates:[req.body.latitude,req.body.longitude]
+    partner.currentLocation = {
+      type: 'Point',
+      coordinates: [req.body.latitude, req.body.longitude]
     }
     await partner.save();
 
@@ -865,7 +865,7 @@ exports.getWallet = async (req, res) => {
 
     let data = await PartnerWallet.findOne({ partner: partnerId });
     if (!data) {
-      data = await PartnerWallet.create({ partner: partnerId });
+      // data = await PartnerWallet.create({ partner: partnerId });
       await NotificationModel.create({
         title: "New Wallet Alert",
         userId: partnerId,
@@ -873,7 +873,7 @@ exports.getWallet = async (req, res) => {
       })
       return res
         .status(200)
-        .json({ success: true, message: "Wallet details", data: data });
+        .json({ success: true, message: "Wallet details", data: {} });
     }
     if (data.balance < 100) {
       await NotificationModel.create({
@@ -912,7 +912,19 @@ exports.addtransactionwallet = async (req, res) => {
 
     let data = await PartnerWallet.findOne({ partner: partner });
     if (!data) {
-      data = await PartnerWallet.create({ partner: partner });
+      data = await PartnerWallet.create({
+        partner: partner, balance: Number(amount), transactions: [{
+          type: type,
+          amount: amount,
+          description: description,
+          reference: reference,
+          balance: amount,
+        }]
+      });
+
+      return res
+        .status(200)
+        .json({ message: "Successfully updated transaction", success: data });
     }
 
     if (type == "credit") {
@@ -945,5 +957,105 @@ exports.getAllwalletTransaction = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
+  }
+};
+
+exports.getWalletByAdminId = async (req, res) => {
+  try {
+    const partnerId = (req.params.id);
+    //  console.log("Partner ID from params:", partnerId);
+    if (!partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: "Partner ID is missing",
+      });
+    }
+
+
+    let data = await PartnerWallet.findOne({ partner: partnerId });
+    if (!data) {
+
+      return res
+        .status(200)
+        .json({ success: true, message: "Wallet details", data: {} });
+    }
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Wallet details", data: data });
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+
+exports.addtransactionwalletadmin = async (req, res) => {
+  try {
+    const { type, amount, description, reference, partner } = req.body;
+    if (!type || !amount || !partner || !description)
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid request" });
+    if (!["credit", "debit"].includes(type)) {
+      // throw new Error('Invalid transaction type');
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid transaction type" });
+    }
+    if (typeof amount !== "number" || amount <= 0) {
+      // throw new Error('Invalid amount');
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid amount" });
+    }
+
+    let data = await PartnerWallet.findOne({ partner: partner });
+    if (!data) {
+      data = await PartnerWallet.create({
+        partner: partner, transactions: [{
+          type: type,
+          amount: amount,
+          description: description,
+          reference: reference,
+          balance: amount,
+        }], balance: Number(amount)
+      });
+      await NotificationModel.create({
+        title: description,
+        userId: partner,
+        message: `Your wallet has been ${type}ed with amount ${amount}. Your new balance is ${data.balance}.`,
+      })
+
+      return res
+        .status(200)
+        .json({ message: "Successfully updated transaction", success: data });
+
+    } else
+
+      if (type == "credit") {
+        data.balance = data.balance + Number(amount);
+      } else {
+        data.balance = data.balance - Number(amount);
+      }
+    data.transactions.push({
+      type: type,
+      amount: amount,
+      description: description,
+      reference: reference,
+      balance: data.balance,
+    });
+    data = await data.save();
+
+    await NotificationModel.create({
+      title: description,
+      userId: partner,
+      message: `Your wallet has been ${type}ed with amount ${amount}. Your new balance is ${data.balance}.`,
+    })
+
+    return res
+      .status(200)
+      .json({ message: "Successfully updated transaction", success: data });
+  } catch (err) {
+    console.log(err);
   }
 };

@@ -11,6 +11,7 @@ const { upload, processFilePath } = require("../middleware/upload");
 const SubCategory = require("../models/SubCategory");
 const Product = require("../models/product");
 const ReviewController = require("../controllers/reviewController");
+const { addtransactionwalletadmin, getWalletByAdminId } = require("../controllers/partnerAuthController");
 
 // Auth routes
 router.post("/login", adminController.loginAdmin);
@@ -308,5 +309,10 @@ router.get(
 );
 
 router.get("/contactus", adminAuth, ReviewController.getAllContactUs);
+
+// Add a new wallet partner
+router.put('/partner/addwallets',adminAuth,addtransactionwalletadmin );
+router.get('/adminwallets/:id', adminAuth, getWalletByAdminId);
+
 
 module.exports = router;
