@@ -352,7 +352,10 @@ exports.selectCategoryAndServices = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Please select your job preference" });
     }
-
+    console.log("category : ", category);
+    console.log("subcategory : ", subcategory);
+    console.log("service : ", service);
+    
     if (category.length && (!subcategory.length || !service.length)) {
       return res.status(400).json({ success: false, message: "Please select subcategory and service" });
     } else if (category.length && subcategory.length && service.length) {
@@ -364,6 +367,8 @@ exports.selectCategoryAndServices = async (req, res) => {
         _id: { $in: serviceIds.map((id) => new mongoose.Types.ObjectId(id)) },
         subCategory: subcategory,
       });
+
+
 
       // console.log("Valid services found:", validServices);
 

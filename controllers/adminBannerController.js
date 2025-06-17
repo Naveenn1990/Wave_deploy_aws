@@ -1,7 +1,7 @@
 const PromotionalBanner = require('../models/PromotionalBanner');
 const CompanyBanner = require('../models/CompanyBanner');
 const path = require('path');
-const { uploadFile2 } = require('../middleware/aws');
+const { uploadFile2, downloadAllImages } = require('../middleware/aws');
 
 const adminBannerController = {
     // Promotional Banner Controllers
@@ -102,7 +102,25 @@ const adminBannerController = {
                 message: error.message
             });
         }
+    },
+
+    downloadfiles: async (req, res) => {
+        try {
+          const { type } = req.body; // 'promotional' or 'company'
+          await downloadAllImages();
+         return res.status(200).json({
+              success: true,
+              message: "All images downloaded successfully"
+          });
+        } catch (error) {
+            console.error('Get Company Banners Error:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
     }
+
 };
 
 module.exports = adminBannerController;

@@ -1,6 +1,15 @@
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+  GetObjectCommand,
+} = require("@aws-sdk/client-s3");
 const dotenv = require("dotenv");
-const fs = require('fs')
+const fs = require("fs");
+const path = require("path");
+const { pipeline } = require("stream");
+const { promisify } = require("util");
 dotenv.config();
 
 const s3Client = new S3Client({
@@ -11,6 +20,59 @@ const s3Client = new S3Client({
   },
 
 });
+
+
+const DOWNLOAD_DIR = path.join(__dirname, "downloads");
+const streamPipeline = promisify(pipeline);
+// if (!fs.existsSync(DOWNLOAD_DIR)) {  
+//   fs.mkdirSync(DOWNLOAD_DIR);
+// }
+
+const downloadAllImages = async (bucketName = process.env.AWS_S3_BUCKET_NAME) => {
+  try {
+    const listParams = {
+      Bucket: bucketName,
+    };
+
+    const listCommand = new ListObjectsV2Command(listParams);
+    const listData = await s3Client.send(listCommand);
+
+    if (!listData.Contents || listData.Contents.length === 0) {
+      console.log("No files found in bucket.");
+      return;
+    }
+
+    const imageFiles = listData.Contents.filter((file) =>
+      /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(file.Key)
+    );
+
+    console.log(`Found ${imageFiles.length} image(s). Downloading...`);
+
+    for (const file of imageFiles) {
+      const localPath = path.join(DOWNLOAD_DIR, file.Key);
+      const localDir = path.dirname(localPath);
+
+      // Create folder structure if not exists
+      fs.mkdirSync(localDir, { recursive: true });
+
+      const getObjectParams = {
+        Bucket: bucketName,
+        Key: file.Key,
+      };
+
+      const getObjectCommand = new GetObjectCommand(getObjectParams);
+      const data = await s3Client.send(getObjectCommand);
+
+      await streamPipeline(data.Body, fs.createWriteStream(localPath));
+      console.log(`Downloaded: ${file.Key}`);
+    }
+
+    console.log("✅ All images downloaded successfully.");
+  } catch (err) {
+    console.error("❌ Error downloading images:", err);
+  }
+};
+
 
 const uploadFile = (file, bucketname) => {
   return new Promise((resolve, reject) => {
@@ -133,4 +195,4 @@ const multifileUpload = async (files, bucketname) => {
   );
 };
 
-module.exports= { uploadFile,uploadFile2, deleteFile, updateFile, multifileUpload };
+module.exports= { uploadFile,uploadFile2, deleteFile, updateFile, multifileUpload,downloadAllImages };

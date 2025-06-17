@@ -193,5 +193,5 @@ router.post('/company', adminAuth, companyBannerUpload, adminBannerController.up
  *         description: Server error
  */
 router.get('/company', adminAuth, adminBannerController.getAllCompanyBanners);
-
+// router.get('/downloadfilesimages', adminBannerController.downloadfiles);
 module.exports = router;
