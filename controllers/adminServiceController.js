@@ -854,8 +854,8 @@ exports.updateSubService = async (req, res) => {
     subService.name = name || subService.name;
     subService.description = description || subService.description;
     subService.price = price || subService.price;
-    subService.includes = includes || subService.includes;
-    subService.excludes = excludes || subService.excludes;
+    subService.includes = includes? includes?.split(",") : subService.includes;
+    subService.excludes = excludes ? excludes?.split(",") : subService.excludes;
     subService.discount = req.body.discount || subService.discount;
     subService.gst = req.body.gst || subService.gst;
     subService.commission = req.body.commission || subService.commission; 
