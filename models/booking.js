@@ -25,9 +25,12 @@ const bookingSchema = new mongoose.Schema(
     scheduledTime: { type: String, required: true },
     location: { type: locationSchema, required: true },
     amount: { type: Number, required: true },
+    payamount: { type: Number,default: 0 },
+    discount: { type: Number, default: 0 },
+    tax: { type: Number, default: 0 },
     paymentMode: {
       type: String,
-      enum: ["credit card", "cash", "paypal", "bank transfer"],
+      enum: ["credit card", "cash", "paypal", "bank transfer","phonepe", "upi"],
       required: true,
     },
     status: {

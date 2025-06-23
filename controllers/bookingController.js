@@ -787,6 +787,8 @@ exports.createBooking = async (req, res) => {
       currentBooking,
       lat,
       lng,
+      payamount,
+      discount,
     } = req.body;
 
     // Validate required fields
@@ -821,6 +823,8 @@ exports.createBooking = async (req, res) => {
       lat,
       lng,
       currentBooking,
+      discount,
+      payamount,
       location: {
         address: location?.address || "",
         landmark: location?.landmark || "",

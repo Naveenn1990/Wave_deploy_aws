@@ -769,6 +769,7 @@ const firbasecall = require('./routes/notificationRoutes')
 const admin = require('firebase-admin');
 const { uploadFile2 } = require("./middleware/aws");
 const driverFareRoutes = require('./routes/driverFareRoutes');
+const phonePayRoutes = require('./routes/phonePay');
 
 // Initialize Firebase Admin
 // const serviceAccount = require('./firebase-admin.json');   
@@ -796,6 +797,7 @@ app.use('/api/firebase', firbasecall);
 app.use('/api/user/notifications', notificationRoute);
 app.use("/api/notification", partnerNotification);
 app.use('/api/driverfares', driverFareRoutes);
+app.use('/api/phonepay', phonePayRoutes);
 // Root route for WebSocket server
 
 app.get("/admin/bookings", adminBookingController.getAllBookings);
