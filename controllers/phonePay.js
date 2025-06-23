@@ -42,7 +42,7 @@ class Transaction{
         amount: amount*100,
         redirectUrl:  `https://wavetechservices.in/payment-success?transactionId=${data._id}&userID=${userId}`,
         redirectMode: "GET",
-        callbackUrl: "https://wavetechservices.in/api/user/payment-callback",
+        callbackUrl: "https://wavetechservices.in/api/phonepay/payment-callback",
         mobileNumber: Mobile,
         paymentInstrument: {
           type: "PAY_PAGE",
