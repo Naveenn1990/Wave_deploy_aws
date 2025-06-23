@@ -41,7 +41,7 @@ class Transaction{
         merchantUserId: userId,
         amount: amount*100,
         redirectUrl:  `https://wavetechservices.in/payment-success?transactionId=${data._id}&userID=${userId}`,
-        redirectMode: "POST",
+        redirectMode: "GET",
         callbackUrl: "https://wavetechservices.in/api/user/payment-callback",
         mobileNumber: Mobile,
         paymentInstrument: {
