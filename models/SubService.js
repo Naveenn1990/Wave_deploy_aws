@@ -95,6 +95,10 @@ const subServiceSchema = new mongoose.Schema({
         type: Number,
         // required: true
     },
+    minimumAmount:{
+        type: Number,
+        default: 0 // Minimum amount for the service
+    },
     gst: {
         type: Number,
         default: 0 // GST percentage

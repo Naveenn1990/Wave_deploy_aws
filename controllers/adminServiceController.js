@@ -569,7 +569,8 @@ exports.createSubService = async (req, res) => {
       icon: imagePaths, // Store array of image filenames
       includes: req.body.includes ? req.body.includes.split(",") : [],
       excludes: req.body.excludes ? req.body.excludes.split(",") : [],
-      city: cities
+      city: cities,
+      minimumAmount: req.body.minimumAmount || 0 // Default to 0 if not provided
     });
 
     const savedSubService = await subService.save();
@@ -862,7 +863,7 @@ exports.updateSubService = async (req, res) => {
     if (req.body.service && req.body.service !== 'null') {
       subService.service = req.body.service;
     }
-
+    subService.minimumAmount = req.body.minimumAmount || subService.minimumAmount;
 
     if (imagePaths !== undefined) {
       subService.icon = imagePaths;

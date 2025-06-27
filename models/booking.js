@@ -30,7 +30,7 @@ const bookingSchema = new mongoose.Schema(
     tax: { type: Number, default: 0 },
     paymentMode: {
       type: String,
-      enum: ["credit card", "cash", "paypal", "bank transfer","phonepe", "upi"],
+      enum: ["credit card", "cash", "paypal", "bank transfer","phonepe", "upi",'online'],
       required: true,
     },
     status: {

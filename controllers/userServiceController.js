@@ -61,7 +61,8 @@ async function getServiceHierarchy(req, res) {
           icon: getCleanImageName(subService.icon),
           price: subService.price,
           duration: subService.duration,
-          isActive: subService.isActive
+          isActive: subService.isActive,
+          minimumAmount: subService?.minimumAmount, // Default to 0 if not set
         }));
 
         // Return service with its subservices
@@ -359,9 +360,10 @@ async function getAllServices(req, res) {
         basePrice: service.basePrice,
         duration: service.duration,
         isActive: service.isActive,
+        minimumAmount: service.minimumAmount || 0, // Default to 0 if not set
         category: {
           _id: service.category?._id,
-          name: service.category?.name
+          name: service.category?.name,
       }
       }))
     });
@@ -507,6 +509,7 @@ const getAllSubServices = async (req, res) => {
                   gst: subservice.gst || 0,
                   commission: subservice.commission || 0,
                   rating: subservice.rating || 0,
+                  minimumAmount: subservice.minimumAmount || 0, // Default to 0 if not set
               };
           })
       );

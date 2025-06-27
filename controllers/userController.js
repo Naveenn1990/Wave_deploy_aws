@@ -5,28 +5,23 @@ const path = require("path");
 const Booking = require("../models/booking"); // Ensure the correct model is imported
 const SubService = require("../models/SubService");
 const { uploadFile2 } = require("../middleware/aws");
+const fetch = require('node-fetch'); 
 
 // Register new user
 exports.register = async (req, res) => {
   try {
-    const { name, email, phone, password, confirmPassword } = req.body;
+    const { name, email, phone, password, confirmPassword,fcmToken } = req.body;
     console.log("req.body : ", req.body)
     // Validate required fields
-    if (!name || !email || !phone || !password || !confirmPassword) {
+    if (!name || !email || !phone) {
       return res.status(400).json({
         success: false,
         message:
-          "Name, email, phone, password, and confirm password are required",
+          "Name, email, phone are required",
       });
     }
 
-    // Check if passwords match
-    if (password !== confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Passwords do not match",
-      });
-    }
+ 
 
     // Find the user by phone number
     let user = await User.findOne({ phone });
@@ -42,13 +37,13 @@ exports.register = async (req, res) => {
     if (user) {
       user.name = name;
       user.email = email;
-      user.password = password;
+    
 
       // Mark profile as complete since required fields are provided
       user.isProfileComplete = true;
 
-      if (req.body.fcmToken) {
-        user.fcmToken = req.body.fcmToken;
+      if (fcmToken) {
+        user.fcmToken = fcmToken;
       }
 
 
@@ -58,7 +53,7 @@ exports.register = async (req, res) => {
         name,
         email,
         phone,
-        password,
+     
         isVerified: true,
         isProfileComplete: true, // Set to true on successful profile completion
         fcmToken: fcmToken || null // Store FCM token
@@ -200,13 +195,41 @@ exports.sendLoginOTP = async (req, res) => {
         message: "No user found with this phone number",
       });
     }
-
+   const apiURL = 'http://123.108.46.13/sms-panel/api/http/index.php';
+   
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const tempOTPExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
 
     user.tempOTP = otp;
     user.tempOTPExpiry = tempOTPExpiry;
+ const params = {
+        username: 'ABHINANDHAN', // Replace with your actual username
+        apikey: '81E9C-0AE0B',   // Replace with your actual API key
+        apirequest: 'Text',
+        sender: `ABHIAN`,
+        mobile: phone,
+        message:  `Your OTP for mobile number verification at Abhinandan Organic is  ${otp}.
+
+Please use this OTP to complete your verification.`,
+        route: `TRANS`,
+        TemplateID: `1107173641973511689`,
+        format: 'JSON',
+    };
+
+    // Convert parameters to query string
+    const queryParams = new URLSearchParams(params).toString();
+       const response = await fetch(`${apiURL}?${queryParams}`, {
+            method: 'GET', // API uses GET method
+        });
+
+        // Parse and return the response
+        // if (response.ok) {
+        //     const data = await response.json();
+        //     return data;
+        // } else {
+        //     throw new Error(`HTTP error! Status: ${response.status}`);
+        // }
     await user.save();
 
     console.log(`OTP generated for ${phone}: ${otp}`); // For debugging
