@@ -13,6 +13,7 @@ const PartnerProfile = require("../models/PartnerProfile");
 const mongoose = require("mongoose");
 const { uploadFile2 } = require("../middleware/aws");
 
+
 // Admin login
 // exports.loginAdmin = async (req, res) => {
 //   try {
@@ -165,6 +166,7 @@ exports.createMainAdmin = async (req, res) => {
       providerVerification: true,
       verifiedProvider: true,
       enquiry: true,
+      complaintToken:true,
     };
 
     // Hash the password
@@ -229,6 +231,7 @@ exports.createAdmin = async (req, res) => {
       "providerVerification",
       "verifiedProvider",
       "enquiry",
+      "complaintToken"
     ];
 
     const filteredPermissions = {};
@@ -716,6 +719,7 @@ exports.getAllPartners = async (req, res) => {
           Reviews: partner.reviews.length > 0 ? partner.reviews : "No reviews",
           Services: partner.service.length > 0 ? partner.service : "No services",
           MonthWiseBookingCount: monthWiseBookings,
+          completedBookings:completedBookings,
           Earnings: {
             totalEarnings,
             transactions,

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const tokenSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Partner',
     required: true
   },
   booking: {
@@ -16,14 +16,24 @@ const tokenSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  userId:{
+     type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
   issue: {
     type: String,
     required: true
+  },
+  feedback:{
+    type:String
   },
   status: {
     type: String,
     enum: ['pending', 'in_progress', 'resolved', 'closed'],
     default: 'pending'
+  },
+  proof:{
+    type:String
   },
   resolution: {
     type: String

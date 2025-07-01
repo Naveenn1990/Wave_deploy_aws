@@ -1055,9 +1055,10 @@ const sendBookingCompletionNotifications = async (booking, user, subService, par
 exports.completeBooking = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log("check",req.body);
     const files = req.files;
     const { payamout, paymentMode } = req.body;
-console.log("check",req.body);
+
 
     // Process file uploads
     const photos = files.photos

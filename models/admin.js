@@ -123,6 +123,7 @@ const adminSchema = new mongoose.Schema(
       sales: { type: Boolean, default: false },
       revenue: { type: Boolean, default: false },
       register: { type: Boolean, default: false },
+      complaintToken: { type: Boolean, default: false },
     },
   },
   {
