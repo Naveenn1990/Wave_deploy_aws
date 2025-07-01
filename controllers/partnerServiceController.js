@@ -15,7 +15,7 @@ const PartnerWallet = require("../models/PartnerWallet");
 const admin = require('firebase-admin');
 const { uploadFile2 } = require("../middleware/aws");
 const DriverBooking = require("../models/DriverBooking");
-
+const { sendOTP } = require("../utils/sendOTP");
 const sendBookingAcceptanceNotifications = async (booking, user, subService, partner, admins) => {
   try {
     // User notification
@@ -374,9 +374,8 @@ exports.toggleServiceStatus = async (req, res) => {
     await service.save();
 
     res.json({
-      message: `Service ${
-        status === "active" ? "activated" : "deactivated"
-      } successfully`,
+      message: `Service ${status === "active" ? "activated" : "deactivated"
+        } successfully`,
       service,
     });
   } catch (error) {
@@ -489,12 +488,12 @@ exports.getMatchingBookings = async (req, res) => {
       });
     }
 
-    let driveBookings = [] 
+    let driveBookings = []
 
-    if (profile.drive || profile.tempoTraveller){
+    if (profile.drive || profile.tempoTraveller) {
       driveBookings = await DriverBooking.find({})
 
-    } 
+    }
 
     // Get partner's selected category, sub-category, and services
     const { category, subcategory, service } = profile;
@@ -513,7 +512,7 @@ exports.getMatchingBookings = async (req, res) => {
     // Find sub-services that belong to the partner's selected services
     const subServices = await SubService.find({
       service: { $in: service },
-    }).select("_id").sort({updatedAt:-1})
+    }).select("_id").sort({ updatedAt: -1 })
 
     if (!subServices || subServices.length === 0) {
       return res.status(400).json({
@@ -560,8 +559,8 @@ exports.getMatchingBookings = async (req, res) => {
         select: "name", // Ensure subcategory name is fetched
       })
       .select("-__v")
-      .sort({updatedAt:-1})
-      // .sort({ scheduledDate: 1, scheduledTime: 1 });
+      .sort({ updatedAt: -1 })
+    // .sort({ scheduledDate: 1, scheduledTime: 1 });
 
     // console.log("Found Bookings Count:", bookings.length);
 
@@ -617,46 +616,46 @@ exports.getMatchingBookings = async (req, res) => {
   }
 };
 
-async function deductWallet(updatedBooking,partner){
+async function deductWallet(updatedBooking, partner) {
   try {
- let  data = await PartnerWallet.findOne({ partner: partner });
-if(data){
-  data.balance = data.balance -100;
-  data.transactions.push({
-    type: "debit",
-    amount: 100,
-    description: `Job accepted fee for ${updatedBooking.subService.name}`,
-    reference:"",
-    balance: data.balance,
-  });
-  await data.save()
+    let data = await PartnerWallet.findOne({ partner: partner });
+    if (data) {
+      data.balance = data.balance - 100;
+      data.transactions.push({
+        type: "debit",
+        amount: 100,
+        description: `Job accepted fee for ${updatedBooking.subService.name}`,
+        reference: "",
+        balance: data.balance,
+      });
+      await data.save()
 
-  await NotificationModel.create({
-    userId: partner,
-    title: "Accepted Booking",
-    message: `Your booking for ${updatedBooking.subService.name} has been Accepted and job fee Rs.100 has been deducted!`,
-  });
-}
-// io.to(updatedBooking.user._id).emit("booking accepted", {
-//   message: `Your booking for ${updatedBooking.subService.name} has been Confirm!`,
-//   booking: updatedBooking,
-// });
+      await NotificationModel.create({
+        userId: partner,
+        title: "Accepted Booking",
+        message: `Your booking for ${updatedBooking.subService.name} has been Accepted and job fee Rs.100 has been deducted!`,
+      });
+    }
+    // io.to(updatedBooking.user._id).emit("booking accepted", {
+    //   message: `Your booking for ${updatedBooking.subService.name} has been Confirm!`,
+    //   booking: updatedBooking,
+    // });
 
-// console.log(
-//   `Emitted 'booking accepted' event to user ${updatedBooking?.user?._id}`
-// );
-// const user = await User.findById(updatedBooking?.user?._id);
-// user.notifications.push({
-//   message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
-//   booking: updatedBooking,
-//   seen: false,
-//   date: new Date(),
-// });
+    // console.log(
+    //   `Emitted 'booking accepted' event to user ${updatedBooking?.user?._id}`
+    // );
+    // const user = await User.findById(updatedBooking?.user?._id);
+    // user.notifications.push({
+    //   message: `Your booking for ${updatedBooking.subService.name} has been Accepted!`,
+    //   booking: updatedBooking,
+    //   seen: false,
+    //   date: new Date(),
+    // });
 
-// user.save();
+    // user.save();
   } catch (error) {
     console.log(error);
-    
+
   }
 }
 
@@ -685,9 +684,9 @@ exports.acceptBooking = async (req, res) => {
     }
 
     // Validate booking existence
-    const booking = await Booking.findById(bookingId) 
-    .populate('user')
-    .populate('subService');
+    const booking = await Booking.findById(bookingId)
+      .populate('user')
+      .populate('subService');
 
     if (!booking) {
       return res
@@ -716,16 +715,16 @@ exports.acceptBooking = async (req, res) => {
       { new: true }
     )
       .populate({
-        path: "partner", 
+        path: "partner",
       })
       .populate({
-        path: "user", 
+        path: "user",
       })
       .populate({
-        path: "subService", 
+        path: "subService",
       })
       .populate({
-        path: "service", 
+        path: "service",
       });
 
     // Update Partner: Add booking to bookings array
@@ -746,10 +745,10 @@ exports.acceptBooking = async (req, res) => {
       updatedBooking.partner,
       admins
     )
-    
 
-    deductWallet(updatedBooking,partnerId);
-  
+
+    deductWallet(updatedBooking, partnerId);
+
     res.status(200).json({
       success: true,
       message: "Booking accepted successfully",
@@ -768,7 +767,7 @@ exports.acceptBooking = async (req, res) => {
 exports.getBookingBybookid = async (req, res) => {
   try {
     let bookingId = req.params.bookingId;
-    let booking = await Booking.findById(bookingId).populate("user subService").populate({path:"cart.product"});
+    let booking = await Booking.findById(bookingId).populate("user subService").populate({ path: "cart.product" });
     if (!booking) {
       return res.status(404).json({
         success: false,
@@ -1003,7 +1002,7 @@ const sendBookingCompletionNotifications = async (booking, user, subService, par
 
     // Admin notifications
     const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been completed by partner ${partner.name}.`;
-    
+
     const adminNotification = {
       message: adminNotificationMessage,
       booking: booking._id,
@@ -1051,12 +1050,14 @@ const sendBookingCompletionNotifications = async (booking, user, subService, par
     return false;
   }
 };
-  
+
 
 exports.completeBooking = async (req, res) => {
   try {
     const { id } = req.params;
     const files = req.files;
+    const { payamout, paymentMode } = req.body;
+console.log("check",req.body);
 
     // Process file uploads
     const photos = files.photos
@@ -1065,7 +1066,7 @@ exports.completeBooking = async (req, res) => {
     const videos = files.videos
       ? await Promise.all(files.videos.map(async (file) => await uploadFile2(file, "Job")))
       : [];
-    
+
 
     // Find and update the booking with populated data
     const booking = await Booking.findByIdAndUpdate(
@@ -1080,13 +1081,13 @@ exports.completeBooking = async (req, res) => {
       { new: true }
     )
       .populate({
-        path: "user", 
+        path: "user",
       })
       .populate({
-        path: "subService", 
+        path: "subService",
       })
       .populate({
-        path: "partner", 
+        path: "partner",
       });
 
     if (!booking) {
@@ -1095,6 +1096,33 @@ exports.completeBooking = async (req, res) => {
         message: "Booking not found",
       });
     }
+    if (payamout&&payamout!=0) {
+      booking.payamount = booking.payamount + Number(payamout);
+      booking.paymentMode = paymentMode;
+    }
+
+    if(paymentMode === "cash"&&payamout) {
+      const partnerWallet = await PartnerWallet.findOne({ partner: booking.partner._id });
+      if (!partnerWallet) {
+        return res.status(404).json({
+          success: false,
+          message: "Partner wallet not found",
+        });
+      }
+      partnerWallet.balance =partnerWallet.balance- Number(payamout);
+      partnerWallet.transactions.push({ 
+        amount: payamout,
+       type: "debit",
+        description: `Payment for booking ${booking.subService.name} completed`,
+        reference: booking._id,
+        balance: partnerWallet.balance,
+      })
+      await partnerWallet.save();
+    }
+
+
+    booking.paymentStatus = "completed";
+    await booking.save();
 
     // Get admin details for notifications
     const admins = await Admin.find({}).select('fcmToken');
@@ -1126,7 +1154,7 @@ exports.completeBooking = async (req, res) => {
     });
   }
 };
- 
+
 // Get completed bookings
 exports.getCompletedBookings = async (req, res) => {
   try {
@@ -1306,6 +1334,20 @@ exports.getRejectedBookings = async (req, res) => {
 
 const sendBookingPauseNotifications = async (booking, user, subService, partner, admins, pauseDetails) => {
   try {
+    // Validate required parameters
+    if (!booking || !user || !subService || !partner || !pauseDetails) {
+      console.error('Missing required parameters for booking pause notification');
+      return false;
+    }
+
+    // Ensure notifications arrays exist
+    if (!user.notifications) {
+      user.notifications = [];
+    }
+    if (!partner.notifications) {
+      partner.notifications = [];
+    }
+
     // User notification
     const userNotification = {
       message: `Your booking for ${subService.name} has been paused. Reason: ${pauseDetails.pauseReason}. Will resume on ${pauseDetails.nextScheduledDate}`,
@@ -1396,7 +1438,7 @@ const sendBookingPauseNotifications = async (booking, user, subService, partner,
 
     // Admin notifications
     const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been paused by partner ${partner.name}. Reason: ${pauseDetails.pauseReason}. Will resume on ${pauseDetails.nextScheduledDate}`;
-    
+
     const adminNotification = {
       message: adminNotificationMessage,
       booking: booking._id,
@@ -1411,37 +1453,47 @@ const sendBookingPauseNotifications = async (booking, user, subService, partner,
       { $push: { notifications: adminNotification } }
     );
 
-    // Send FCM to all admins with tokens
-    const adminTokens = admins.filter(a => a.fcmToken).map(a => a.fcmToken);
-    if (adminTokens.length > 0) {
-      const adminMessage = {
-        notification: {
-          title: 'Booking Paused',
-          body: adminNotificationMessage
-        },
-        data: {
-          bookingId: booking._id.toString(),
-          type: 'admin_booking_paused',
-          title: 'Booking Paused',
-          body: adminNotificationMessage,
-          timestamp: new Date().toISOString(),
-          partnerName: partner.name,
-          resumeDate: pauseDetails.nextScheduledDate.toISOString(),
-          pauseReason: pauseDetails.pauseReason
-        },
-        tokens: adminTokens,
-        android: {
-          priority: 'high',
-          ttl: 60 * 60 * 24 * 7 // 1 week retention
-        }
-      };
+    // Send FCM to all admins with tokens (only if admins array exists)
+    if (admins && Array.isArray(admins)) {
+      const adminTokens = admins.filter(a => a && a.fcmToken).map(a => a.fcmToken);
+      if (adminTokens.length > 0) {
+        const adminMessage = {
+          notification: {
+            title: 'Booking Paused',
+            body: adminNotificationMessage
+          },
+          data: {
+            bookingId: booking._id.toString(),
+            type: 'admin_booking_paused',
+            title: 'Booking Paused',
+            body: adminNotificationMessage,
+            timestamp: new Date().toISOString(),
+            partnerName: partner.name,
+            resumeDate: pauseDetails.nextScheduledDate.toISOString(),
+            pauseReason: pauseDetails.pauseReason
+          },
+          tokens: adminTokens,
+          android: {
+            priority: 'high',
+            ttl: 60 * 60 * 24 * 7 // 1 week retention
+          }
+        };
 
-      await admin.messaging().sendMulticast(adminMessage);
+        await admin.messaging().sendMulticast(adminMessage);
+      }
     }
 
     return true;
   } catch (error) {
     console.error('Booking pause notification error:', error);
+    console.error('Parameters received:', {
+      booking: booking ? 'exists' : 'undefined',
+      user: user ? 'exists' : 'undefined',
+      subService: subService ? 'exists' : 'undefined',
+      partner: partner ? 'exists' : 'undefined',
+      admins: admins ? 'exists' : 'undefined',
+      pauseDetails: pauseDetails ? 'exists' : 'undefined'
+    });
     return false;
   }
 };
@@ -1453,11 +1505,12 @@ exports.pauseBooking = async (req, res) => {
     const { bookingId } = req.params;
     let { nextScheduledDate, nextScheduledTime, pauseReason } = req.body;
 
-    // console.log("Received:", {
-    //   nextScheduledDate,
-    //   nextScheduledTime,
-    //   pauseReason,
-    // });
+    console.log("Received:", {
+      nextScheduledDate,
+      nextScheduledTime,
+      pauseReason,
+      bookingId
+    });
 
     // Validate inputs
     if (!nextScheduledDate || isNaN(new Date(nextScheduledDate).getTime())) {
@@ -1477,7 +1530,7 @@ exports.pauseBooking = async (req, res) => {
     // Find booking with populated data
     const booking = await Booking.findOne({
       _id: bookingId,
-      status: { $in: ["accepted", "in_progress"] },
+      status: { $in: ["accepted", "in_progress", "paused"] },
     })
       .populate('user')
       .populate('subService')
@@ -1712,7 +1765,7 @@ exports.addToCart = async (req, res) => {
     let booking = await Booking.findOne({
       _id: bookingId,
       partner: partnerId, // Ensure booking belongs to this partner
-     
+
     });
 
     if (!booking) {
@@ -1732,7 +1785,7 @@ exports.addToCart = async (req, res) => {
     if (existingItemIndex !== -1) {
       // Update quantity
       booking.cart[existingItemIndex].quantity = change;
-      booking.cart[existingItemIndex].approved=false
+      booking.cart[existingItemIndex].approved = false
       // Remove item if quantity is 0 or negative
       if (booking.cart[existingItemIndex].quantity <= 0) {
         booking.cart.splice(existingItemIndex, 1);
@@ -1749,7 +1802,7 @@ exports.addToCart = async (req, res) => {
     }
 
     // Save the updated booking with the modified cart
-    booking=await booking.save();
+    booking = await booking.save();
 
     return res.status(200).json({
       message: "Cart updated successfully",
@@ -1762,21 +1815,21 @@ exports.addToCart = async (req, res) => {
   }
 };
 
-exports.removeCart=async(req,res)=>{
-  try{
-    let {bookid,cartId}=req.body;
-    let booking=await Booking.findByIdAndUpdate(bookid,{$pull:{cart:{_id:cartId}}},{new:true});
-    if(!booking) return res.status(404).json({ message: "Booking not found" });
+exports.removeCart = async (req, res) => {
+  try {
+    let { bookid, cartId } = req.body;
+    let booking = await Booking.findByIdAndUpdate(bookid, { $pull: { cart: { _id: cartId } } }, { new: true });
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
     // let cart=booking.cart.id(cartId);
     // cart.remove();
-  
-    return res.status(200).json({message:"Cart item removed successfully",cart:booking.cart });
-  }catch(error){
+
+    return res.status(200).json({ message: "Cart item removed successfully", cart: booking.cart });
+  } catch (error) {
     console.log(error);
-    
+
   }
 }
- 
+
 // Get all bookings
 exports.allpartnerBookings = async (req, res) => {
   try {
@@ -2027,3 +2080,157 @@ exports.getwalletbypartner = async (req, res) => {
     console.log(error);
   }
 };
+
+
+exports.sendOtpWithNotification = async (req, res) => {
+  try {
+    const { bookid } = req.body;
+
+
+
+    // Find the partner by phone number
+    const booking = await Booking.findById(bookid).populate('user').populate('subService');
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    const user = booking.user; // Assuming booking has a user field that references the User model
+    if (!user) {
+      return res.status(404).json({ message: "user not found" });
+    }
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
+    if (!user.fcmToken) {
+      await sendOTP(user.phone, otp);
+      booking.otp = otp; // Save OTP to booking
+      await booking.save();
+      return res.status(200).json({ message: "OTP sent successfully" });
+    }
+    // Send OTP via SMS (assuming you have a function sendSms)
+
+    const userNotification = {
+      title: 'Service Otp Verification',
+      message: `Your OTP is ${otp} for service ${booking?.subService?.name}. Please do not share it with anyone.`, // Fixed typo: namw -> name
+      userId: user._id,
+      type: 'new_notification',
+      read: false,
+      skipFcm: true, // Prevent post-save hook from sending FCM
+    };
+
+    // Create notification for the user
+    try {
+      if (user.fcmToken) {
+        const userMessage = {
+          notification: {
+            title: userNotification.title, // ✅ Fixed: Use .title instead of entire object
+            body: userNotification.message.length > 100
+              ? userNotification.message.slice(0, 97) + '...'
+              : userNotification.message,
+          },
+          data: {
+            type: 'new-notification', // Align with FirebaseProvider
+            userId: user._id.toString(),
+            bookingId: booking._id.toString(),
+            title: userNotification.title,
+            message: userNotification.message.length > 100
+              ? userNotification.message.slice(0, 97) + '...'
+              : userNotification.message,
+            timestamp: new Date().toISOString(),
+          },
+          token: user.fcmToken,
+          android: {
+            priority: 'high',
+            ttl: 60 * 60 * 24,
+          },
+          apns: {
+            payload: {
+              aps: {
+                contentAvailable: true,
+              },
+            },
+            headers: {
+              'apns-priority': '5',
+            },
+          },
+        };
+
+        // Validate payload size
+        const userPayloadString = JSON.stringify(userMessage);
+        const userPayloadSize = Buffer.byteLength(userPayloadString, 'utf8');
+        if (userPayloadSize > 4096) {
+          console.error(`User FCM payload too large: ${userPayloadSize} bytes`);
+          userMessage.notification.body = userMessage.notification.body.slice(0, 50) + '...';
+          userMessage.data.message = userMessage.data.message.slice(0, 50) + '...';
+          const fallbackSize = Buffer.byteLength(JSON.stringify(userMessage), 'utf8');
+          if (fallbackSize > 4096) {
+            console.error(`User fallback payload still too large: ${fallbackSize} bytes`);
+            throw new Error('User FCM payload exceeds size limit');
+          }
+        }
+
+        console.log(`Sending FCM to user: ${user._id}`);
+        await admin.messaging().send(userMessage);
+        console.log(`FCM sent to user: ${user._id}`);
+      } else {
+        console.log(`No FCM token for user: ${user._id}`);
+      }
+    } catch (error) {
+      sendOTP(user.phone, otp);
+    }
+
+
+    booking.otp = otp; // Save OTP to booking
+    await booking.save();
+
+    res.status(200).json({ message: "OTP sent successfully" });
+  } catch (error) {
+    console.error("Error sending OTP:", error);
+    res.status(500).json({ message: "Error sending OTP", error: error.message });
+  }
+}
+
+exports.verifyOtpbooking = async (req, res) => {
+  try {
+    const { bookid, otp } = req.body;
+
+    // Find the booking by ID
+    const booking = await Booking.findById(bookid);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Check if the OTP matches
+    if (booking.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    // Clear the OTP after successful verification
+    booking.otp = undefined;
+    await booking.save();
+
+    res.status(200).json({ message: "OTP verified successfully" });
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    res.status(500).json({ message: "Error verifying OTP", error: error.message });
+  }
+}
+
+exports.sendSmsOtp = async (req, res) => {
+  try {
+    const { bookid } = req.body;
+    // Find the partner by phone number
+    const booking = await Booking.findById(bookid).populate('user').populate('subService');
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    const user = booking.user; // Assuming booking has a user field that references the User model
+    if (!user) {
+      return res.status(404).json({ message: "user not found" });
+    }
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
+
+    await sendOTP(user.phone, otp);
+    booking.otp = otp; // Save OTP to booking
+    await booking.save();
+    return res.status(200).json({ message: "OTP sent successfully" });
+  } catch (error) {
+    console.error("Error sending SMS OTP:", error);
+    res.status(500).json({ message: "Error sending SMS OTP", error: error.message });
+  }
+}

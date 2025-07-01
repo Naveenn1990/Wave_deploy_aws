@@ -57,6 +57,9 @@ const bookingSchema = new mongoose.Schema(
 
     acceptedAt: Date,
     completedAt: Date,
+    otp:{
+      type: String,
+    },
     pauseDetails: {
       nextScheduledDate: Date,
       nextScheduledTime: String,

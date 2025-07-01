@@ -33,6 +33,9 @@ const {
   updateServiceStatus,
   getMatchingBookings,
   acceptBooking,
+sendOtpWithNotification,
+verifyOtpbooking,
+sendSmsOtp,
 } = partnerServiceController;
 
 const {
@@ -291,6 +294,9 @@ router.get(
 
 router.put("/acceptdriver",auth,acceptBookingDriver);
 router.put("/rejectdriver",auth,rejectBookingDriver);
-router.get("/getByDriver",auth,getByDriverId)
+router.get("/getByDriver",auth,getByDriverId);
+router.post("/sendOtpWithNotification", auth, sendOtpWithNotification);
+router.post("/verifyOtpbooking", auth, verifyOtpbooking);
+router.post("/sendSmsOtp", auth, sendSmsOtp);
 
 module.exports = router;

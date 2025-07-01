@@ -22,7 +22,7 @@ class Transaction{
     successUrl,failedUrl
       });
       if (!data) return res.status(400).json({ error: "Something went worng" });
-
+      // console.log("Data created:", req.body);
       function generateSignature(payload, saltKey, saltIndex) {
         const encodedPayload = Buffer.from(payload).toString("base64");
         const concatenatedString = encodedPayload + "/pg/v1/pay" + saltKey;
@@ -74,6 +74,7 @@ class Transaction{
            response.data,
            response.data?.data.instrumentResponse?.redirectInfo?.url
          );
+         
       return res.status(200).json({id:data._id,
         url: response.data?.data.instrumentResponse?.redirectInfo,
       });
