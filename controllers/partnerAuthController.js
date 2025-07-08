@@ -84,6 +84,26 @@ exports.updateTokenFmc = async (req, res) => {
 
   }
 }
+
+exports.completePaymentVendor = async (req, res) => {
+  try {
+    let { registerAmount, payId } = req.body;
+    let data = await Partner.findById(req.partner._id);
+    if (!data) return res.status(200).json({ error: "Data not found" });
+    if (registerAmount) {
+      data.registerAmount = registerAmount;
+      registerdFee = true;
+    }
+    if (payId) {
+      data.payId = payId;
+    }
+
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message })
+  }
+}
+
 // Verify OTP and login partner
 exports.verifyLoginOTP = async (req, res) => {
   try {
@@ -162,7 +182,7 @@ exports.verifyLoginOTP = async (req, res) => {
         category: partner?.category, // Ensure this field exists
         subcategory: partner?.subcategory, // Ensure this field exists
         service: partner?.service, // Ensure this field exists
-        modeOfService: partner?.modeOfService||"offline", // Ensure this field exists
+        modeOfService: partner?.modeOfService || "offline", // Ensure this field exists
         status: partner?.status,
         // kycStatus: partner?.kycStatus,
         profileCompleted: partner?.profileCompleted,
@@ -355,7 +375,7 @@ exports.selectCategoryAndServices = async (req, res) => {
     console.log("category : ", category);
     console.log("subcategory : ", subcategory);
     console.log("service : ", service);
-    
+
     if (category.length && (!subcategory.length || !service.length)) {
       return res.status(400).json({ success: false, message: "Please select subcategory and service" });
     } else if (category.length && subcategory.length && service.length) {
@@ -743,7 +763,7 @@ exports.getProfile = async (req, res) => {
         subcategory: profile.subcategory,
         category: profile.category,
         service: profile.service,
-        modeOfService: profile?.modeOfService|| "offline",
+        modeOfService: profile?.modeOfService || "offline",
         profilePicture: profile.profilePicture,
         status: profile.profileCompleted ? "Completed" : "Incomplete",
         drive: profile.drive,
@@ -839,7 +859,7 @@ exports.updateProfile = async (req, res) => {
         experience: profile.experience,
         category: profile.category,
         service: profile.service,
-        modeOfService: profile?.modeOfService||"offline",
+        modeOfService: profile?.modeOfService || "offline",
         profilePicture: profile.profilePicture,
         verificationStatus: profile.verificationStatus,
         status: profile.status,
@@ -878,7 +898,7 @@ exports.getWallet = async (req, res) => {
       })
       return res
         .status(200)
-        .json({ success: true, message: "Wallet details", data: {} });
+        .json({ success: true, message: "Wallet details", data: {balance:0,transactions:[]} });
     }
     if (data.balance < 100) {
       await NotificationModel.create({

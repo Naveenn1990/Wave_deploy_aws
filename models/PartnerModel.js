@@ -124,6 +124,17 @@ const partnerSchema = new mongoose.Schema(
           return this.profileCompleted;
         },
       },
+      registerAmount:{
+        type: Number,
+        default:0
+      },
+      payId:{
+        type:String
+      },
+      registerdFee:{
+        type:Boolean,
+        default:false  
+      },
       city: {
         type: String,
       },

@@ -280,7 +280,7 @@ router.post("/reviews/user", auth, partnerServiceController.reviewUser);
 router.get("/getWalletbypartner", auth, partnerAuthController.getWallet);
 router.put("/updateTokenFmc",auth,partnerAuthController.updateTokenFmc);
 router.put("/updateLocation",auth,partnerAuthController.updateLocation);
-
+router.put("/regigiste-fee",auth,partnerAuthController.completePaymentVendor)
 router.post(
   "/addtransactionwallet",
   auth,

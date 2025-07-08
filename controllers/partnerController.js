@@ -119,6 +119,19 @@ const updateTokenFmc = async (req, res) => {
   }
 }
 
+// const completePaymentVendor=async(req,res)=>{
+//   try {
+//     let {registerAmount,payId}=req.body;
+//     let data=await Partner.findById(req.partner._id);
+//     if(!data) return res.status(200).json({error:"Data not found"});
+//     data.registerAmount=registerAmount;
+//     data.payId=payId;
+//     registerdFee=true;
+//   } catch (error) {
+//     return res.status(500).json({error:error.message})
+//   }
+// }
+
 const updateProfile = async (req, res) => {
   try {
     // console.log("Request body:", req.body);
@@ -391,4 +404,5 @@ module.exports = {
   completeBooking,
   getAllPartnerKYC,
   updateTokenFmc,
+
 };
