@@ -11,7 +11,7 @@ const { upload, processFilePath } = require("../middleware/upload");
 const SubCategory = require("../models/SubCategory");
 const Product = require("../models/product");
 const ReviewController = require("../controllers/reviewController");
-const { addtransactionwalletadmin, getWalletByAdminId, completePaymentVendor } = require("../controllers/partnerAuthController");
+const { addtransactionwalletadmin, getWalletByAdminId, completePaymentVendor, updatedDocuments } = require("../controllers/partnerAuthController");
 
 // Auth routes
 router.post("/login", adminController.loginAdmin);
@@ -319,5 +319,5 @@ router.get("/contactus", adminAuth, ReviewController.getAllContactUs);
 router.put('/partner/addwallets',adminAuth,addtransactionwalletadmin );
 router.get('/adminwallets/:id', adminAuth, getWalletByAdminId);
 router.put('/registrationfeeupdate',adminAuth,completePaymentVendor)
-
+router.put("/updatedDocuments",upload.any(),adminAuth,updatedDocuments)
 module.exports = router;

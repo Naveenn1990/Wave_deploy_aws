@@ -672,6 +672,42 @@ exports.completeKYC = async (req, res) => {
   }
 };
 
+
+exports.updatedDocuments=async(req,res)=>{
+  try {
+    let {id}=req.body;
+     
+      let data=await  Partner.findById(id);
+      if(!data) return res.status(400).json({error:"Data not found"});
+
+        if (req.files && req.files.length > 0) {
+        let arr = req.files;
+        let i;
+        for (i = 0; i < arr?.length; i++) {
+          if (arr[i].fieldname == "panCard") {
+            data.kyc.panCard = await uploadFile2(arr[i],"partnerdoc");
+          }
+          if (arr[i].fieldname == "aadhaar") {
+            data.kyc.aadhaar = await uploadFile2(arr[i],"partnerdoc");
+          }
+          if (arr[i].fieldname == "chequeImage") {
+            data.kyc.chequeImage = await uploadFile2(arr[i],"partnerdoc");
+          }
+          if (arr[i].fieldname == "drivingLicence") {
+            data.kyc.drivingLicence = await uploadFile2(arr[i],"partnerdoc");
+          }
+           if (arr[i].fieldname == "bill") {
+            data.kyc.bill = await uploadFile2(arr[i],"partnerdoc");
+          }
+        }
+      }
+      data=await data.save();
+
+      return res.status(200).json({success:"Successfully updated"})
+  } catch (error) {
+    console.log(error)
+  }
+}
 // New endpoint for admin to update KYC status
 exports.updateKYCStatus = async (req, res) => {
   try {
