@@ -87,19 +87,23 @@ exports.updateTokenFmc = async (req, res) => {
 
 exports.completePaymentVendor = async (req, res) => {
   try {
-    let { registerAmount, payId } = req.body;
-    let data = await Partner.findById(req.partner._id);
+    let {id, registerAmount, payId,paidBy } = req.body;
+    let data = await Partner.findById(id||req.partner._id);
     if (!data) return res.status(200).json({ error: "Data not found" });
     if (registerAmount) {
-      data.registerAmount = registerAmount;
-      registerdFee = true;
+      data.profile.registerAmount = registerAmount;
+      data.profile.registerdFee = true;
     }
     if (payId) {
-      data.payId = payId;
+      data.profile.payId = payId;
     }
-
-
+    if(paidBy){
+      data.profile.paidBy=paidBy
+    }
+    data=await data.save();
+    return res.status(200).json({success:"Successfully completed transaction"})
   } catch (error) {
+    console.log(error)
     return res.status(500).json({ error: error.message })
   }
 }

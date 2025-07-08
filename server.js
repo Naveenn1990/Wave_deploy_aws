@@ -106,29 +106,57 @@ const initiateCall = async (req, res) => {
 
     console.log("callerId, receiverId, callId, isUser, offer,user", callerId, receiverId, callId, isUser, offer, user)
     // Emit call initiation event to receiver's room
-    const message = {
-      notification: {
-        title: 'Incoming Call',
-        body: `Call from ${user.name}`,
+    // const message = {
+    //   notification: {
+    //     title: 'Incoming Call',
+    //     body: `Call from ${user.name}`,
 
+    //   },
+    //   android: {
+    //     notification: {
+    //       channel_id: 'call-channel',
+    //       sound: "ringtone",
+    //     },
+    //   },
+    //   data: {
+    //     callId,
+    //     callerId,
+    //     receiverId,
+    //     type: 'call',
+    //     user: JSON.stringify(user),
+    //     offer: JSON.stringify(offer),
+    //   },
+    //   token: isUser ? partner.fcmToken : partner.fcmtoken,
+    // };
+const message = {
+  notification: {
+    title: 'Incoming Call',
+    body: `Call from ${user.name}`,
+  },
+  android: {
+    notification: {
+      channel_id: 'call-channel',
+      sound: 'ringtone',
+    },
+  },
+  apns: {
+    payload: {
+      aps: {
+        sound: 'ringtone.caf',
+        contentAvailable: true,
       },
-      android: {
-        notification: {
-          channel_id: 'call-channel',
-          sound: "ringtone",
-        },
-      },
-      data: {
-        callId,
-        callerId,
-        receiverId,
-        type: 'call',
-        user: JSON.stringify(user),
-        offer: JSON.stringify(offer),
-      },
-      token: isUser ? partner.fcmToken : partner.fcmtoken,
-    };
-
+    },
+  },
+  data: {
+    callId,
+    callerId,
+    receiverId,
+    type: 'call',
+    user: JSON.stringify(user),
+    offer: JSON.stringify(offer),
+  },
+  token: isUser ? partner.fcmToken : partner.fcmtoken,
+};
     await admin.messaging().send(message);
     console.log('Notification sent to receiver:', receiverId);
     res.json({ success: true });
@@ -771,6 +799,7 @@ const { uploadFile2 } = require("./middleware/aws");
 const driverFareRoutes = require('./routes/driverFareRoutes');
 const phonePayRoutes = require('./routes/phonePay');
 const tokenRoutes=require('./routes/tokenRoute');
+const RegisterFee=require('./routes/registerFeeRoutes')
 // Initialize Firebase Admin
 // const serviceAccount = require('./firebase-admin.json');   
 // admin.initializeApp({
@@ -799,6 +828,7 @@ app.use("/api/notification", partnerNotification);
 app.use('/api/driverfares', driverFareRoutes);
 app.use('/api/phonepay', phonePayRoutes);
 app.use('/api/tokens', tokenRoutes);
+app.use('/api/admin', RegisterFee);
 // Root route for WebSocket server
 
 app.get("/admin/bookings", adminBookingController.getAllBookings);

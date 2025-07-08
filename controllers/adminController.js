@@ -167,6 +167,7 @@ exports.createMainAdmin = async (req, res) => {
       verifiedProvider: true,
       enquiry: true,
       complaintToken:true,
+    providerregisterfee:true
     };
 
     // Hash the password
@@ -231,7 +232,8 @@ exports.createAdmin = async (req, res) => {
       "providerVerification",
       "verifiedProvider",
       "enquiry",
-      "complaintToken"
+      "complaintToken",
+      "providerregisterfee"
     ];
 
     const filteredPermissions = {};

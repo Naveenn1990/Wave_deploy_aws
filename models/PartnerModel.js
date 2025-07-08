@@ -131,6 +131,10 @@ const partnerSchema = new mongoose.Schema(
       payId:{
         type:String
       },
+      paidBy:{
+        type:String,
+        default:"Self"
+      },
       registerdFee:{
         type:Boolean,
         default:false  
