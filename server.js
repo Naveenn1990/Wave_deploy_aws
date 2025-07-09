@@ -100,7 +100,10 @@ const initiateCall = async (req, res) => {
     if (!partner) {
       return res.status(404).json({ success: false, message: 'Receiver not found' });
     }
-
+const fcmToken = isUser ? partner.fcmToken : partner.fcmtoken;
+    if (!fcmToken) {
+      return res.status(400).json({ success: false, message: 'User currently offline...' });
+    }
     // Store call state
     calls.set(callId, { callerId, receiverId, status: 'pending', offer });
 
