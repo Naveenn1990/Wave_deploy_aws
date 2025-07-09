@@ -789,4 +789,5 @@ router.get(
  */
 router.get("/api/user/bookings", auth, bookingController.getAllUserBookings);
 router.put("/updateFcmToken", userController.updateFcmToken);
+router.delete('/deleteduser',auth,userController.deleteUser)
 module.exports = router;

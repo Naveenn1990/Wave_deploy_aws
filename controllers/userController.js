@@ -107,6 +107,16 @@ exports.updateFcmToken = async (req, res) => {
   }
 }
 
+exports.deleteUser=async(req,res)=>{
+  try {
+    let id=req.user._id;
+    let data =await User.deleteOne({_id:id});
+    return res.status(200).json({success:"Suuccessfully deleted"})
+  } catch (error) {
+    console.log(error);
+    
+  }
+}
 
 // Login with password
 exports.loginWithPassword = async (req, res) => {
