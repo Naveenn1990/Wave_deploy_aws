@@ -6,6 +6,7 @@ const Booking = require("../models/booking"); // Ensure the correct model is imp
 const SubService = require("../models/SubService");
 const { uploadFile2 } = require("../middleware/aws");
 const fetch = require('node-fetch'); 
+const { default: axios } = require("axios");
 
 // Register new user
 exports.register = async (req, res) => {
@@ -195,34 +196,25 @@ exports.sendLoginOTP = async (req, res) => {
         message: "No user found with this phone number",
       });
     }
-   const apiURL = 'http://123.108.46.13/sms-panel/api/http/index.php';
-   
+
+ const apiUrl = `https://1.rapidsms.co.in/api/push`;
+
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const tempOTPExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
 
     user.tempOTP = otp;
     user.tempOTPExpiry = tempOTPExpiry;
- const params = {
-        username: 'ABHINANDHAN', // Replace with your actual username
-        apikey: '81E9C-0AE0B',   // Replace with your actual API key
-        apirequest: 'Text',
-        sender: `ABHIAN`,
-        mobile: phone,
-        message:  `Your OTP for mobile number verification at Abhinandan Organic is  ${otp}.
-
-Please use this OTP to complete your verification.`,
-        route: `TRANS`,
-        TemplateID: `1107173641973511689`,
-        format: 'JSON',
+  const params = {
+        apikey: "6874d06f3053b",
+        route: "TRANS",
+        sender: "WVETEC",
+        mobileno: phone,
+        text: `Welcome to Wave Tech Services your Mobile Number Verification Code is ${otp}`
     };
 
     // Convert parameters to query string
-    const queryParams = new URLSearchParams(params).toString();
-       const response = await fetch(`${apiURL}?${queryParams}`, {
-            method: 'GET', // API uses GET method
-        });
-
+  const response = await axios.get(apiUrl, { params });
         // Parse and return the response
         // if (response.ok) {
         //     const data = await response.json();
