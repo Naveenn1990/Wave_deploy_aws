@@ -100,63 +100,85 @@ const initiateCall = async (req, res) => {
     if (!partner) {
       return res.status(404).json({ success: false, message: 'Receiver not found' });
     }
-
+const fcmToken = isUser ? partner.fcmToken : partner.fcmtoken;
+    if (!fcmToken) {
+      return res.status(400).json({ success: false, message: 'User currently offline...' });
+    }
     // Store call state
     calls.set(callId, { callerId, receiverId, status: 'pending', offer });
 
     console.log("callerId, receiverId, callId, isUser, offer,user", callerId, receiverId, callId, isUser, offer, user)
-    // Emit call initiation event to receiver's room
-    // const message = {
-    //   notification: {
-    //     title: 'Incoming Call',
-    //     body: `Call from ${user.name}`,
+   
+// const message = {
+//   notification: {
+//     title: 'Incoming Call',
+//     body: `Call from ${user.name}`,
+//   },
+//   android: {
+//     notification: {
+//       channel_id: 'call-channel',
+//       sound: 'ringtone',
+//     },
+//   },
+//   apns: {
+//     payload: {
+//       aps: {
+//         sound: 'ringtone.caf',
+//         contentAvailable: true,
+//       },
+//     },
+//   },
+//   data: {
+//     callId,
+//     callerId,
+//     receiverId,
+//     type: 'call',
+//     user: JSON.stringify(user),
+//     offer: JSON.stringify(offer),
+//   },
+//   token: isUser ? partner.fcmToken : partner.fcmtoken,
+// };
 
-    //   },
-    //   android: {
-    //     notification: {
-    //       channel_id: 'call-channel',
-    //       sound: "ringtone",
-    //     },
-    //   },
-    //   data: {
-    //     callId,
-    //     callerId,
-    //     receiverId,
-    //     type: 'call',
-    //     user: JSON.stringify(user),
-    //     offer: JSON.stringify(offer),
-    //   },
-    //   token: isUser ? partner.fcmToken : partner.fcmtoken,
-    // };
 const message = {
-  notification: {
-    title: 'Incoming Call',
-    body: `Call from ${user.name}`,
-  },
-  android: {
-    notification: {
-      channel_id: 'call-channel',
-      sound: 'ringtone',
-    },
-  },
-  apns: {
-    payload: {
-      aps: {
-        sound: 'ringtone.caf',
-        contentAvailable: true,
+      token: fcmToken,
+      notification: {
+        title: 'Incoming Call',
+        body: `Call from ${user.name}`,
       },
-    },
-  },
-  data: {
-    callId,
-    callerId,
-    receiverId,
-    type: 'call',
-    user: JSON.stringify(user),
-    offer: JSON.stringify(offer),
-  },
-  token: isUser ? partner.fcmToken : partner.fcmtoken,
-};
+      data: {
+        callId: callId.toString(),
+        callerId: callerId.toString(),
+        receiverId: receiverId.toString(),
+        type: 'call',
+        user: JSON.stringify(user),
+        offer: JSON.stringify(offer),
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'call-channel', // Ensure this channel exists in Android app
+          sound: 'ringtone',
+          priority: 'high',
+        },
+      },
+      apns: {
+        headers: {
+          'apns-priority': '10', // High priority for iOS
+        },
+        payload: {
+          aps: {
+            alert: {
+              title: 'Incoming Call',
+              body: `Call from ${user.name}`,
+            },
+            sound: 'default', // Use default sound to avoid file issues
+            contentAvailable: true, // For background notifications
+            mutableContent: true, // For notification service extensions (if used)
+            badge: 1, // Optional: Set badge count
+          },
+        },
+      },
+    };
     await admin.messaging().send(message);
     console.log('Notification sent to receiver:', receiverId);
     res.json({ success: true });
