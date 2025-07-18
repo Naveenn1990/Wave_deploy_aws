@@ -131,7 +131,7 @@ exports.loginAdmin = async (req, res) => {
 //     res.status(500).json({ message: "Error creating admin" });
 //   }
 // };
-  
+
 exports.createMainAdmin = async (req, res) => {
   try {
     // Check if a main admin already exists
@@ -166,8 +166,9 @@ exports.createMainAdmin = async (req, res) => {
       providerVerification: true,
       verifiedProvider: true,
       enquiry: true,
-      complaintToken:true,
-    providerregisterfee:true
+      complaintToken: true,
+      providerregisterfee: true,
+      transaction: true,
     };
 
     // Hash the password
@@ -198,21 +199,21 @@ exports.createMainAdmin = async (req, res) => {
     res.status(500).json({ message: "Error creating main admin" });
   }
 };
- 
+
 exports.createAdmin = async (req, res) => {
-  try { 
+  try {
     if (req.admin.role !== "admin") {
       return res.status(403).json({ message: "Not authorized" });
     }
 
     // console.log("req.body : " , req.body)
-    const { email, password, name , permissions} = req.body;  
+    const { email, password, name, permissions } = req.body;
 
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
       return res.status(400).json({ message: "Subadmin already exists" });
     }
- 
+
     const validModules = [
       "dashboard",
       "subadmin",
@@ -227,6 +228,7 @@ exports.createAdmin = async (req, res) => {
       "booking",
       "refundRequest",
       "reviews",
+      'transaction',
       "promotionalVideo",
       "customer",
       "providerVerification",
@@ -262,7 +264,7 @@ exports.createAdmin = async (req, res) => {
 
     res.status(201).json({
       message: "Subadmin created successfully",
-      subadmin 
+      subadmin
     });
   } catch (error) {
     console.error("Create Subadmin Error:", error);
@@ -274,24 +276,24 @@ exports.createAdmin = async (req, res) => {
 exports.getProfiles = async (req, res, next) => {
   try {
     // console.log("Getting profile for admin:", req.admin._id);
- 
+
     // if (!req.admin || !req.admin._id) {
     //   throw new Error("User not authenticated");
     // }
 
     const admins = await Admin.find()
-      // .select("-password -tempOTP -tempOTPExpiry")
-      // .lean();
+    // .select("-password -tempOTP -tempOTPExpiry")
+    // .lean();
 
     if (!admins) {
-      console.log("Admin : " , admins)
+      console.log("Admin : ", admins)
       const error = new Error("Admin not found");
       error.statusCode = 404;
       throw error;
-    } 
+    }
     res.json({
       success: true,
-      admins, 
+      admins,
     });
   } catch (error) {
     console.error("Get Profile Error:", {
@@ -299,7 +301,7 @@ exports.getProfiles = async (req, res, next) => {
       stack: error.stack,
       // adminId: req.admin?._id,
     });
- 
+
     next(error);
   }
 };
@@ -308,7 +310,7 @@ exports.getProfiles = async (req, res, next) => {
 exports.getProfile = async (req, res, next) => {
   try {
     console.log("Getting profile for admin:", req.admin._id);
- 
+
     if (!req.admin || !req.admin._id) {
       throw new Error("User not authenticated");
     }
@@ -318,14 +320,14 @@ exports.getProfile = async (req, res, next) => {
       .lean();
 
     if (!admin) {
-      console.log("Admin : " , admin)
+      console.log("Admin : ", admin)
       const error = new Error("Admin not found");
       error.statusCode = 404;
       throw error;
-    } 
+    }
     res.json({
       success: true,
-      admin, 
+      admin,
     });
   } catch (error) {
     console.error("Get Profile Error:", {
@@ -333,7 +335,7 @@ exports.getProfile = async (req, res, next) => {
       stack: error.stack,
       // adminId: req.admin?._id,
     });
- 
+
     next(error);
   }
 };
@@ -342,7 +344,7 @@ exports.updateProfile = async (req, res) => {
   try {
     const { subadminId } = req.params; // Get subadmin ID from URL
     const { name, email, password, permissions } = req.body;
-    console.log("Req Body : " , req.body) 
+    console.log("Req Body : ", req.body)
 
     // Find subadmin by ID and ensure they exist
     const subadmin = await Admin.findById(subadminId);
@@ -566,9 +568,9 @@ exports.getPartnerKYC = async (req, res) => {
       .populate('profile');
 
     if (!partner) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Partner not found" 
+        message: "Partner not found"
       });
     }
 
@@ -584,9 +586,9 @@ exports.getPartnerKYC = async (req, res) => {
     });
   } catch (error) {
     console.error("Get Partner KYC Error:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Error fetching partner KYC details" 
+      message: "Error fetching partner KYC details"
     });
   }
 };
@@ -606,10 +608,10 @@ exports.verifyPartnerKYC = async (req, res) => {
 
     if (!partner) {
       return res.status(404).json({ success: false, message: "Partner not found" });
-    } 
+    }
     partner.kyc.status = 'approved'
     await partner.save()
-    
+
     res.json({ success: true, message: "Partner found", partner });
   } catch (error) {
     console.error("Error:", error);
@@ -707,7 +709,7 @@ exports.getAllPartners = async (req, res) => {
             createdAt: partner.createdAt,
             updatedAt: partner.updatedAt,
             KYC: {
-              status: partner?.kyc?.status ,
+              status: partner?.kyc?.status,
               // status: partner?.kyc?.status || "Pending",
               panCard: partner.kyc?.panCard ? `/uploads/kyc/${partner.kyc?.panCard}` : "Not Uploaded",
               aadhaar: partner.kyc?.aadhaar ? `/uploads/kyc/${partner.kyc?.aadhaar}` : "Not Uploaded",
@@ -719,12 +721,12 @@ exports.getAllPartners = async (req, res) => {
           Reviews: partner.reviews.length > 0 ? partner.reviews : "No reviews",
           Services: partner.service.length > 0 ? partner.service : "No services",
           MonthWiseBookingCount: monthWiseBookings,
-          completedBookings:completedBookings,
+          completedBookings: completedBookings,
           Earnings: {
             totalEarnings,
             transactions,
           },
-          registerAmount:partner.profile?.registerAmount || 0,
+          registerAmount: partner.profile?.registerAmount || 0,
           payId: partner.profile?.payId || "N/A",
           paidBy: partner.profile?.paidBy || "N/A",
         };
@@ -802,19 +804,19 @@ exports.getPartnerDetails = async (req, res) => {
     let transactions = completedBookings.map((booking) => {
       const subService = booking.subService;
       const totalAmount = booking.amount;
-      const commissionAmount = ((subService?.commission||0) / 100) * totalAmount;
+      const commissionAmount = ((subService?.commission || 0) / 100) * totalAmount;
       const partnerEarnings = totalAmount - commissionAmount;
       totalEarnings += partnerEarnings;
 
       return {
         bookingId: booking._id,
         user: booking.user,
-        subService: subService?.name|| "N/A",
+        subService: subService?.name || "N/A",
         service: booking.service?.name,
         subCategory: booking.subCategory?.name,
         category: booking.category?.name,
         totalAmount,
-        commissionPercentage: (subService?.commission||0),
+        commissionPercentage: (subService?.commission || 0),
         commissionAmount,
         partnerEarnings,
         paymentMode: booking.paymentMode,
@@ -828,18 +830,18 @@ exports.getPartnerDetails = async (req, res) => {
     console.error("Get Partner Details Error:", error);
     res.status(500).json({ message: "Error fetching partner details" });
   }
-}; 
+};
 
 //get partner details 
 exports.getPartnerProfile = async (req, res) => {
   try {
-    const {id} = req.body
+    const { id } = req.body
     if (!id) {
       return res.status(400).json({
         success: false,
         message: "Partner ID is missing",
       });
-    } 
+    }
 
     const partnerId = new mongoose.Types.ObjectId(id);
 
@@ -912,9 +914,9 @@ exports.updatePartnerStatus = async (req, res) => {
     // Check if partner exists
     const partner = await Partner.findById(partnerId);
     if (!partner) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Partner not found" 
+        message: "Partner not found"
       });
     }
 
@@ -941,10 +943,10 @@ exports.updatePartnerStatus = async (req, res) => {
     });
   } catch (error) {
     console.error("Update Partner Status Error:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: "Error updating KYC status",
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -955,9 +957,9 @@ exports.createServiceCategory = async (req, res) => {
   try {
     console.log('Request body:', req.body);
     console.log('File:', req.file);
-    
+
     const { name, description } = req.body;
-    
+
     // Validate required fields
     if (!name || !description) {
       return res.status(400).json({
@@ -976,7 +978,7 @@ exports.createServiceCategory = async (req, res) => {
     }
 
     // Create icon path
-    const iconPath = await uploadFile2(req.file,"category");
+    const iconPath = await uploadFile2(req.file, "category");
 
     const category = new ServiceCategory({
       name: name.trim(),
@@ -989,7 +991,7 @@ exports.createServiceCategory = async (req, res) => {
 
     const savedCategory = await category.save();
     console.log('Saved category:', savedCategory);
-    
+
     res.status(201).json({
       success: true,
       message: "Service category created successfully",
@@ -1001,7 +1003,7 @@ exports.createServiceCategory = async (req, res) => {
       stack: error.stack,
       name: error.name
     });
-    
+
     // Check for specific MongoDB errors
     if (error.name === 'ValidationError') {
       return res.status(400).json({
@@ -1010,7 +1012,7 @@ exports.createServiceCategory = async (req, res) => {
         errors: Object.values(error.errors).map(err => err.message)
       });
     }
-    
+
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -1061,7 +1063,7 @@ exports.createService = async (req, res) => {
     }
 
     // Create icon path
-    const iconPath = await uploadFile2(req.file,"service");
+    const iconPath = await uploadFile2(req.file, "service");
 
 
     const service = new Service({
@@ -1128,8 +1130,8 @@ exports.addSubService = async (req, res) => {
     const { serviceId } = req.params;
     const { name, description, basePrice, duration } = req.body;
 
-    
-    
+
+
     if (!req.file) {
       return res.status(400).json({ message: "Icon is required" });
     }
@@ -1138,7 +1140,7 @@ exports.addSubService = async (req, res) => {
     if (!service) {
       return res.status(404).json({ message: "Service not found" });
     }
-let icon=await uploadFile2(req.file,"subservice");
+    let icon = await uploadFile2(req.file, "subservice");
 
     service.subServices.push({
       name,
@@ -1347,9 +1349,9 @@ exports.completeBooking = async (req, res) => {
 
 exports.assignedbooking = async (req, res) => {
   try {
-    const { partnerId ,bookingId} = req.body;
+    const { partnerId, bookingId } = req.body;
     const book = await booking.findById(bookingId);
-console.log("partnerId ,bookingId",partnerId ,bookingId)
+    console.log("partnerId ,bookingId", partnerId, bookingId)
     if (!book) {
       return res.status(404).json({ message: "Booking not found" });
     }
@@ -1361,7 +1363,7 @@ console.log("partnerId ,bookingId",partnerId ,bookingId)
     // }
 
     book.partner = partnerId;
-    book.status="accepted"
+    book.status = "accepted"
     await book.save();
 
     res.json({ message: "Job accepted successfully", book });
@@ -1381,29 +1383,29 @@ exports.getAllReviews = async (req, res) => {
         path: 'booking', // Populate booking
         populate: {
           path: 'partner', // Populate partner from the booking
-           // Select fields from partner
+          // Select fields from partner
         }
       });
 
     // Format the response to include desired fields
     const formattedReviews = reviews.map(review => ({
-      _id : review._id,
+      _id: review._id,
       customer: {
         name: review.user?.name || 'Unknown',
         email: review.user?.email || 'Unknown'
       },
       subService: review.subService
         ? {
-            name: review.subService.name,
-            description: review.subService.description
-          }
+          name: review.subService.name,
+          description: review.subService.description
+        }
         : null,
       date: review.createdAt,
       partner: review.booking?.partner
         ? {
-            name: review.booking.partner.name,
-            email: review.booking.partner.email
-          }
+          name: review.booking.partner.name,
+          email: review.booking.partner.email
+        }
         : null,
       rating: review.rating,
       comment: review.comment,
@@ -1429,27 +1431,27 @@ exports.getAllReviews = async (req, res) => {
 exports.updateReviewStatus = async (req, res) => {
   const { reviewId } = req.params;
   const { status } = req.body;
-  console.log("Incoming Data :", req.params , req.body)
+  console.log("Incoming Data :", req.params, req.body)
 
   if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ message: "Invalid status. Choose 'approved' or 'rejected'." });
+    return res.status(400).json({ message: "Invalid status. Choose 'approved' or 'rejected'." });
   }
 
   try {
-      const review = await Review.findByIdAndUpdate(
-          reviewId,
-          { status },
-          { new: true }
-      ).populate('partner', 'name').populate('booking', 'price date services');
+    const review = await Review.findByIdAndUpdate(
+      reviewId,
+      { status },
+      { new: true }
+    ).populate('partner', 'name').populate('booking', 'price date services');
 
-      if (!review) {
-          return res.status(404).json({ message: "Review not found." });
-      }
+    if (!review) {
+      return res.status(404).json({ message: "Review not found." });
+    }
 
-      res.status(200).json({ message: `Review ${status} successfully`, review });
+    res.status(200).json({ message: `Review ${status} successfully`, review });
   } catch (error) {
     console.log(error)
-      res.status(500).json({ message: "Error updating review status", error: error.message });
+    res.status(500).json({ message: "Error updating review status", error: error.message });
   }
 };
 
@@ -1464,14 +1466,14 @@ exports.addSubCategory = async (req, res) => {
 
   // Check if name and category are provided
   if (!name || !category) {
-    console.log(name , category , "test")
-      return res.status(400).json({ message: "Name and category are required." });
+    console.log(name, category, "test")
+    return res.status(400).json({ message: "Name and category are required." });
   }
- let image= await uploadFile2(req.file,"category");
+  let image = await uploadFile2(req.file, "category");
   const subCategory = new SubCategory({
-      name,
-      category,
-      image: image // Assuming the image is uploaded similarly
+    name,
+    category,
+    image: image // Assuming the image is uploaded similarly
   });
 
   await subCategory.save();
@@ -1482,7 +1484,7 @@ exports.addSubCategory = async (req, res) => {
 exports.updateSubCategory = async (req, res) => {
   try {
     const { name } = req.body;
-    let image = req.file ? await uploadFile2(req.file,"category") : undefined; // Handle uploaded file
+    let image = req.file ? await uploadFile2(req.file, "category") : undefined; // Handle uploaded file
     console.log(name, image);
 
     // Find the existing category
@@ -1525,7 +1527,7 @@ exports.updateSubCategory = async (req, res) => {
 exports.deleteSubCategory = async (req, res) => {
   try {
     const category = await SubCategory.findById(req.params.subcategoryId);
-    
+
     if (!category) {
       return res.status(404).json({
         success: false,
@@ -1544,7 +1546,7 @@ exports.deleteSubCategory = async (req, res) => {
 
     // Use findByIdAndDelete instead of remove()
     await SubCategory.findByIdAndDelete(req.params.subcategoryId);
-    
+
     res.json({
       success: true,
       message: "Sub Category deleted successfully"
@@ -1563,17 +1565,17 @@ exports.deleteSubCategory = async (req, res) => {
 exports.updateUserStatus = async (req, res) => {
   const { userId, status } = req.body;
   if (!userId || (status !== 'active' && status !== 'inactive')) {
-    console.log(userId , status)
-      return res.status(400).json({ message: 'Invalid user ID or status' });
+    console.log(userId, status)
+    return res.status(400).json({ message: 'Invalid user ID or status' });
   }
   try {
-      const user = await User.findByIdAndUpdate(userId, { status }, { new: true });
-      if (!user) {
-          return res.status(404).json({ message: 'User not found' });
-      }
-      return res.status(200).json({ message: 'User status updated', user });
+    const user = await User.findByIdAndUpdate(userId, { status }, { new: true });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    return res.status(200).json({ message: 'User status updated', user });
   } catch (error) {
-      return res.status(500).json({ message: 'Server error', error });
+    return res.status(500).json({ message: 'Server error', error });
   }
 };
 

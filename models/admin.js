@@ -125,6 +125,7 @@ const adminSchema = new mongoose.Schema(
       register: { type: Boolean, default: false },
       complaintToken: { type: Boolean, default: false },
       providerregisterfee:{ type: Boolean, default: false },
+      transaction: { type: Boolean, default: false },
     },
   },
   {
