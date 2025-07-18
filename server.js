@@ -86,8 +86,6 @@ const Partner = require("./models/PartnerModel");
 const calls = new Map();
 const rides = new Map(); // Format: { rideId: { driverId, userId, status } }
 
-
-
 const initiateCall = async (req, res) => {
   try {
     // console.log("req.body", req.body)
@@ -106,38 +104,6 @@ const fcmToken = isUser ? partner.fcmToken : partner.fcmtoken;
     }
     // Store call state
     calls.set(callId, { callerId, receiverId, status: 'pending', offer });
-
-    console.log("callerId, receiverId, callId, isUser, offer,user", callerId, receiverId, callId, isUser, offer, user)
-   
-// const message = {
-//   notification: {
-//     title: 'Incoming Call',
-//     body: `Call from ${user.name}`,
-//   },
-//   android: {
-//     notification: {
-//       channel_id: 'call-channel',
-//       sound: 'ringtone',
-//     },
-//   },
-//   apns: {
-//     payload: {
-//       aps: {
-//         sound: 'ringtone.caf',
-//         contentAvailable: true,
-//       },
-//     },
-//   },
-//   data: {
-//     callId,
-//     callerId,
-//     receiverId,
-//     type: 'call',
-//     user: JSON.stringify(user),
-//     offer: JSON.stringify(offer),
-//   },
-//   token: isUser ? partner.fcmToken : partner.fcmtoken,
-// };
 
 const message = {
       token: fcmToken,

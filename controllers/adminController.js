@@ -618,9 +618,7 @@ exports.verifyPartnerKYC = async (req, res) => {
 };
 
 
-// Get all partners
-// Get all partners
-// Get all partners
+
 // Get all partners
 exports.getAllPartners = async (req, res) => {
   try {
@@ -726,6 +724,9 @@ exports.getAllPartners = async (req, res) => {
             totalEarnings,
             transactions,
           },
+          registerAmount:partner.profile?.registerAmount || 0,
+          payId: partner.profile?.payId || "N/A",
+          paidBy: partner.profile?.paidBy || "N/A",
         };
       })
     );
