@@ -569,27 +569,38 @@ exports.addAddress = async (req, res) => {
       });
     }
 
-    // Add new address to the addresses array
-    user.addresses.push({
-      address,
-      landmark: landmark || "",
-      addressType: addressType || "home",
-      lat,
-      lng
-    });
+    // Check if the address type already exists for the user
+    const existingAddressIndex = user.addresses.findIndex(addr => addr.addressType === addressType);
+
+    if (existingAddressIndex !== -1) {
+      // Update the existing address
+      user.addresses[existingAddressIndex].address = address;
+      user.addresses[existingAddressIndex].landmark = landmark || "";
+      user.addresses[existingAddressIndex].lat = lat;
+      user.addresses[existingAddressIndex].lng = lng;
+    } else {
+      // Add new address to the addresses array
+      user.addresses.push({
+        address,
+        landmark: landmark || "",
+        addressType: addressType || "home",
+        lat,
+        lng
+      });
+    }
 
     await user.save();
 
     res.json({
       success: true,
-      message: "Address added successfully",
+      message: "Address added/updated successfully",
       addresses: user.addresses, // Return updated addresses array
     });
   } catch (error) {
     console.error("Add Address Error:", error);
     res.status(500).json({
       success: false,
-      message: "Error adding address",
+      message: "Error adding/updating address",
       details:
         process.env.NODE_ENV === "development" ? error.message : undefined,
     });
