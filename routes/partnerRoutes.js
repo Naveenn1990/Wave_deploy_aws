@@ -57,25 +57,7 @@ const {
   getAllCategories,
 } = require("../controllers/partnerDropdownController");
 
-// Configure multer for file uploads
 
-
-const fileFilter = (req, file, cb) => {
-  if (file.fieldname === "profilePicture") {
-    if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
-      return cb(new Error("Please upload an image file"));
-    }
-  } else if (file.fieldname === "photos") {
-    if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
-      return cb(new Error("Please upload an image file"));
-    }
-  } else if (file.fieldname === "videos") {
-    if (!file.originalname.match(/\.(mp4|mov|avi|mkv)$/)) {
-      return cb(new Error("Please upload a video file"));
-    }
-  }
-  cb(null, true);
-};
 
 const upload = multer({
 
@@ -125,6 +107,10 @@ router.post(
   completeProfile
 );
 
+
+
+router.get("/getAllReferralpartner", adminAuth, partnerAuthController.getAllReferralpartner);
+
 // Partner KYC Routes (Protected)
 router.post(
   "/kyc/complete",
@@ -133,6 +119,7 @@ router.post(
     upload.fields([
       { name: "panCard", maxCount: 1 },
       { name: "aadhaar", maxCount: 1 },
+      { name: "aadhaarback", maxCount: 1 },
       { name: "chequeImage", maxCount: 1 },
       { name: "drivingLicence", maxCount: 1 },
       { name: "bill", maxCount: 1 },
@@ -159,6 +146,7 @@ router.post(
 // Admin route to update KYC status (Protected, Admin Only)
 router.put("/kyc/:partnerId/status", adminAuth, updateKYCStatus);
 
+router.get('/referralcode/:referralCode',auth,partnerAuthController.getReferralCode);
 // Partner Service Routes (Protected)
 router.get("/services/available", auth, getAvailableServices);
 router.post("/services/select", auth, selectService);
@@ -182,6 +170,7 @@ router.post(
   upload.fields([
     { name: "photos", maxCount: 10 },
     { name: "videos", maxCount: 5 },
+      { name: "afterVideo", maxCount: 5 },
   ]),
   partnerServiceController.completeBooking
 );
@@ -259,7 +248,9 @@ router.get(
 // router.put('/products/use/:id', auth, partnerServiceController.useProduct); // Use product (decrease stock)
 // router.put('/products/return/:id', auth, partnerServiceController.returnProduct); // Return product (increase stock)
 router.post("/products/add", auth, partnerServiceController.addToCart); // Add new product
-router.put('product/removecart',auth,partnerServiceController.removeCart);
+router.put('/product/removecart',auth,partnerServiceController.removeCart);
+
+router.put("/products/addmanulcart",upload.any(), auth, partnerServiceController.AddManulProductCart); // Get cart items
 
 router.get("/bookings", auth, partnerServiceController.allpartnerBookings);
 
@@ -276,7 +267,7 @@ router.get("/reviews/user", auth, partnerServiceController.getUserReviews);
 
 // Route to review user
 router.post("/reviews/user", auth, partnerServiceController.reviewUser);
-
+router.put('/upload/review-video',upload.any(),auth,partnerServiceController.reviewVideo);
 router.get("/getWalletbypartner", auth, partnerAuthController.getWallet);
 router.put("/updateTokenFmc",auth,partnerAuthController.updateTokenFmc);
 router.put("/updateLocation",auth,partnerAuthController.updateLocation);

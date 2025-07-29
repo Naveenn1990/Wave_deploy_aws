@@ -9,6 +9,7 @@ const SubCategory = require("../models/SubCategory");
 const Product = require("../models/product");
 const Partner = require("../models/PartnerModel");
 const { uploadFile2, multifileUpload } = require('../middleware/aws');
+const PartnerWallet = require('../models/PartnerWallet');
 // Get all services
 exports.getAllServices = async (req, res) => {
   try {
@@ -570,7 +571,8 @@ exports.createSubService = async (req, res) => {
       includes: req.body.includes ? req.body.includes.split(",") : [],
       excludes: req.body.excludes ? req.body.excludes.split(",") : [],
       city: cities,
-      minimumAmount: req.body.minimumAmount || 0 // Default to 0 if not provided
+      minimumAmount: req.body.minimumAmount || 0, // Default to 0 if not provided
+      acceptCharges: req.body.acceptCharges || 0 // Default to 0 if not provided
     });
 
     const savedSubService = await subService.save();
@@ -868,7 +870,8 @@ exports.updateSubService = async (req, res) => {
     if (imagePaths !== undefined) {
       subService.icon = imagePaths;
     }
-  
+  subService.acceptCharges = req.body.acceptCharges || subService.acceptCharges; // Default to 0 if not provided
+
     await subService.save();
 
     res.json({
@@ -1298,6 +1301,91 @@ exports.updatePartnerStatus = async (req, res) => {
       });
   }
 };
+
+exports.deletePartner = async (req, res) => {
+  try {
+      const { partnerId } = req.params;
+
+      // Find and delete the partner
+      const deletedPartner = await Partner.findByIdAndDelete(partnerId);
+      if (!deletedPartner) {
+          return res.status(404).json({
+              success: false,
+              message: "Partner not found."
+          });
+      }
+      await PartnerWallet.deleteOne({ partner: partnerId });
+      res.status(200).json({
+          success: true,
+          message: "Partner deleted successfully."
+      });
+
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({
+          success: false,
+          message: "Internal server error",
+          error: error.message
+      });
+  }
+}
+
+
+exports.updatePartnerProfile = async (req, res) => {
+  try {
+    let { id } = req.params;
+    let { name, email, phone,whatsappNumber } = req.body;
+    let updatedPartner = await Partner.findById(id);
+    if (!updatedPartner) {
+      return res.status(404).json({
+        success: false,
+        message: "Partner not found."
+      });
+      }
+
+      if(name) {
+        updatedPartner.profile.name = name; 
+        }
+      if(email &&updatedPartner.profile.email!== email.trim()) {
+        // Check if email already exists
+        const existingPartner = await Partner.findOne({ "profile.email": email.trim() });
+        if (existingPartner) {
+          return res.status(400).json({
+            success: false,
+            message: "Email already exists."
+            });
+        }
+        updatedPartner.profile.email = email.trim();
+      }
+      if(phone && updatedPartner.phone !== phone.trim()) {
+        // Check if phone number already exists
+        const existingPartner = await Partner.findOne({ "phone": phone.trim() });
+        if (existingPartner) {
+          return res.status(400).json({
+            success: false,
+            message: "Phone number already exists."
+            });
+            }
+        updatedPartner.phone = phone.trim();
+      }
+      if(whatsappNumber && updatedPartner.whatsappNumber !== whatsappNumber.trim()) {
+        updatedPartner.whatsappNumber = whatsappNumber.trim();
+        }
+      await updatedPartner.save();
+    res.status(200).json({
+      success: true,
+      message: "Partner profile updated successfully.",
+      data: updatedPartner
+      });
+  }catch (error) {
+    console.error("Error updating partner profile:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating partner profile",
+      error: error.message
+    });
+  }
+}
 
 
 //get partner earnings 

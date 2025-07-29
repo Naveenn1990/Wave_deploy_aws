@@ -488,11 +488,25 @@ exports.getMatchingBookings = async (req, res) => {
       });
     }
 
+    const Wallet = await PartnerWallet.findOne({ partner: req.partner._id });
+    if (!Wallet) {
+      return res.status(400).json({
+        success: false,
+        message: "Partner wallet not found",
+      });
+    }
+
+    if (Wallet.balance < 500) {
+      return res.status(400).json({
+        success: false,
+        message: "Partner wallet balance is less than 500",
+      });
+    }
+
     let driveBookings = []
 
     if (profile.drive || profile.tempoTraveller) {
       driveBookings = await DriverBooking.find({})
-
     }
 
     // Get partner's selected category, sub-category, and services
@@ -538,6 +552,7 @@ exports.getMatchingBookings = async (req, res) => {
             path: "category",
             model: "ServiceCategory",
             select: "name", // Ensure the category name is fetched
+
           },
         },
       })
@@ -547,7 +562,7 @@ exports.getMatchingBookings = async (req, res) => {
       })
       .populate({
         path: "subService",
-        select: "name price duration description", // Ensure sub-service details are fetched
+        select: "name price duration description acceptCharges minimumAmount", // Ensure sub-service details are fetched
       })
       .populate({
         path: "service",
@@ -583,6 +598,7 @@ exports.getMatchingBookings = async (req, res) => {
         price: booking.subService?.price || 0,
         duration: booking.subService?.duration || "N/A",
         description: booking.subService?.description || "N/A",
+        acceptCharges: booking.subService?.acceptCharges || 0,
       },
       service: {
         name: booking.service?.name || "N/A",
@@ -619,11 +635,11 @@ exports.getMatchingBookings = async (req, res) => {
 async function deductWallet(updatedBooking, partner) {
   try {
     let data = await PartnerWallet.findOne({ partner: partner });
-    if (data) {
-      data.balance = data.balance - 100;
+    if (data && updatedBooking.subService.acceptCharges > 0) {
+      data.balance = data.balance - updatedBooking.subService.acceptCharges;
       data.transactions.push({
         type: "debit",
-        amount: 100,
+        amount: updatedBooking.subService.acceptCharges,
         description: `Job accepted fee for ${updatedBooking.subService.name}`,
         reference: "",
         balance: data.balance,
@@ -633,7 +649,7 @@ async function deductWallet(updatedBooking, partner) {
       await NotificationModel.create({
         userId: partner,
         title: "Accepted Booking",
-        message: `Your booking for ${updatedBooking.subService.name} has been Accepted and job fee Rs.100 has been deducted!`,
+        message: `Your booking for ${updatedBooking.subService.name} has been Accepted and job fee Rs.${updatedBooking.subService.acceptCharges} has been deducted!`,
       });
     }
     // io.to(updatedBooking.user._id).emit("booking accepted", {
@@ -1055,7 +1071,7 @@ const sendBookingCompletionNotifications = async (booking, user, subService, par
 exports.completeBooking = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("check",req.body);
+    console.log("check", req.body);
     const files = req.files;
     const { payamout, paymentMode } = req.body;
 
@@ -1067,7 +1083,11 @@ exports.completeBooking = async (req, res) => {
     const videos = files.videos
       ? await Promise.all(files.videos.map(async (file) => await uploadFile2(file, "Job")))
       : [];
+    if (files.afterVideo) {
+      const videoA = await Promise.all(files.afterVideo.map(async (file) => await uploadFile2(file, "Job")))
 
+      videos.push(videoA[0]);
+    }
 
     // Find and update the booking with populated data
     const booking = await Booking.findByIdAndUpdate(
@@ -1097,12 +1117,12 @@ exports.completeBooking = async (req, res) => {
         message: "Booking not found",
       });
     }
-    if (payamout&&payamout!=0) {
+    if (payamout && payamout != 0) {
       booking.payamount = booking.payamount + Number(payamout);
       booking.paymentMode = paymentMode;
     }
 
-    if(paymentMode === "cash"&&payamout) {
+    if (paymentMode === "cash" && payamout) {
       const partnerWallet = await PartnerWallet.findOne({ partner: booking.partner._id });
       if (!partnerWallet) {
         return res.status(404).json({
@@ -1110,10 +1130,10 @@ exports.completeBooking = async (req, res) => {
           message: "Partner wallet not found",
         });
       }
-      partnerWallet.balance =partnerWallet.balance- Number(payamout);
-      partnerWallet.transactions.push({ 
+      partnerWallet.balance = partnerWallet.balance - Number(payamout);
+      partnerWallet.transactions.push({
         amount: payamout,
-       type: "debit",
+        type: "debit",
         description: `Payment for booking ${booking.subService.name} completed`,
         reference: booking._id,
         balance: partnerWallet.balance,
@@ -1710,21 +1730,15 @@ exports.getPartnerBookings = async (req, res) => {
 // ✅ Get all products by category (For partners)
 exports.getProductsByCategory = async (req, res) => {
   try {
-    const { category } = req.params; // Extract category ID from URL
 
-    // console.log("Received categoryId:", category);
+    const { category } = req.params; // Extract category IDs from URL
+    const categoryIds = category.split(',').map(id => new mongoose.Types.ObjectId(id.trim()));
 
-    // Validate category ID format
-    if (!mongoose.Types.ObjectId.isValid(category)) {
-      return res.status(400).json({ message: "Invalid category ID" });
-    }
+    console.log("Received categoryIds:", categoryIds);
 
-    // Convert category to ObjectId
-    const categoryId = new mongoose.Types.ObjectId(category);
-
-    // Fetch products that match category ID & have stock available
+    // Fetch products that match any of the category IDs & have stock available
     const products = await Product.find({
-      category: categoryId,
+      category: { $in: categoryIds },
       stock: { $gt: 0 },
     });
 
@@ -1828,6 +1842,61 @@ exports.removeCart = async (req, res) => {
   } catch (error) {
     console.log(error);
 
+  }
+}
+
+exports.AddManulProductCart = async (req, res) => {
+  try {
+    const { bookingId, name, price, amount, description, quantity } = req.body;
+    const partnerId = req.partner.id; // Assuming partner authentication is handled
+
+    if (!bookingId || !name || !amount || !description) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+    const checkBooking = await Booking.findById(bookingId);
+    if (!checkBooking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+    const carts = checkBooking.cart || [];
+    if (name && price && amount && description) {
+
+      const newCartItem = {
+        name,
+        price,
+        amount,
+        description,
+        quantity: 1, // Default quantity for manual products
+        approved: false, // Set approved to false by default
+        addedByPartner: partnerId, // Store partner details
+      };
+
+      if (req.files && req.files.length > 0) {
+        let arr = req.files;
+        let i;
+        for (i = 0; i < arr?.length; i++) {
+          if (arr[i].fieldname == "image") {
+            newCartItem.image = await uploadFile2(arr[i], "products");
+          }
+        }
+      }
+      if (quantity && quantity > 0) {
+        newCartItem.quantity = Number(quantity); // Set quantity if provided
+      }
+      carts.push(newCartItem);
+    }
+
+    // Update the booking with the new cart item
+    if (carts.length > 0) {
+      checkBooking.cart = carts;
+    }
+    const updatedBooking = await checkBooking.save();
+    return res.status(200).json({
+      message: "Manual product added to cart successfully",
+      cart: updatedBooking.cart,
+    });
+  } catch (error) {
+    console.error("Error adding manual product to cart:", error);
+    return res.status(500).json({ message: "Error adding product to cart", error: error.message });
   }
 }
 
@@ -1960,7 +2029,7 @@ exports.getUserReviews = async (req, res) => {
 // Review partner
 exports.reviewUser = async (req, res) => {
   try {
-    const { bookingId, userId, rating, comment } = req.body;
+    const { bookingId, userId, rating, comment, video } = req.body;
     const partnerId = req.partner._id;
 
     // Check if the booking exists and belongs to the partner
@@ -2004,18 +2073,88 @@ exports.reviewUser = async (req, res) => {
       booking: bookingId,
       rating,
       comment,
+      video: video || null, // Optional video field
       createdAt: new Date(),
+
     };
+    if (video) {
+      booking.review.comment = comment;
+      booking.review.rating = rating;
+      booking.review.video = video || null; // Optional video field
+      booking.review.createdAt = new Date();
+    }
+
 
     // Push review into the user's reviews array
     user.reviews.push(review);
     await user.save();
+    await booking.save();
 
     res.status(201).json({
       success: true,
       message: "Review submitted successfully!",
       review,
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server error. Please try again later.",
+    });
+  }
+};
+
+exports.reviewVideo = async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+ const partnerId = req.partner._id;
+    // Check if the booking exists and belongs to the partner
+    const booking = await Booking.findOne({
+      _id: bookingId,
+    });
+    if (!booking) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking or booking not completed.",
+      });
+    }
+    // Add video to booking
+    let reviewV = ""
+    if (req.files && req.files.length > 0) {
+      let arr = req.files;
+      let i;
+      for (i = 0; i < arr?.length; i++) {
+        if (arr[i].fieldname == "video") {
+          const video = await uploadFile2(arr[i], "job");
+          booking.videos.push(video);
+          booking.review.video = video; // Add video to review object
+          reviewV = video;
+          const wallet = await PartnerWallet.findOne({ partner:partnerId });
+          if (wallet) {
+            wallet.balance += (booking.reviewPrice || 50); // Add 10 to partner's wallet for video review
+            wallet.transactions.push({
+              transactionId: `WARE0${Date.now()}`,
+              amount: booking.reviewPrice || 50,
+              type: "credit",
+              balance: wallet.balance,
+              date: new Date(),
+              description: `Video review added for booking`,
+            });
+            await wallet.save();
+          }
+        }
+      }
+    }
+
+
+
+    await booking.save();
+    return res.status(201).json({
+      success: true,
+      message: "Video added successfully!",
+      videoUrl: reviewV,
+    });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -2086,9 +2225,6 @@ exports.getwalletbypartner = async (req, res) => {
 exports.sendOtpWithNotification = async (req, res) => {
   try {
     const { bookid } = req.body;
-
-
-
     // Find the partner by phone number
     const booking = await Booking.findById(bookid).populate('user').populate('subService');
     if (!booking) return res.status(404).json({ message: "Booking not found" });
@@ -2187,6 +2323,14 @@ exports.sendOtpWithNotification = async (req, res) => {
   }
 }
 
+// Booking.generateMissingOTPs()
+//   .then(count => {
+//     console.log(`Generated OTPs for ${count} existing bookings`);
+//   })
+//   .catch(error => {
+//     console.error('Error:', error);
+//   });
+
 exports.verifyOtpbooking = async (req, res) => {
   try {
     const { bookid, otp } = req.body;
@@ -2197,13 +2341,15 @@ exports.verifyOtpbooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
+
+
     // Check if the OTP matches
-    if (booking.otp !== otp) {
+    if ((booking.otp) !== otp) {
       return res.status(400).json({ message: "Invalid OTP" });
     }
 
     // Clear the OTP after successful verification
-    booking.otp = undefined;
+    // booking.otp = undefined;
     await booking.save();
 
     res.status(200).json({ message: "OTP verified successfully" });

@@ -56,12 +56,25 @@ const userSchema = new mongoose.Schema({
   //   seen: { type: Boolean, default: false },
   //   date: { type: Date, default: Date.now }
   // }],
+
+  // User reviews
+  referalCode: {
+    type: String,
+    unique: true,
+    default: () => {
+      return `WAVEREU${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    }
+  },
+  referredBy: { type: String, trim: true },
+  referredUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User',phone: String,name: String }],
+
   reviews: [
     {
       partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner" },
       booking: { type: mongoose.Schema.Types.ObjectId, ref: "Booking" },
       rating: { type: Number, required: true },
       comment: { type: String, required: true },
+      video: { type: String }, // Optional video field
       createdAt: { type: Date, default: Date.now }
     }
   ]

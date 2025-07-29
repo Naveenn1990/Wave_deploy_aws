@@ -10,6 +10,7 @@ const Service = require("../models/Service");
 const mongoose = require("mongoose");
 const NotificationModel = require("../models/Notification");
 const { uploadFile2 } = require("../middleware/aws");
+const ReferralAmount = require("../models/ReferralAmount");
 // Send OTP for partner login/registration
 exports.sendLoginOTP = async (req, res) => {
   try {
@@ -87,8 +88,8 @@ exports.updateTokenFmc = async (req, res) => {
 
 exports.completePaymentVendor = async (req, res) => {
   try {
-    let {id, registerAmount, payId,paidBy } = req.body;
-    let data = await Partner.findById(id||req.partner._id);
+    let { id, registerAmount, payId, paidBy } = req.body;
+    let data = await Partner.findById(id || req.partner._id);
     if (!data) return res.status(200).json({ error: "Data not found" });
     if (registerAmount) {
       data.profile.registerAmount = registerAmount;
@@ -97,11 +98,11 @@ exports.completePaymentVendor = async (req, res) => {
     if (payId) {
       data.profile.payId = payId;
     }
-    if(paidBy){
-      data.profile.paidBy=paidBy
+    if (paidBy) {
+      data.profile.paidBy = paidBy
     }
-    data=await data.save();
-    return res.status(200).json({success:"Successfully completed transaction"})
+    data = await data.save();
+    return res.status(200).json({ success: "Successfully completed transaction" })
   } catch (error) {
     console.log(error)
     return res.status(500).json({ error: error.message })
@@ -260,6 +261,21 @@ exports.resendOTP = async (req, res) => {
   }
 };
 
+
+const createNotification = async (partnerId, title, message) => {
+  try {
+    const notification = new NotificationModel({
+     userId: partnerId,
+      title,
+      message,
+      type: 'info', // Default type
+    });
+    await notification.save();
+  } catch (error) {
+    console.log("Error creating notification:", error);
+  }
+
+}
 // Complete partner profile
 exports.completeProfile = async (req, res) => {
   try {
@@ -279,6 +295,7 @@ exports.completeProfile = async (req, res) => {
       address,
       landmark,
       pincode,
+      referralCode,
       city,
     } = req.body;
 
@@ -312,6 +329,52 @@ exports.completeProfile = async (req, res) => {
         .json({ success: false, message: "Partner not found" });
     }
 
+    if (referralCode) {
+      const referrer = await Partner.findOne({ referralCode: referralCode?.toUpperCase(), referredPartners: { $ne: updatedPartner._id } });
+      if (referrer) {
+        // Add the referrer to the referredPartners array
+        referrer.referredPartners.push({ partner: req.partner._id });
+      
+        const referAmount = await ReferralAmount.findOne({});
+        const wallet = await PartnerWallet.findOne({ partner: referrer._id });
+        if (wallet && referAmount.referralPartnerAm) {
+          wallet.balance = (referAmount.referralPartnerAm || 10) + wallet.balance;
+          wallet.transactions.push({
+            type: "credit",
+            amount: (referAmount.referralPartnerAm || 10),
+            description: `Referral bonus credited for ${updatedPartner.profile.name}`,
+            balance: wallet.balance,
+            transactionId: `RF-${Date.now()}`
+          });
+          // Update the referredBy field in the partner profile
+          updatedPartner.referredBy = referrer._id;
+          await updatedPartner.save();
+          await wallet.save();
+          referrer.totalEarnRe=referrer.totalEarnRe+(referAmount.referralPartnerAm||0)
+            await referrer.save();
+          createNotification(referrer._id, "Referral Bonus", `You have received a referral bonus of ${referAmount.referralPartnerAm || 10} for referring ${updatedPartner.profile.name}`);
+        }
+        if (referAmount.joiningAmountPartner) {
+          await PartnerWallet.create({
+            partner: updatedPartner._id,
+            balance: referAmount.joiningAmountPartner,
+            transactions: [
+              {
+                type: "credit",
+                amount: referAmount.joiningAmountPartner,
+                description: `Joining bonus credited`,
+                balance: referAmount.joiningAmountPartner,
+                transactionId: `JN-${Date.now()}`
+              }
+            ]
+          });
+          createNotification(updatedPartner._id, "Joining Bonus", `You have received a joining bonus of ${referAmount.joiningAmountPartner}`);
+        }
+      }
+    }
+
+
+
     return res.status(200).json({
       success: true,
       message: "Partner updated successfully",
@@ -326,6 +389,20 @@ exports.completeProfile = async (req, res) => {
     });
   }
 };
+
+exports.getAllReferralpartner=async(req,res)=>{
+try {
+  let partners = await Partner.find({}).sort({_id:-1}).populate("referredBy").populate({ path: "referredPartners.partner"});
+  return res.status(200).json({
+    success: true,
+    message: "Partners retrieved successfully",
+    data: partners,
+    });
+} catch (error) {
+  console.log(error);
+  
+}
+}
 
 exports.updateLocation = async (req, res) => {
   try {
@@ -376,9 +453,9 @@ exports.selectCategoryAndServices = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Please select your job preference" });
     }
-    console.log("category : ", category);
-    console.log("subcategory : ", subcategory);
-    console.log("service : ", service);
+    // console.log("category : ", category);
+    // console.log("subcategory : ", subcategory);
+    // console.log("service : ", service);
 
     if (category.length && (!subcategory.length || !service.length)) {
       return res.status(400).json({ success: false, message: "Please select subcategory and service" });
@@ -589,7 +666,7 @@ exports.completeKYC = async (req, res) => {
     let panCard = await uploadFile2(req.files.panCard[0], "partnerdoc");
     let aadhaar = await uploadFile2(req.files.aadhaar[0], "partnerdoc");
     let chequeImage = await uploadFile2(req.files.chequeImage[0], "partnerdoc");
-
+    let aadhaarback = await uploadFile2(req.files.aadhaarback[0], "partnerdoc");
     let drivingLicence = await uploadFile2(req.files.drivingLicence[0], "partnerdoc");
     let bill = await uploadFile2(req.files.bill[0], "partnerdoc");
 
@@ -601,7 +678,7 @@ exports.completeKYC = async (req, res) => {
       });
     }
 
-    if (!panCard || !aadhaar || !chequeImage || !drivingLicence || !bill) {
+    if (!panCard || !aadhaar || !chequeImage || !drivingLicence || !bill || !aadhaarback) {
       return res.status(400).json({
         success: false,
         message:
@@ -624,6 +701,7 @@ exports.completeKYC = async (req, res) => {
     profile.kyc = {
       panCard,
       aadhaar,
+      aadhaarback,
       chequeImage,
       drivingLicence,
       bill,
@@ -673,37 +751,40 @@ exports.completeKYC = async (req, res) => {
 };
 
 
-exports.updatedDocuments=async(req,res)=>{
+exports.updatedDocuments = async (req, res) => {
   try {
-    let {id}=req.body;
-     
-      let data=await  Partner.findById(id);
-      if(!data) return res.status(400).json({error:"Data not found"});
+    let { id } = req.body;
 
-        if (req.files && req.files.length > 0) {
-        let arr = req.files;
-        let i;
-        for (i = 0; i < arr?.length; i++) {
-          if (arr[i].fieldname == "panCard") {
-            data.kyc.panCard = await uploadFile2(arr[i],"partnerdoc");
-          }
-          if (arr[i].fieldname == "aadhaar") {
-            data.kyc.aadhaar = await uploadFile2(arr[i],"partnerdoc");
-          }
-          if (arr[i].fieldname == "chequeImage") {
-            data.kyc.chequeImage = await uploadFile2(arr[i],"partnerdoc");
-          }
-          if (arr[i].fieldname == "drivingLicence") {
-            data.kyc.drivingLicence = await uploadFile2(arr[i],"partnerdoc");
-          }
-           if (arr[i].fieldname == "bill") {
-            data.kyc.bill = await uploadFile2(arr[i],"partnerdoc");
-          }
+    let data = await Partner.findById(id);
+    if (!data) return res.status(400).json({ error: "Data not found" });
+
+    if (req.files && req.files.length > 0) {
+      let arr = req.files;
+      let i;
+      for (i = 0; i < arr?.length; i++) {
+        if (arr[i].fieldname == "panCard") {
+          data.kyc.panCard = await uploadFile2(arr[i], "partnerdoc");
+        }
+        if (arr[i].fieldname == "aadhaar") {
+          data.kyc.aadhaar = await uploadFile2(arr[i], "partnerdoc");
+        }
+        if (arr[i].fieldname == "aadhaarback") {
+          data.kyc.aadhaarback = await uploadFile2(arr[i], "partnerdoc");
+        }
+        if (arr[i].fieldname == "chequeImage") {
+          data.kyc.chequeImage = await uploadFile2(arr[i], "partnerdoc");
+        }
+        if (arr[i].fieldname == "drivingLicence") {
+          data.kyc.drivingLicence = await uploadFile2(arr[i], "partnerdoc");
+        }
+        if (arr[i].fieldname == "bill") {
+          data.kyc.bill = await uploadFile2(arr[i], "partnerdoc");
         }
       }
-      data=await data.save();
+    }
+    data = await data.save();
 
-      return res.status(200).json({success:"Successfully updated"})
+    return res.status(200).json({ success: "Successfully updated" })
   } catch (error) {
     console.log(error)
   }
@@ -766,13 +847,6 @@ exports.getProfile = async (req, res) => {
       });
     }
 
-    // console.log(
-    //   "Partner ID:",
-    //   req.partner._id,
-    //   "Type:",
-    //   typeof req.partner._id
-    // );
-
     const partnerId = new mongoose.Types.ObjectId(req.partner._id);
 
     const profile = await Partner.findOne({ _id: partnerId })
@@ -807,7 +881,10 @@ exports.getProfile = async (req, res) => {
         profilePicture: profile.profilePicture,
         status: profile.profileCompleted ? "Completed" : "Incomplete",
         drive: profile.drive,
-        tempoTraveller: profile.tempoTraveller
+        tempoTraveller: profile.tempoTraveller,
+        referralCode: profile.referralCode,
+        referredBy: profile.referredBy,
+        referredPartners: profile.referredPartners || [],
       },
     });
   } catch (error) {
@@ -938,7 +1015,7 @@ exports.getWallet = async (req, res) => {
       })
       return res
         .status(200)
-        .json({ success: true, message: "Wallet details", data: {balance:0,transactions:[]} });
+        .json({ success: true, message: "Wallet details", data: { balance: 0, transactions: [] } });
     }
     if (data.balance < 100) {
       await NotificationModel.create({
@@ -1124,3 +1201,42 @@ exports.addtransactionwalletadmin = async (req, res) => {
     console.log(err);
   }
 };
+
+exports.getReferralCode = async (req, res) => {
+  try {
+    const { referralCode } = req.params;
+
+    if (!referralCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Referral code is required",
+      });
+    }
+
+    const partner = await Partner.findOne({ referralCode });
+
+    if (!partner) {
+      return res.status(404).json({
+        success: false,
+        message: "Partner not found with this referral code",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Referral code found",
+      partner: {
+        id: partner._id,
+        name: partner.profile?.name || "N/A",
+        phone: partner.phone,
+        referralCode: partner.referralCode,
+      },
+    });
+  } catch (error) {
+    console.error("Get Referral Code Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching referral code",
+    });
+  }
+}

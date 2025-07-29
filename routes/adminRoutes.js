@@ -319,5 +319,8 @@ router.get("/contactus", adminAuth, ReviewController.getAllContactUs);
 router.put('/partner/addwallets',adminAuth,addtransactionwalletadmin );
 router.get('/adminwallets/:id', adminAuth, getWalletByAdminId);
 router.put('/registrationfeeupdate',adminAuth,completePaymentVendor)
-router.put("/updatedDocuments",upload.any(),adminAuth,updatedDocuments)
+router.put("/updatedDocuments",upload.any(),adminAuth,updatedDocuments);
+router.delete('/deletepartner/:partnerId', adminAuth, adminServiceController.deletePartner);
+router.put('/updatePartnerProfile/:id', adminAuth, adminServiceController.updatePartnerProfile);
+
 module.exports = router;

@@ -8,13 +8,14 @@ const SubService = require("../models/SubService");
 const Admin = require("../models/admin");
 const PartnerModel = require("../models/PartnerModel");
 const Notification = require("../models/Notification");
+const PartnerWallet=require("../models/PartnerWallet");
 const admin = require("firebase-admin");
 
 
 const createNotification = async (serviceId, name, job) => {
   try {
     // Find partners with the given serviceId
-    const partners = await PartnerModel.find({ service: serviceId }).populate('service');
+    const partners = await PartnerModel.find({ service: serviceId,'kyc.status':"approved" }).populate('service');
     console.log(`Found ${partners.length} partners for service: ${name}`);
 
     // Process each partner concurrently
@@ -22,8 +23,9 @@ const createNotification = async (serviceId, name, job) => {
       partners.map(async (partner) => {
         try {
           const userIdString = partner._id.toString();
-
-          // Prepare minimal job data for FCM, including all fields needed by JobNotificationScreen
+          const checkWallet = await PartnerWallet.findOne({ partner: partner._id });
+          if(checkWallet?.balance>499){
+       // Prepare minimal job data for FCM, including all fields needed by JobNotificationScreen
           const minimalJob = {
             _id: job._id?.toString() || '',
             serviceId: job.serviceId?.toString() || '',
@@ -121,6 +123,18 @@ const createNotification = async (serviceId, name, job) => {
          
           }
         
+          }else{
+            console.log(`Partner ${partner._id} does not have sufficient balance.`);
+               const notification = new Notification({
+            title: 'Insufficient Balance Alert',
+            userId: partner._id,
+            message: `Your wallet balance is insufficient to accept a new booking for ${name || job.subService?.name || 'the service'}. Please recharge your wallet. A minimum balance of ₹500 is required to proceed.`,
+            createdAt: new Date(),
+            read: false,
+          });
+          await notification.save();
+          }
+   
         } catch (error) {
           console.error(`Error processing partner ${partner._id}:`, error.message);
         }

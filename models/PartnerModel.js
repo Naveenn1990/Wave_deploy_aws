@@ -24,6 +24,7 @@ const partnerSchema = new mongoose.Schema(
       chequeImage: String,
       drivingLicence: String,
       bill: String,
+      aadhaarback: String,
       status: {
         type: String,
         enum: ["pending", "approved", "rejected"],
@@ -135,6 +136,7 @@ const partnerSchema = new mongoose.Schema(
         type:String,
         default:"Self"
       },
+
       registerdFee:{
         type:Boolean,
         default:false  
@@ -186,6 +188,28 @@ const partnerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    referralCode: {
+      type: String,
+      unique: true,
+      default: () => {
+        return `WAVEREP${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      },
+    },
+    totalEarnRe:{
+      type:Number,
+      default:0
+    },
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Partner",
+    },
+    referredPartners: [{
+      partner:{type: mongoose.Schema.Types.ObjectId,
+      ref: "Partner",
+    },
+      name: String,
+      phone: String,
+    }],
     // Add Reviews Field
     reviews: [
       {

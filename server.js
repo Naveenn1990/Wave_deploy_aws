@@ -787,7 +787,8 @@ const { uploadFile2 } = require("./middleware/aws");
 const driverFareRoutes = require('./routes/driverFareRoutes');
 const phonePayRoutes = require('./routes/phonePay');
 const tokenRoutes=require('./routes/tokenRoute');
-const RegisterFee=require('./routes/registerFeeRoutes')
+const RegisterFee=require('./routes/registerFeeRoutes');
+const RefferralAmount= require('./routes/referralAmountRoutes');
 // Initialize Firebase Admin
 // const serviceAccount = require('./firebase-admin.json');   
 // admin.initializeApp({
@@ -817,6 +818,8 @@ app.use('/api/driverfares', driverFareRoutes);
 app.use('/api/phonepay', phonePayRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/admin', RegisterFee);
+app.use('/api/referral', RefferralAmount);
+
 // Root route for WebSocket server
 
 app.get("/admin/bookings", adminBookingController.getAllBookings);

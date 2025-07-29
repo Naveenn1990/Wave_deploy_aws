@@ -62,7 +62,7 @@ const subServiceSchema = new mongoose.Schema({
         type: String,
         // required: true
     },
-    user : {
+    user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
     },
@@ -73,7 +73,7 @@ const subServiceSchema = new mongoose.Schema({
     },
     subCategory: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'SubCategory', 
+        ref: 'SubCategory',
     },
     // review: {
     //         type: mongoose.Schema.Types.ObjectId,
@@ -81,8 +81,8 @@ const subServiceSchema = new mongoose.Schema({
     // },
     reviews: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Review', 
-    }], 
+        ref: 'Review',
+    }],
     price: {
         type: Number,
         required: true
@@ -95,9 +95,13 @@ const subServiceSchema = new mongoose.Schema({
         type: Number,
         // required: true
     },
-    minimumAmount:{
+    minimumAmount: {
         type: Number,
         default: 0 // Minimum amount for the service
+    },
+    acceptCharges: {
+        type: Number,
+        default: 0
     },
     gst: {
         type: Number,
@@ -127,15 +131,15 @@ const subServiceSchema = new mongoose.Schema({
         default: Date.now
     },
     rating: {
-        type: Number, 
+        type: Number,
         default: 0
     },
     city: [{
         type: String,
-        required: true 
+        required: true
     }],
-    
-});  
+
+});
 
 // Pre-save hook to calculate basePrice
 subServiceSchema.pre('save', function (next) {

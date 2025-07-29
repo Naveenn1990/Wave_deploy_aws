@@ -1,65 +1,3 @@
-// const mongoose = require("mongoose");
-
-// const adminSchema = new mongoose.Schema(
-//   {
-//     email: {
-//       type: String,
-//       required: true,
-//       unique: true,
-//       lowercase: true,
-//       trim: true,
-//     },
-//     password: {
-//       type: String,
-//       required: true,
-//     },
-//     name: {
-//       type: String,
-//       required: true,
-//       trim: true,
-//     },
-//     role: {
-//       type: String,
-//       enum: ["super_admin", "admin"],
-//       default: "admin",
-//     },
-//     modules: [
-//       {
-//         type: String,
-//         status: Boolean,
-//         enum: ["dashboard", "Banner" , "Categories" , "Sub Categories" , "Services" , 
-//           "Sub Services" , "Offers" , "Product Inventory" , "Booking" , "Refund Request" ,
-//            "Reviews", "Customer" , "Provider Verification" , "Verified Provider" , "Enquiry",  
-//         ],
-//       }
-//     ],
-//     permissions: [
-//       {
-//         type: String,
-//         enum: [
-//           "manage_partners",
-//           "manage_services",
-//           "manage_categories",
-//           "manage_promotions",
-//           "manage_customers",
-//           "view_reports",
-//         ],
-//       },
-//     ],
-//     status: {
-//       type: String,
-//       enum: ["active", "inactive"],
-//       default: "active",
-//     },
-//     notifications:[],
-//   },
-//   {
-//     timestamps: true,
-//   }
-// );
-
-// // Export the model
-// module.exports = mongoose.model("Admin", adminSchema);
 
 
 const mongoose = require("mongoose");
@@ -126,6 +64,7 @@ const adminSchema = new mongoose.Schema(
       complaintToken: { type: Boolean, default: false },
       providerregisterfee:{ type: Boolean, default: false },
       transaction: { type: Boolean, default: false },
+      referralAmount: { type: Boolean, default: false }, // New permission for Referral Amount
     },
   },
   {
