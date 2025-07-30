@@ -44,26 +44,41 @@ const partnerWalletSchema = new mongoose.Schema({
     enum: ["active", "blocked"],
     default: "active",
   },
-  // Internal counters
   walletSeq: { type: Number, default: 0 },
   transactionSeq: { type: Number, default: 0 }
 }, { timestamps: true });
 
+// Generate a unique transaction ID
+async function generateUniqueTransactionId() {
+  let attempt = 0;
+  while (attempt < 10) {
+    const randomId = `WPWT${Math.floor(1000 + Math.random() * 9000)}`; // WPWT1000 to WPWT9999
+
+    const exists = await mongoose.model('PartnerWallet').findOne({
+      'transactions.transactionId': randomId
+    });
+
+    if (!exists) return randomId;
+
+    attempt++;
+  }
+  throw new Error("Failed to generate unique transactionId after multiple attempts");
+}
+
 // Pre-save hook for wallet ID generation
-partnerWalletSchema.pre('save', async function(next) {
+partnerWalletSchema.pre('save', async function (next) {
   const wallet = this;
-  
+
   if (!wallet.isNew) return next();
 
   try {
-    // Find the last wallet to get sequence
     const lastWallet = await mongoose.model('PartnerWallet')
       .findOne({}, {}, { sort: { 'createdAt': -1 } })
       .select('walletId')
       .lean();
 
-    const lastSeq = lastWallet?.walletId 
-      ? parseInt(lastWallet.walletId.replace('WPW', '')) 
+    const lastSeq = lastWallet?.walletId
+      ? parseInt(lastWallet.walletId.replace('WPW', ''))
       : 0;
 
     wallet.walletId = `WPW${(lastSeq + 1).toString().padStart(4, '0')}`;
@@ -73,31 +88,18 @@ partnerWalletSchema.pre('save', async function(next) {
   }
 });
 
-// Pre-save hook for transaction ID generation
-partnerWalletSchema.pre('save', async function(next) {
+// Pre-save hook for generating unique transaction IDs
+partnerWalletSchema.pre('save', async function (next) {
   const wallet = this;
-  
+
   if (!wallet.isModified('transactions')) return next();
 
   try {
-    // Get existing max transaction ID across all wallets
-    const lastTransaction = await mongoose.model('PartnerWallet').aggregate([
-      { $unwind: "$transactions" },
-      { $sort: { "transactions.createdAt": -1 } },
-      { $limit: 1 },
-      { $project: { lastId: "$transactions.transactionId" } }
-    ]);
-
-    const lastSeq = lastTransaction[0]?.lastId 
-      ? parseInt(lastTransaction[0].lastId.replace('WPWT', ''))
-      : 0;
-
-    // Generate IDs for new transactions
-    wallet.transactions
-      .filter(t => !t.transactionId)
-      .forEach((t, index) => {
-        t.transactionId = `WPWT${(lastSeq + index + 1).toString().padStart(4, '0')}`;
-      });
+    for (let txn of wallet.transactions) {
+      if (!txn.transactionId) {
+        txn.transactionId = await generateUniqueTransactionId();
+      }
+    }
 
     next();
   } catch (err) {
