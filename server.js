@@ -819,7 +819,16 @@ app.use('/api/phonepay', phonePayRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/admin', RegisterFee);
 app.use('/api/referral', RefferralAmount);
-
+// Add this route to your backend
+app.post('/api/admin/proxy-image', async (req, res) => {
+  try {
+    const { imageUrl } = req.body;
+    const response = await axios.get(imageUrl, { responseType: 'stream' });
+    response.data.pipe(res);
+  } catch (error) {
+    res.status(404).send('Image not found');
+  }
+});
 // Root route for WebSocket server
 
 app.get("/admin/bookings", adminBookingController.getAllBookings);
