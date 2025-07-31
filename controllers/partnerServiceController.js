@@ -762,6 +762,8 @@ exports.acceptBooking = async (req, res) => {
       admins
     )
 
+    Booking.generateMissingOTPs()
+
 
     deductWallet(updatedBooking, partnerId);
 
@@ -2107,7 +2109,7 @@ exports.reviewUser = async (req, res) => {
 exports.reviewVideo = async (req, res) => {
   try {
     const { bookingId } = req.body;
- const partnerId = req.partner._id;
+    const partnerId = req.partner._id;
     // Check if the booking exists and belongs to the partner
     const booking = await Booking.findOne({
       _id: bookingId,
@@ -2129,7 +2131,7 @@ exports.reviewVideo = async (req, res) => {
           booking.videos.push(video);
           booking.review.video = video; // Add video to review object
           reviewV = video;
-          const wallet = await PartnerWallet.findOne({ partner:partnerId });
+          const wallet = await PartnerWallet.findOne({ partner: partnerId });
           if (wallet) {
             wallet.balance += (booking.reviewPrice || 50); // Add 10 to partner's wallet for video review
             wallet.transactions.push({
@@ -2323,13 +2325,7 @@ exports.sendOtpWithNotification = async (req, res) => {
   }
 }
 
-// Booking.generateMissingOTPs()
-//   .then(count => {
-//     console.log(`Generated OTPs for ${count} existing bookings`);
-//   })
-//   .catch(error => {
-//     console.error('Error:', error);
-//   });
+
 
 exports.verifyOtpbooking = async (req, res) => {
   try {
