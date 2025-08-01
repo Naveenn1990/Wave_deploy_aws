@@ -5,13 +5,13 @@ const path = require("path");
 const Booking = require("../models/booking"); // Ensure the correct model is imported
 const SubService = require("../models/SubService");
 const { uploadFile2 } = require("../middleware/aws");
-const fetch = require('node-fetch'); 
+const fetch = require('node-fetch');
 const { default: axios } = require("axios");
 
 // Register new user
 exports.register = async (req, res) => {
   try {
-    const { name, email, phone, password, confirmPassword,fcmToken } = req.body;
+    const { name, email, phone, password, confirmPassword, fcmToken } = req.body;
     console.log("req.body : ", req.body)
     // Validate required fields
     if (!name || !email || !phone) {
@@ -22,7 +22,7 @@ exports.register = async (req, res) => {
       });
     }
 
- 
+
 
     // Find the user by phone number
     let user = await User.findOne({ phone });
@@ -38,7 +38,7 @@ exports.register = async (req, res) => {
     if (user) {
       user.name = name;
       user.email = email;
-    
+
 
       // Mark profile as complete since required fields are provided
       user.isProfileComplete = true;
@@ -54,7 +54,7 @@ exports.register = async (req, res) => {
         name,
         email,
         phone,
-     
+
         isVerified: true,
         isProfileComplete: true, // Set to true on successful profile completion
         fcmToken: fcmToken || null // Store FCM token
@@ -108,14 +108,14 @@ exports.updateFcmToken = async (req, res) => {
   }
 }
 
-exports.deleteUser=async(req,res)=>{
+exports.deleteUser = async (req, res) => {
   try {
-    let id=req.user._id;
-    let data =await User.deleteOne({_id:id});
-    return res.status(200).json({success:"Suuccessfully deleted"})
+    let id = req.user._id;
+    let data = await User.deleteOne({ _id: id });
+    return res.status(200).json({ success: "Suuccessfully deleted" })
   } catch (error) {
     console.log(error);
-    
+
   }
 }
 
@@ -207,7 +207,7 @@ exports.sendLoginOTP = async (req, res) => {
       });
     }
 
- const apiUrl = `https://1.rapidsms.co.in/api/push`;
+    const apiUrl = `https://1.rapidsms.co.in/api/push`;
 
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -215,23 +215,23 @@ exports.sendLoginOTP = async (req, res) => {
 
     user.tempOTP = otp;
     user.tempOTPExpiry = tempOTPExpiry;
-  const params = {
-        apikey: "6874d06f3053b",
-        route: "TRANS",
-        sender: "WVETEC",
-        mobileno: phone,
-        text: `Welcome to Wave Tech Services your Mobile Number Verification Code is ${otp}`
+    const params = {
+      apikey: "6874d06f3053b",
+      route: "TRANS",
+      sender: "WVETEC",
+      mobileno: phone,
+      text: `Welcome to Wave Tech Services your Mobile Number Verification Code is ${otp}`
     };
 
     // Convert parameters to query string
-  const response = await axios.get(apiUrl, { params });
-        // Parse and return the response
-        // if (response.ok) {
-        //     const data = await response.json();
-        //     return data;
-        // } else {
-        //     throw new Error(`HTTP error! Status: ${response.status}`);
-        // }
+    const response = await axios.get(apiUrl, { params });
+    // Parse and return the response
+    // if (response.ok) {
+    //     const data = await response.json();
+    //     return data;
+    // } else {
+    //     throw new Error(`HTTP error! Status: ${response.status}`);
+    // }
     await user.save();
 
     console.log(`OTP generated for ${phone}: ${otp}`); // For debugging
@@ -481,7 +481,7 @@ exports.updateProfile = async (req, res) => {
     console.log("Req BOdy", req.body);
     // Handle profile picture if uploaded
     if (req.file) {
-      updates.profilePicture =await uploadFile2(req.file,"profile");
+      updates.profilePicture = await uploadFile2(req.file, "profile");
     }
 
     const user = await User.findByIdAndUpdate(
@@ -749,3 +749,32 @@ exports.getUserDetails = async (req, res) => {
     });
   }
 };
+
+
+exports.addliveselectedAdd = async (req, res) => {
+  try {
+    const user = await User.findOne({ _id: req.user._id });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    const selectedAdd = req.body.selectedAdd;
+    if (selectedAdd) {
+      user.selectedAddress = selectedAdd
+    }
+
+    await user.save();
+   return res.status(200).json({
+      success: true,
+      message: "Address added successfully",
+    });
+  } catch (error) {
+    console.error("Add Address Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+}

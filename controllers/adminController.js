@@ -1211,7 +1211,7 @@ exports.getAllUsers = async (req, res) => {
 
     // Get all users without pagination
     const users = await User.find(query)
-      .select('name email phone address status createdAt')
+      .select('name email phone address status selectedAddress createdAt')
       .sort(sort);
 
     // Get total count
@@ -1240,7 +1240,9 @@ exports.getAllUsers = async (req, res) => {
       address: user.address || 'N/A',
       noOfBookings: bookingCountMap[user._id] || 0,
       accountStatus: user.status,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      selectedAddress: user?.selectedAddress|| 'N/A'
+      
     }));
 
     res.json({

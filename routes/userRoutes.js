@@ -16,6 +16,7 @@ const {
   sendForgotPasswordOTP,
   resetPassword,
   getUserDetails,
+  addliveselectedAdd
 } = require("../controllers/userController");
 const authController = require("../controllers/authController");
 const userServiceController = require("../controllers/userServiceController");
@@ -442,6 +443,8 @@ router.put("/profile", auth, upload.single("profilePicture"), updateProfile);
 
 // Get user details route
 router.get("/details/:userId", auth, getUserDetails);
+
+router.put("/addliveselectedAdd",auth,addliveselectedAdd);
 
 // Address routes (protected)
 /**

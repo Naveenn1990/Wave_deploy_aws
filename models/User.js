@@ -26,6 +26,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     minlength: 6
   },
+  selectedAddress:{
+    type:String
+  },
   addresses: [{
     address: { type: String, trim: true },
     lat: { type: String },
