@@ -736,9 +736,9 @@ const approvePartnerCart = async (req, res) => {
 
       const product = await Product.findById(item.product);
       if (!product) {
-        console.error("Product not found:", item.product);
+         item.approved = true;
         continue;
-      }
+      }else
 
       // Check stock availability
       if (product.stock < item.quantity) {

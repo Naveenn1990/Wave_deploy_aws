@@ -68,9 +68,14 @@ const userSchema = new mongoose.Schema({
       return `WAVEREU${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
     }
   },
-  referredBy: { type: String, trim: true },
-  referredUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User',phone: String,name: String }],
+  
+  referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 
+  referredUsers: [{
+    _id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // referred user ID
+    name: String,
+    mobile: String
+  }],
   reviews: [
     {
       partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner" },

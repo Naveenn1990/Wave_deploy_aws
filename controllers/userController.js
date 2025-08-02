@@ -8,10 +8,31 @@ const { uploadFile2 } = require("../middleware/aws");
 const fetch = require('node-fetch');
 const { default: axios } = require("axios");
 
+
+async function handleReferral(user, referralCode) {
+  if (!referralCode) return;
+
+  const referringUser = await User.findOne({ referalCode: referralCode.toUpperCase() });
+  if (!referringUser) return;
+
+  const alreadyReferred = referringUser.referredUsers.some(u => u._id.equals(user._id));
+  if (!alreadyReferred) {
+    referringUser.referredUsers.push({
+      _id: user._id,
+      name: user.name,
+      mobile: user.phone
+    });
+    await referringUser.save();
+  }
+
+  user.referredBy = referringUser._id;
+  await user.save();
+}
+
 // Register new user
 exports.register = async (req, res) => {
   try {
-    const { name, email, phone, password, confirmPassword, fcmToken } = req.body;
+    const { name, email, phone, password, confirmPassword, fcmToken,referalCode } = req.body;
     console.log("req.body : ", req.body)
     // Validate required fields
     if (!name || !email || !phone) {
@@ -45,6 +66,9 @@ exports.register = async (req, res) => {
 
       if (fcmToken) {
         user.fcmToken = fcmToken;
+      }
+      if(referalCode){
+       handleReferral(user,referalCode)
       }
 
 
