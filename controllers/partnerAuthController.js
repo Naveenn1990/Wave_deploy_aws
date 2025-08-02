@@ -279,11 +279,7 @@ const createNotification = async (partnerId, title, message) => {
 // Complete partner profile
 exports.completeProfile = async (req, res) => {
   try {
-    // console.log("Received request body:", req.body);
-    // console.log(
-    //   "Received file:",
-    //   req.file ? req.file.filename : "No file uploaded"
-    // );
+
 
     const {
       name,

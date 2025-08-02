@@ -7,15 +7,17 @@ const Booking = require("../models/booking");
 const Partner = require("../models/PartnerModel");
 const Product = require("../models/product");
 const Review = require("../models/Review");
+const Notification = require("../models/Notification");
+
 
 // Helper function to get clean image filename
 function getCleanImageName(imagePath) {
-    if (!imagePath) return null;
-    // If it's a full URL or path, extract just the filename
-    if (imagePath.includes('/')) {
-        return imagePath.split('/').pop();
-    }
-    return imagePath;
+  if (!imagePath) return null;
+  // If it's a full URL or path, extract just the filename
+  if (imagePath.includes('/')) {
+    return imagePath.split('/').pop();
+  }
+  return imagePath;
 }
 
 // Get complete service hierarchy (categories -> services -> subservices)
@@ -34,23 +36,23 @@ async function getServiceHierarchy(req, res) {
     // Process each category to include its services and subservices
     const hierarchyData = await Promise.all(categories.map(async (category) => {
       // console.log(`Processing category: ${category.name} (${category._id})`);
-      
+
       // Get all active services for this category
       const services = await Service.find({
         category: category._id,
         isActive: true
       }).lean();
-      
+
       // console.log(`Found ${services.length} services for category ${category.name}:`, services);
 
       // Get subservices for each service
       const servicesWithSubservices = await Promise.all(services.map(async (service) => {
         // console.log(`Processing service: ${service.name} (${service._id})`);
-        
+
         const subServices = await SubService.find({
           service: service._id
         }).lean();
-        
+
         // console.log(`Found ${subServices.length} subservices for service ${service.name}:`, subServices);
 
         // Format subservices
@@ -104,31 +106,31 @@ async function getServiceHierarchy(req, res) {
 }
 
 const getCategories = async (req, res) => {
-    try {
-        const categories = await ServiceCategory.find({ isActive: true })
-            .populate({
-                path: 'subcategories',
-                match: { isActive: true },
-                populate: {
-                    path: 'services',
-                    match: { isActive: true },
-                    populate: {
-                        path: 'subservices',
-                        match: { isActive: true }
-                    }
-                }
-            });
+  try {
+    const categories = await ServiceCategory.find({ isActive: true })
+      .populate({
+        path: 'subcategories',
+        match: { isActive: true },
+        populate: {
+          path: 'services',
+          match: { isActive: true },
+          populate: {
+            path: 'subservices',
+            match: { isActive: true }
+          }
+        }
+      });
 
-        // console.log('Fetched Categories:', categories); // Log fetched categories
+    // console.log('Fetched Categories:', categories); // Log fetched categories
 
-        res.status(200).json({
-            success: true,
-            data: categories
-        });
-    } catch (error) {
-        console.error('Error fetching categories:', error); // Log errors
-        res.status(500).json({ success: false, message: error.message });
-    }
+    res.status(200).json({
+      success: true,
+      data: categories
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error); // Log errors
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // Get services by category
@@ -364,7 +366,7 @@ async function getAllServices(req, res) {
         category: {
           _id: service.category?._id,
           name: service.category?.name,
-      }
+        }
       }))
     });
   } catch (error) {
@@ -378,17 +380,17 @@ async function getAllServices(req, res) {
 }
 
 const getAllServicesForUser = async (req, res) => {
-    try {
-        const services = await Service.find({ isActive: true }); // Fetch active services
+  try {
+    const services = await Service.find({ isActive: true }); // Fetch active services
 
-        res.status(200).json({
-            success: true,
-            data: services
-        });
-    } catch (error) {
-        console.error('Error fetching services:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
+    res.status(200).json({
+      success: true,
+      data: services
+    });
+  } catch (error) {
+    console.error('Error fetching services:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // const getAllSubCategories = async (req, res) => {
@@ -409,40 +411,40 @@ const getAllServicesForUser = async (req, res) => {
 const getAllSubCategories = async (req, res) => {
   // console.log("testttt")
   try {
-      const subcategories = await SubCategory.find({ isActive: true })
-          .populate('category')
-          .populate({
-              path: 'services',
-              model: 'Service',
-              populate: { 
-                  path: 'subCategory', 
-                  model: 'SubCategory' 
-              }
-          })
-          .populate({
-              path: 'subservices',   // <-- Add this to fetch subservices
-              model: 'SubService'
-          });
-          // console.log('Fetched Subcategories:', subcategories);
-          // .populate({
-          //   path: 'subservices',
-          //   populate: {
-          //       path: 'services', // SubService -> Service
-          //       populate: {
-          //           path: 'subCategory', // Service -> SubCategory
-          //           populate: {
-          //               path: 'category', // SubCategory -> ServiceCategory
-          //            }
-          //       }
-          //   }
-          // })
-      res.status(200).json({
-          success: true,
-          data: subcategories
+    const subcategories = await SubCategory.find({ isActive: true })
+      .populate('category')
+      .populate({
+        path: 'services',
+        model: 'Service',
+        populate: {
+          path: 'subCategory',
+          model: 'SubCategory'
+        }
+      })
+      .populate({
+        path: 'subservices',   // <-- Add this to fetch subservices
+        model: 'SubService'
       });
+    // console.log('Fetched Subcategories:', subcategories);
+    // .populate({
+    //   path: 'subservices',
+    //   populate: {
+    //       path: 'services', // SubService -> Service
+    //       populate: {
+    //           path: 'subCategory', // Service -> SubCategory
+    //           populate: {
+    //               path: 'category', // SubCategory -> ServiceCategory
+    //            }
+    //       }
+    //   }
+    // })
+    res.status(200).json({
+      success: true,
+      data: subcategories
+    });
   } catch (error) {
-      console.error('Error fetching subcategories:', error);
-      res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching subcategories:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -451,17 +453,17 @@ const getAllSubCategories = async (req, res) => {
 
 const getAllSubCategoriesForUser = async (req, res) => {
   // console.log("subcategory")
-    try {
-        const subcategories = await SubCategory.find({ isActive: true }); // Fetch active subcategories
+  try {
+    const subcategories = await SubCategory.find({ isActive: true }); // Fetch active subcategories
 
-        res.status(200).json({
-            success: true,
-            data: subcategories
-        });
-    } catch (error) {
-        console.error('Error fetching subcategories:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
+    res.status(200).json({
+      success: true,
+      data: subcategories
+    });
+  } catch (error) {
+    console.error('Error fetching subcategories:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // const getAllSubServices = async (req, res) => {
@@ -479,49 +481,49 @@ const getAllSubCategoriesForUser = async (req, res) => {
 // };
 const getAllSubServices = async (req, res) => {
   try {
-      const subservices = await SubService.find({ isActive: true })
+    const subservices = await SubService.find({ isActive: true })
       .populate({
         path: 'service',
         populate: {
-            path: 'subCategory',
-            populate: {
-                path: 'category',
-                model: 'ServiceCategory'
-            }
+          path: 'subCategory',
+          populate: {
+            path: 'category',
+            model: 'ServiceCategory'
+          }
         }
       });
-      // Attach reviews and calculate average rating
-      const enrichedSubservices = await Promise.all(
-          subservices.map(async (subservice) => {
-              const reviews = await Review.find({ subService: subservice._id, status: 'approved' })
-                  .populate('user', 'name email');
+    // Attach reviews and calculate average rating
+    const enrichedSubservices = await Promise.all(
+      subservices.map(async (subservice) => {
+        const reviews = await Review.find({ subService: subservice._id, status: 'approved' })
+          .populate('user', 'name email');
 
-              const totalRatings = reviews.reduce((sum, review) => sum + review.rating, 0);
-              const averageRating = reviews.length > 0
-                  ? (totalRatings / reviews.length).toFixed(1)
-                  : "No rating till now";
+        const totalRatings = reviews.reduce((sum, review) => sum + review.rating, 0);
+        const averageRating = reviews.length > 0
+          ? (totalRatings / reviews.length).toFixed(1)
+          : "No rating till now";
 
-              return {
-                  ...subservice.toObject(),
-                  reviews,
-                  averageRating,
-                  discount: subservice.discount || 0,
-                  gst: subservice.gst || 0,
-                  commission: subservice.commission || 0,
-                  rating: subservice.rating || 0,
-                  minimumAmount: subservice.minimumAmount || 0, // Default to 0 if not set
-              };
-          })
-      );
+        return {
+          ...subservice.toObject(),
+          reviews,
+          averageRating,
+          discount: subservice.discount || 0,
+          gst: subservice.gst || 0,
+          commission: subservice.commission || 0,
+          rating: subservice.rating || 0,
+          minimumAmount: subservice.minimumAmount || 0, // Default to 0 if not set
+        };
+      })
+    );
 
-      res.status(200).json({
-          success: true,
-          data: enrichedSubservices
-      });
+    res.status(200).json({
+      success: true,
+      data: enrichedSubservices
+    });
 
   } catch (error) {
-      console.error('Error fetching subservices:', error);
-      res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching subservices:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -533,46 +535,46 @@ const getAllSubServices = async (req, res) => {
 
 const getAllSubServicesForUser = async (req, res) => {
   // console.log("hi")
-    try {
-        const subservices = await SubService.find({ isActive: true })
-        .populate({path: 'reviews'})
+  try {
+    const subservices = await SubService.find({ isActive: true })
+      .populate({ path: 'reviews' })
 
-        res.status(200).json({
-            success: true,
-            data: subservices
-        });
-    } catch (error) {
-        console.error('Error fetching subservices:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
+    res.status(200).json({
+      success: true,
+      data: subservices
+    });
+  } catch (error) {
+    console.error('Error fetching subservices:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 const getAllCategoriesForUser = async (req, res) => {
-    try {
-        const categories = await ServiceCategory.find(); // Fetch active categories
-        // console.log(categories)
-        res.status(200).json({
-            success: true,
-            data: categories
-        });
-    } catch (error) {
-        console.error('Error fetching categories:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
+  try {
+    const categories = await ServiceCategory.find(); // Fetch active categories
+    // console.log(categories)
+    res.status(200).json({
+      success: true,
+      data: categories
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 const getAllCategories = async (req, res) => {
-    try {
-        const categories = await ServiceCategory.find({ isActive: true }); // Fetch active categories
+  try {
+    const categories = await ServiceCategory.find({ isActive: true }); // Fetch active categories
 
-        res.status(200).json({
-            success: true,
-            data: categories
-        });
-    } catch (error) {
-        console.error('Error fetching categories:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
+    res.status(200).json({
+      success: true,
+      data: categories
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // Get all partners
@@ -611,69 +613,69 @@ const getAllPartners = async (req, res) => {
 };
 
 const getSubCategoryHierarchy = async (req, res) => {
-    try {
-        const subcategories = await SubCategory.find({ isActive: true })
-            .populate({
-                path: 'services',
-                match: { isActive: true },
-                populate: {
-                    path: 'subservices',
-                    match: { isActive: true }
-                }
-            });
+  try {
+    const subcategories = await SubCategory.find({ isActive: true })
+      .populate({
+        path: 'services',
+        match: { isActive: true },
+        populate: {
+          path: 'subservices',
+          match: { isActive: true }
+        }
+      });
 
-        res.status(200).json({
-            success: true,
-            data: subcategories
-        });
-    } catch (error) {
-        console.error('Error fetching subcategory hierarchy:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
+    res.status(200).json({
+      success: true,
+      data: subcategories
+    });
+  } catch (error) {
+    console.error('Error fetching subcategory hierarchy:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 const getUserSubCategoryHierarchy = async (req, res) => {
-    try {
-        const subcategories = await SubCategory.find({ isActive: true })
-            .populate({
-                path: 'services',
-                match: { isActive: true },
-                populate: {
-                    path: 'subservices',
-                    match: { isActive: true }
-                }
-            });
+  try {
+    const subcategories = await SubCategory.find({ isActive: true })
+      .populate({
+        path: 'services',
+        match: { isActive: true },
+        populate: {
+          path: 'subservices',
+          match: { isActive: true }
+        }
+      });
 
-        res.status(200).json({
-            success: true,
-            data: subcategories
-        });
-    } catch (error) {
-        console.error('Error fetching subcategory hierarchy for user:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
+    res.status(200).json({
+      success: true,
+      data: subcategories
+    });
+  } catch (error) {
+    console.error('Error fetching subcategory hierarchy for user:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 
 // Book subservice
 const bookSubService = async (req, res) => {
-    const { subServiceId, userId } = req.body; // Assuming these are passed in the request
+  const { subServiceId, userId } = req.body; // Assuming these are passed in the request
 
-    // Logic to find the subservice and create a booking
-    const subService = await SubService.findById(subServiceId);
-    if (!subService) {
-        return res.status(404).json({ message: "Subservice not found." });
-    }
+  // Logic to find the subservice and create a booking
+  const subService = await SubService.findById(subServiceId);
+  if (!subService) {
+    return res.status(404).json({ message: "Subservice not found." });
+  }
 
-    // Logic to create a booking
-    const booking = new Booking({
-        user: userId,
-        subService: subServiceId,
-        // other relevant booking details
-    });
+  // Logic to create a booking
+  const booking = new Booking({
+    user: userId,
+    subService: subServiceId,
+    // other relevant booking details
+  });
 
-    await booking.save();
-    return res.status(201).json({ message: "Booking created successfully", booking });
+  await booking.save();
+  return res.status(201).json({ message: "Booking created successfully", booking });
 };
 
 // View cart of partner 
@@ -710,7 +712,7 @@ const approvePartnerCart = async (req, res) => {
     const userId = req.user.id; // Authenticated User ID (Approving the cart)
 
     // Step 1: Validate Booking & Ownership
-    const booking = await Booking.findOne({ _id: bookingId, user: userId }).populate("cart.product");
+    const booking = await Booking.findOne({ _id: bookingId, user: userId }).populate("cart.product").populate("user");
 
     if (!booking) {
       return res.status(403).json({ message: "Unauthorized: This booking does not belong to you" });
@@ -736,14 +738,14 @@ const approvePartnerCart = async (req, res) => {
 
       const product = await Product.findById(item.product);
       if (!product) {
-         item.approved = true;
+        item.approved = true;
         continue;
-      }else
+      } else
 
-      // Check stock availability
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ message: `Insufficient stock for product: ${product.name}` });
-      }
+        // Check stock availability
+        if (product.stock < item.quantity) {
+          return res.status(400).json({ message: `Insufficient stock for product: ${product.name}` });
+        }
 
       // Deduct stock
       product.stock -= item.quantity;
@@ -767,6 +769,15 @@ const approvePartnerCart = async (req, res) => {
       item.approved = true;
     }
 
+    const notification = new Notification({
+      title: 'Cart Approved',
+      userId: booking.partner,
+      message: `caurt approved by ${booking?.user?.name} at ${booking.date} `,
+      createdAt: new Date(),
+      read: false,
+    });
+    await notification.save();
+
     // Step 4: Save Approved Cart Permanently
     booking.savedCart = booking.cart; // Save the cart permanently
     await booking.save();
@@ -782,7 +793,7 @@ const approvePartnerCart = async (req, res) => {
     console.error("Error approving cart:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
-};   
+};
 
 
 //get all completed booking in system 
@@ -811,7 +822,7 @@ const getAllCompletedBookingsinsystem = async (req, res) => {
     console.error("Error fetching completed bookings:", error);
     res.status(500).json({ success: false, message: "Internal server error." });
   }
-}; 
+};
 
 
 

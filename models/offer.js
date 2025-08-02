@@ -27,7 +27,13 @@ const offerSchema = new mongoose.Schema({
     offerTitle: {
         type: String,
         required: true
-    }
+    },
+    applyOffer:[{
+        userId:{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:'User'
+        }
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Offer', offerSchema);

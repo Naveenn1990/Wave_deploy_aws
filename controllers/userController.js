@@ -1,27 +1,137 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const { sendOTP } = require("../utils/sendOTP");
+const Wallet = require("../models/Wallet");
 const path = require("path");
 const Booking = require("../models/booking"); // Ensure the correct model is imported
 const SubService = require("../models/SubService");
 const { uploadFile2 } = require("../middleware/aws");
-const fetch = require('node-fetch');
+
 const { default: axios } = require("axios");
+const { v4: uuidv4 } = require("uuid");
+const ReferralAmount = require("../models/ReferralAmount");
+const admin = require('firebase-admin');
+const sendreferral = async (user, title, message, type) => {
+  try {
+    // User notification
+    const userNotification = {
+      title: title,
+      message: message,
+      userId: user._id,
+      type: type,
+      read: false,
+      skipFcm: true, // Prevent post-save hook from sending FCM
+    };
 
+    // Save user notification to Notification collection
+    // const userDoc = new Notification(userNotification);
+    // await userDoc.save();
 
+    // Send FCM to user if token exists
+    if (user.fcmToken) {
+      const userMessage = {
+        notification: {
+          title: userNotification.title,
+          body: userNotification.message.length > 100
+            ? userNotification.message.slice(0, 97) + '...'
+            : userNotification.message,
+        },
+        data: {
+          type: 'new-notification', // Align with FirebaseProvider
+          userId: user._id.toString(),
+
+          title: userNotification.title,
+          message: userNotification.message.length > 100
+            ? userNotification.message.slice(0, 97) + '...'
+            : userNotification.message,
+          timestamp: new Date().toISOString(),
+        },
+        token: user.fcmToken,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24,
+        },
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true,
+            },
+          },
+          headers: {
+            'apns-priority': '5',
+          },
+        },
+      };
+
+      // Validate payload size
+      const userPayloadString = JSON.stringify(userMessage);
+      const userPayloadSize = Buffer.byteLength(userPayloadString, 'utf8');
+      if (userPayloadSize > 4096) {
+        console.error(`User FCM payload too large: ${userPayloadSize} bytes`);
+        userMessage.notification.body = userMessage.notification.body.slice(0, 50) + '...';
+        userMessage.data.message = userMessage.data.message.slice(0, 50) + '...';
+        const fallbackSize = Buffer.byteLength(JSON.stringify(userMessage), 'utf8');
+        if (fallbackSize > 4096) {
+          console.error(`User fallback payload still too large: ${fallbackSize} bytes`);
+          throw new Error('User FCM payload exceeds size limit');
+        }
+      }
+
+      console.log(`Sending FCM to user: ${user._id}`);
+      await admin.messaging().send(userMessage);
+      console.log(`FCM sent to user: ${user._id}`);
+    } else {
+      console.log(`No FCM token for user: ${user._id}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Booking acceptance notification error:', error);
+    return { success: false, error: error.message };
+  }
+};
 async function handleReferral(user, referralCode) {
   if (!referralCode) return;
 
   const referringUser = await User.findOne({ referalCode: referralCode.toUpperCase() });
   if (!referringUser) return;
-
+  const referAmount = await ReferralAmount.findOne({});
   const alreadyReferred = referringUser.referredUsers.some(u => u._id.equals(user._id));
-  if (!alreadyReferred) {
+  if (!alreadyReferred && referAmount) {
     referringUser.referredUsers.push({
       _id: user._id,
       name: user.name,
       mobile: user.phone
     });
+
+    let wallet = await Wallet.findOne({ userId: referringUser?._id });
+    if (wallet&&referAmount.referralUserAm>0) {
+      wallet.balance += referAmount.referralUserAm;
+      wallet.transactions.push({
+        type: "Credit",
+        transactionId: `RE0` + uuidv4(),
+        amount: referAmount.referralUserAm,
+        description: `Referral bonus for ${user.name} amout of ${referAmount.referralUserAm}`,
+      })
+      sendreferral(referringUser, "Referral bonus", `You get the money for ${user.name} referral`, "new_notification");
+      await wallet.save();
+    }
+    if (referAmount.joiningAmountUser > 0) {
+      await Wallet.create({
+        userId: user._id,
+        balance: referAmount.joiningAmountUser,
+        transactions: [
+          {
+            type: "Credit",
+            transactionId: `JOI0` + uuidv4(),
+            amount: referAmount.joiningAmountUser,
+            description: `Joining bonus for ${referringUser.name} amout of ${referAmount.joiningAmountUser}`,
+
+          }
+        ]
+      })
+    }
+
     await referringUser.save();
   }
 
@@ -32,7 +142,7 @@ async function handleReferral(user, referralCode) {
 // Register new user
 exports.register = async (req, res) => {
   try {
-    const { name, email, phone, password, confirmPassword, fcmToken,referalCode } = req.body;
+    const { name, email, phone, password, confirmPassword, fcmToken, referalCode } = req.body;
     console.log("req.body : ", req.body)
     // Validate required fields
     if (!name || !email || !phone) {
@@ -67,8 +177,8 @@ exports.register = async (req, res) => {
       if (fcmToken) {
         user.fcmToken = fcmToken;
       }
-      if(referalCode){
-       handleReferral(user,referalCode)
+      if (referalCode) {
+        handleReferral(user, referalCode)
       }
 
 
@@ -790,7 +900,7 @@ exports.addliveselectedAdd = async (req, res) => {
     }
 
     await user.save();
-   return res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Address added successfully",
     });

@@ -31,7 +31,6 @@ const sendBookingAcceptanceNotifications = async (booking, user, subService, par
     // Save user notification to Notification collection
     // const userDoc = new Notification(userNotification);
     // await userDoc.save();
-    console.log(`User notification saved for user: ${user._id}`);
 
     // Send FCM to user if token exists
     if (user.fcmToken) {

@@ -12,6 +12,7 @@ const SubCategory = require("../models/SubCategory"); // Assuming SubCategory mo
 const PartnerProfile = require("../models/PartnerProfile");
 const mongoose = require("mongoose");
 const { uploadFile2 } = require("../middleware/aws");
+const Notification = require("../models/Notification");
 
 
 // Admin login
@@ -1211,7 +1212,7 @@ exports.getAllUsers = async (req, res) => {
 
     // Get all users without pagination
     const users = await User.find(query)
-      .select('name email phone address status selectedAddress createdAt')
+      .select('name email phone addresses status selectedAddress createdAt')
       .sort(sort);
 
     // Get total count
@@ -1237,7 +1238,7 @@ exports.getAllUsers = async (req, res) => {
       customerName: user.name,
       phoneNo: user.phone,
       email: user.email,
-      address: user.address || 'N/A',
+      address: user.addresses||"N/A",
       noOfBookings: bookingCountMap[user._id] || 0,
       accountStatus: user.status,
       createdAt: user.createdAt,
@@ -1354,17 +1355,21 @@ exports.completeBooking = async (req, res) => {
 exports.assignedbooking = async (req, res) => {
   try {
     const { partnerId, bookingId } = req.body;
-    const book = await booking.findById(bookingId);
-    console.log("partnerId ,bookingId", partnerId, bookingId)
+    const book = await booking.findById(bookingId).populate("subService");
+    // console.log("partnerId ,bookingId", partnerId, bookingId)
     if (!book) {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    // if (booking.status !== "pending") {
-    //   return res
-    //     .status(400)
-    //     .json({ message: "This job is no longer available" });
-    // }
+
+  const notification = new Notification({
+      title: 'Booking Assigned',
+      userId: partnerId,
+      message: `You have been assigned a new booking ${book.subService?.name} by wave admin`,
+      createdAt: new Date(),
+      read: false,
+    });
+    await notification.save();
 
     book.partner = partnerId;
     book.status = "accepted"
