@@ -30,12 +30,16 @@ const bookingSchema = new mongoose.Schema(
     scheduledTime: { type: String, required: true },
     location: { type: locationSchema, required: true },
     amount: { type: Number, required: true },
-    payamount: { type: Number,default: 0 },
+    payamount: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
     tax: { type: Number, default: 0 },
+    couponId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Offer",
+    },
     paymentMode: {
       type: String,
-      enum: ["credit card", "cash", "paypal", "bank transfer","phonepe", "upi",'online'],
+      enum: ["credit card", "cash", "paypal", "bank transfer", "phonepe", "upi", 'online'],
       required: true,
     },
     status: {
@@ -63,7 +67,7 @@ const bookingSchema = new mongoose.Schema(
 
     acceptedAt: Date,
     completedAt: Date,
-    otp:{
+    otp: {
       type: String,
     },
     otpGeneratedAt: {
@@ -89,12 +93,12 @@ const bookingSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: "Product",
         },
-        name:{
-          type:String,
+        name: {
+          type: String,
         },
         price: {
           type: Number,
-        default: 0,
+          default: 0,
         },
         amount: {
           type: Number,
@@ -121,17 +125,21 @@ const bookingSchema = new mongoose.Schema(
         }
       }
     ],
-    chat:[],
-    reviewPrice:{
-      type:Number,
-      default:50
+    chat: [],
+    reviewPrice: {
+      type: Number,
+      default: 50
+    },
+      usewallet: {
+      type: Number,
+      default: 0
     },
     lat: { type: String },
     lng: { type: String },
     rideStart: { type: Boolean, default: false },
     currentBooking: { type: Boolean, default: false },
   },
-  { 
+  {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
@@ -139,7 +147,7 @@ const bookingSchema = new mongoose.Schema(
 );
 
 // Pre-save middleware to handle OTP generation
-bookingSchema.pre('save', function(next) {
+bookingSchema.pre('save', function (next) {
   // Generate OTP when partner accepts booking (status changes to 'accepted')
   if (this.isModified('status') && this.status === 'accepted' && this.partner) {
     this.otp = generateOTP();
@@ -147,7 +155,7 @@ bookingSchema.pre('save', function(next) {
     this.otpActive = true;
     this.acceptedAt = new Date();
   }
-  
+
   // Generate OTP for existing accepted bookings that don't have OTP
   if (this.status === 'accepted' && this.partner && (!this.otp || this.otp === '')) {
     this.otp = generateOTP();
@@ -157,18 +165,18 @@ bookingSchema.pre('save', function(next) {
       this.acceptedAt = new Date();
     }
   }
-  
+
   // Stop OTP generation when booking is completed
   if (this.isModified('status') && this.status === 'completed') {
     this.otpActive = false;
     this.completedAt = new Date();
   }
-  
+
   next();
 });
 
 // Method to regenerate OTP (for daily changes)
-bookingSchema.methods.regenerateOTP = function() {
+bookingSchema.methods.regenerateOTP = function () {
   if (this.otpActive && this.status === 'accepted') {
     this.otp = generateOTP();
     this.otpGeneratedAt = new Date();
@@ -178,24 +186,24 @@ bookingSchema.methods.regenerateOTP = function() {
 };
 
 // Method to check if OTP should be regenerated (daily check)
-bookingSchema.methods.shouldRegenerateOTP = function() {
+bookingSchema.methods.shouldRegenerateOTP = function () {
   if (!this.otpActive || !this.otpGeneratedAt) return false;
-  
+
   const now = new Date();
   const otpDate = new Date(this.otpGeneratedAt);
-  
+
   // Check if it's a new day
   return now.toDateString() !== otpDate.toDateString();
 };
 
 // Static method to regenerate daily OTPs
-bookingSchema.statics.regenerateDailyOTPs = async function() {
+bookingSchema.statics.regenerateDailyOTPs = async function () {
   try {
     const activeBookings = await this.find({
       otpActive: true,
-      status: { $in: [ "confirmed", "in_progress",  "accepted", "paused"] },
+      status: { $in: ["confirmed", "in_progress", "accepted", "paused"] },
     });
-    
+
     const updates = [];
     for (const booking of activeBookings) {
       if (booking.shouldRegenerateOTP()) {
@@ -204,7 +212,7 @@ bookingSchema.statics.regenerateDailyOTPs = async function() {
         updates.push(booking.save());
       }
     }
-    
+
     await Promise.all(updates);
     console.log(`Regenerated OTPs for ${updates.length} bookings`);
   } catch (error) {
@@ -213,10 +221,10 @@ bookingSchema.statics.regenerateDailyOTPs = async function() {
 };
 
 // Static method to generate OTPs for existing bookings without OTP
-bookingSchema.statics.generateMissingOTPs = async function() {
+bookingSchema.statics.generateMissingOTPs = async function () {
   try {
     const bookingsWithoutOTP = await this.find({
-      status: { $in: [ "confirmed", "in_progress",  "accepted", "paused"] },
+      status: { $in: ["confirmed", "in_progress", "accepted", "paused"] },
       partner: { $exists: true },
       $or: [
         { otp: { $exists: false } },
@@ -224,7 +232,7 @@ bookingSchema.statics.generateMissingOTPs = async function() {
         { otp: null }
       ]
     });
-    
+
     const updates = [];
     for (const booking of bookingsWithoutOTP) {
       booking.otp = generateOTP();
@@ -235,7 +243,7 @@ bookingSchema.statics.generateMissingOTPs = async function() {
       }
       updates.push(booking.save());
     }
-    
+
     await Promise.all(updates);
     console.log(`Generated OTPs for ${updates.length} existing bookings`);
     return updates.length;
@@ -246,7 +254,7 @@ bookingSchema.statics.generateMissingOTPs = async function() {
 };
 
 // Remove any existing indexes
-bookingSchema.on("index", function(err) {
+bookingSchema.on("index", function (err) {
   if (err) {
     console.error("Booking index error: %s", err);
   } else {

@@ -143,7 +143,7 @@ async function handleReferral(user, referralCode) {
 exports.register = async (req, res) => {
   try {
     const { name, email, phone, password, confirmPassword, fcmToken, referalCode } = req.body;
-    console.log("req.body : ", req.body)
+    console.log("req.body AM : ", req.body)
     // Validate required fields
     if (!name || !email || !phone) {
       return res.status(400).json({

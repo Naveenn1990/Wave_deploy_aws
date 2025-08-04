@@ -8,14 +8,15 @@ const SubService = require("../models/SubService");
 const Admin = require("../models/admin");
 const PartnerModel = require("../models/PartnerModel");
 const Notification = require("../models/Notification");
-const PartnerWallet=require("../models/PartnerWallet");
+const PartnerWallet = require("../models/PartnerWallet");
 const admin = require("firebase-admin");
-
+const Offer = require('../models/offer');
+const Wallet = require("../models/Wallet");
 
 const createNotification = async (serviceId, name, job) => {
   try {
     // Find partners with the given serviceId
-    const partners = await PartnerModel.find({ service: serviceId,'kyc.status':"approved" }).populate('service');
+    const partners = await PartnerModel.find({ service: serviceId, 'kyc.status': "approved" }).populate('service');
     console.log(`Found ${partners.length} partners for service: ${name}`);
 
     // Process each partner concurrently
@@ -24,117 +25,117 @@ const createNotification = async (serviceId, name, job) => {
         try {
           const userIdString = partner._id.toString();
           const checkWallet = await PartnerWallet.findOne({ partner: partner._id });
-          if(checkWallet?.balance>499){
-       // Prepare minimal job data for FCM, including all fields needed by JobNotificationScreen
-          const minimalJob = {
-            _id: job._id?.toString() || '',
-            serviceId: job.serviceId?.toString() || '',
-            subService: {
-              name: job.subService?.name || name || 'Unknown Service',
-              description:
-                (job.subService?.description || '').slice(0, 100) || 'No description', // Truncate to save space
-            },
-            amount: job.amount?.toString() || '0',
-            scheduledDate: job.scheduledDate
-              ? new Date(job.scheduledDate).toISOString().split('T')[0]
-              : '',
-            scheduledTime: job.scheduledTime || '',
-            location: {
-              address: job.location?.address || 'Location not specified',
-            },
-            paymentStatus: job.paymentStatus || 'pending',
-            user: {
-              name: job.user?.name || 'Customer',
-              phone: job.user?.phone || 'N/A',
-            },
-          };
+          if (checkWallet?.balance > 499) {
+            // Prepare minimal job data for FCM, including all fields needed by JobNotificationScreen
+            const minimalJob = {
+              _id: job._id?.toString() || '',
+              serviceId: job.serviceId?.toString() || '',
+              subService: {
+                name: job.subService?.name || name || 'Unknown Service',
+                description:
+                  (job.subService?.description || '').slice(0, 100) || 'No description', // Truncate to save space
+              },
+              amount: job.amount?.toString() || '0',
+              scheduledDate: job.scheduledDate
+                ? new Date(job.scheduledDate).toISOString().split('T')[0]
+                : '',
+              scheduledTime: job.scheduledTime || '',
+              location: {
+                address: job.location?.address || 'Location not specified',
+              },
+              paymentStatus: job.paymentStatus || 'pending',
+              user: {
+                name: job.user?.name || 'Customer',
+                phone: job.user?.phone || 'N/A',
+              },
+            };
 
-          // Save notification to Firestore/MongoDB
-         
-          // console.log(`Notification saved for partner: ${userIdString}`);
-          const notification = new Notification({
-            title: 'New Booking Alert',
-            userId: partner._id,
-            message: `You have new service booking for ${name || job.subService?.name || 'service'}`,
-            createdAt: new Date(),
-            read: false,
-          });
-          await notification.save();
-          // Send FCM notification if fcmtoken exists
-          if (partner.fcmtoken) {
-            const userMessage = {
-              data: {
-                type: 'new-job',
-                job: JSON.stringify(minimalJob),
-                userId: userIdString,
-                title: 'New Job Alert',
-                body: `You have new service booking for ${name || job.subService?.name || 'service'}`,
-                autoNavigate: 'true',
-              },
-              token: partner.fcmtoken,
-              android: {
-                priority: 'high',
-                ttl: 60 * 60 * 24, // 24 hours
-              },
-              apns: {
-                payload: {
-                  aps: {
-                    contentAvailable: true,
-                    sound: 'notificationalert.mp3',
-                    priority: 5,
-                    badge: 1,
+            // Save notification to Firestore/MongoDB
+
+            // console.log(`Notification saved for partner: ${userIdString}`);
+            const notification = new Notification({
+              title: 'New Booking Alert',
+              userId: partner._id,
+              message: `You have new service booking for ${name || job.subService?.name || 'service'}`,
+              createdAt: new Date(),
+              read: false,
+            });
+            await notification.save();
+            // Send FCM notification if fcmtoken exists
+            if (partner.fcmtoken) {
+              const userMessage = {
+                data: {
+                  type: 'new-job',
+                  job: JSON.stringify(minimalJob),
+                  userId: userIdString,
+                  title: 'New Job Alert',
+                  body: `You have new service booking for ${name || job.subService?.name || 'service'}`,
+                  autoNavigate: 'true',
+                },
+                token: partner.fcmtoken,
+                android: {
+                  priority: 'high',
+                  ttl: 60 * 60 * 24, // 24 hours
+                },
+                apns: {
+                  payload: {
+                    aps: {
+                      contentAvailable: true,
+                      sound: 'notificationalert.mp3',
+                      priority: 5,
+                      badge: 1,
+                    },
                   },
                 },
-              },
-            }
-
-            // Validate payload size (4KB = 4096 bytes)
-            const payloadString = JSON.stringify(userMessage);
-            const payloadSize = Buffer.byteLength(payloadString, 'utf8');
-            if (payloadSize > 4096) {
-              console.error(
-                `Payload too large for partner ${userIdString}: ${payloadSize} bytes`,
-              );
-              // Fallback to minimal payload
-              userMessage.data.job = JSON.stringify({
-                id: minimalJob.id,
-                serviceId: minimalJob.serviceId,
-                subService: { name: minimalJob.subService.name },
-              });
-              const fallbackSize = Buffer.byteLength(
-                JSON.stringify(userMessage),
-                'utf8',
-              );
-              if (fallbackSize > 4096) {
-                console.error(
-                  `Fallback payload still too large for partner ${userIdString}: ${fallbackSize} bytes`,
-                );
-                return;
               }
+
+              // Validate payload size (4KB = 4096 bytes)
+              const payloadString = JSON.stringify(userMessage);
+              const payloadSize = Buffer.byteLength(payloadString, 'utf8');
+              if (payloadSize > 4096) {
+                console.error(
+                  `Payload too large for partner ${userIdString}: ${payloadSize} bytes`,
+                );
+                // Fallback to minimal payload
+                userMessage.data.job = JSON.stringify({
+                  id: minimalJob.id,
+                  serviceId: minimalJob.serviceId,
+                  subService: { name: minimalJob.subService.name },
+                });
+                const fallbackSize = Buffer.byteLength(
+                  JSON.stringify(userMessage),
+                  'utf8',
+                );
+                if (fallbackSize > 4096) {
+                  console.error(
+                    `Fallback payload still too large for partner ${userIdString}: ${fallbackSize} bytes`,
+                  );
+                  return;
+                }
+              }
+
+              console.log(`Sending FCM to partner: ${userIdString}`);
+              await admin.messaging().send(userMessage);
+              console.log(`FCM sent to partner: ${userIdString}`);
+            } else {
+              console.log(
+                `No FCM token for partner: ${userIdString}, notification saved to DB`,
+              );
+
             }
 
-            console.log(`Sending FCM to partner: ${userIdString}`);
-            await admin.messaging().send(userMessage);
-            console.log(`FCM sent to partner: ${userIdString}`);
           } else {
-            console.log(
-              `No FCM token for partner: ${userIdString}, notification saved to DB`,
-            );
-         
-          }
-        
-          }else{
             console.log(`Partner ${partner._id} does not have sufficient balance.`);
-               const notification = new Notification({
-            title: 'Insufficient Balance Alert',
-            userId: partner._id,
-            message: `Your wallet balance is insufficient to accept a new booking for ${name || job.subService?.name || 'the service'}. Please recharge your wallet. A minimum balance of ₹500 is required to proceed.`,
-            createdAt: new Date(),
-            read: false,
-          });
-          await notification.save();
+            const notification = new Notification({
+              title: 'Insufficient Balance Alert',
+              userId: partner._id,
+              message: `Your wallet balance is insufficient to accept a new booking for ${name || job.subService?.name || 'the service'}. Please recharge your wallet. A minimum balance of ₹500 is required to proceed.`,
+              createdAt: new Date(),
+              read: false,
+            });
+            await notification.save();
           }
-   
+
         } catch (error) {
           console.error(`Error processing partner ${partner._id}:`, error.message);
         }
@@ -158,6 +159,13 @@ const sendBookingNotifications = async (booking, userId, subService) => {
         message: "User not found",
       });
     }
+
+    const offer = await Offer.findById(booking.couponId);
+    if (offer) {
+      offer.applyOffer.push({ userId: user?._id });
+      await offer.save();
+    }
+
     // User notification
     const userNotification = {
       title: 'Booking Confirmed',
@@ -335,17 +343,17 @@ const sendCancellationNotifications = async (
 ) => {
   try {
     // User notification
-    if( booking.partner){
-       const notification = new Notification({
-      title: 'Cancelled Booking Alert',
-      userId: booking.partner,
-      message: `You job service is ${subService.name} cancelled .`,
-      createdAt: new Date(),
-      read: false,
-    });
-    await notification.save();
+    if (booking.partner) {
+      const notification = new Notification({
+        title: 'Cancelled Booking Alert',
+        userId: booking.partner,
+        message: `You job service is ${subService.name} cancelled .`,
+        createdAt: new Date(),
+        read: false,
+      });
+      await notification.save();
     }
-   
+
     const userNotification = {
       title: 'Booking Cancelled',
       message: `Your booking for ${subService.name} has been cancelled. Reason: ${cancellationReason}`,
@@ -803,6 +811,8 @@ exports.createBooking = async (req, res) => {
       lng,
       payamount,
       discount,
+      couponId,
+      usewallet
     } = req.body;
 
     // Validate required fields
@@ -847,10 +857,25 @@ exports.createBooking = async (req, res) => {
       amount: amount || subService.price,
       status: "pending",
       paymentMode,
+      couponId,
+      usewallet,
     });
 
     await booking.save();
 
+    if (usewallet) {
+      const wallet = await Wallet.findOne({ userId: userId });
+      if (wallet) {
+        wallet.balance = wallet.balance - Number(usewallet);
+        wallet.transactions.push({
+          type: "Debit",
+          amount: Number(usewallet),
+          description: `Booking for ${subService.name} on ${scheduledDate} at ${scheduledTime} using wallet`,
+          transactionId: booking._id
+        })
+        await wallet.save();
+      }
+    }
     // Populate booking details
     const populatedBooking = await Booking.findById(booking._id)
       .populate("subService")
@@ -863,11 +888,11 @@ exports.createBooking = async (req, res) => {
       );
     }
     // Get user and admin details
-  
+
 
     // Send notifications (non-blocking)
     sendBookingNotifications(populatedBooking, userId, subService)
-      
+
 
     res.status(201).json({
       success: true,

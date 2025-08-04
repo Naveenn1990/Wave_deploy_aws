@@ -116,7 +116,7 @@ exports.editOffer = async (req, res) => {
     // Collecting update fields dynamically
     const updateFields = {};
 
-    if (req.body.couponCode) updateFields.couponCode = req.body.couponCode;
+    // if (req.body.couponCode) updateFields.couponCode = req.body.couponCode;
     if (req.body.discount) updateFields.discount = req.body.discount;
     if (req.body.startDate) updateFields.startDate = req.body.startDate;
     if (req.body.endDate) updateFields.endDate = req.body.endDate;
@@ -138,6 +138,13 @@ exports.editOffer = async (req, res) => {
 
         if (!updatedOffer) {
             return res.status(404).json({ message: 'Offer not found' });
+        }
+        if(req.body.couponCode&&updatedOffer.couponCode!==req.body.couponCode){
+            const coupon = await Offer.findOne({couponCode:req.body.couponCode})
+            if(!coupon){
+                return res.status(404).json({ message: 'Coupon not found' });
+                }
+            updatedOffer.couponCode=req.body.couponCode
         }
 
         res.status(200).json(updatedOffer);
@@ -204,7 +211,7 @@ exports.deleteOffer = async (req, res) => {
 exports.getAllOffers = async (req, res) => {
     // console.log("im gettig the offers")
     try {
-        const offers = await Offer.find(); // Fetch all offers from the database
+        const offers = await Offer.find().populate("applyOffer.userId"); // Fetch all offers from the database
         res.status(200).json({ success: true, data: offers });
     } catch (error) {
         console.error("🔥 Error fetching offers:", error);
