@@ -774,13 +774,16 @@ const approvePartnerCart = async (req, res) => {
     const notification = new Notification({
       title: 'Cart Approved',
       userId: booking.partner,
-      message: `caurt approved by ${booking?.user?.name}.`,
+      message: `caurt approved by ${booking?.user?.name} amount ${amount}.`,
       createdAt: new Date(),
       read: false,
     });
     await notification.save();
 
     // Step 4: Save Approved Cart Permanently
+    if(amount){
+      booking.amount=booking.amount+amount;
+    }
     booking.savedCart = booking.cart; // Save the cart permanently
     await booking.save();
 
