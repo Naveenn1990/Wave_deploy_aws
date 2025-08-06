@@ -731,7 +731,7 @@ const approvePartnerCart = async (req, res) => {
 
     let updatedInventory = [];
     let usedProducts = [];
-
+    let amount=0
     // Step 3: Deduct Stock from Inventory & Approve Cart
     for (const item of booking.cart) {
       if (item.approved) continue; // Skip already approved items
@@ -739,6 +739,7 @@ const approvePartnerCart = async (req, res) => {
       const product = await Product.findById(item.product);
       if (!product) {
         item.approved = true;
+        amount=amount+item.amount;
         continue;
       } else
 
@@ -749,6 +750,7 @@ const approvePartnerCart = async (req, res) => {
 
       // Deduct stock
       product.stock -= item.quantity;
+       amount=amount+product.price;
       await product.save();
 
       // Collect product details for response
@@ -772,7 +774,7 @@ const approvePartnerCart = async (req, res) => {
     const notification = new Notification({
       title: 'Cart Approved',
       userId: booking.partner,
-      message: `caurt approved by ${booking?.user?.name} at ${booking.date} `,
+      message: `caurt approved by ${booking?.user?.name}.`,
       createdAt: new Date(),
       read: false,
     });
