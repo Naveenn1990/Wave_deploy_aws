@@ -13,6 +13,7 @@ const PartnerProfile = require("../models/PartnerProfile");
 const mongoose = require("mongoose");
 const { uploadFile2 } = require("../middleware/aws");
 const Notification = require("../models/Notification");
+const dayjs = require("dayjs");
 
 
 // Admin login
@@ -1185,14 +1186,100 @@ exports.getServicesByCategory = async (req, res) => {
 };
 
 // Get all users without pagination limit
+// exports.getAllUsers = async (req, res) => {
+//   try {
+//     const { search, status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+
+//     // Build query
+//     const query = {};
+
+//     // Add search filter
+//     if (search) {
+//       query.$or = [
+//         { name: { $regex: search, $options: 'i' } },
+//         { email: { $regex: search, $options: 'i' } },
+//         { phone: { $regex: search, $options: 'i' } }
+//       ];
+//     }
+
+//     // Add status filter
+//     if (status) {
+//       query.status = status;
+//     }
+
+//     // Build sort object
+//     const sort = {};
+//     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+//     // Get all users without pagination
+//     const users = await User.find(query)
+//       .select('name email phone addresses status selectedAddress createdAt')
+//       .sort(sort);
+
+//     // Get total count
+//     const total = await User.countDocuments(query);
+
+//     // Get booking counts for each user
+//     const userIds = users.map(user => user._id);
+//     const bookingCounts = await booking.aggregate([
+//       { $match: { user: { $in: userIds } } },
+//       { $group: { _id: '$user', count: { $sum: 1 } } }
+//     ]);
+
+//     // Create a map of user ID to booking count
+//     const bookingCountMap = {};
+//     bookingCounts.forEach(item => {
+//       bookingCountMap[item._id] = item.count;
+//     });
+
+//     // Format the response
+//     const formattedUsers = users.map((user, index) => ({
+//       slNo: index + 1,
+//       _id: user._id,
+//       customerName: user.name,
+//       phoneNo: user.phone,
+//       email: user.email,
+//       address: user.addresses||"N/A",
+//       noOfBookings: bookingCountMap[user._id] || 0,
+//       accountStatus: user.status,
+//       createdAt: user.createdAt,
+//       selectedAddress: user?.selectedAddress|| 'N/A'
+
+//     }));
+
+//     res.json({
+//       success: true,
+//       data: formattedUsers,
+//       total,
+//       message: "Users fetched successfully"
+//     });
+
+//   } catch (error) {
+//     console.error("Get All Users Error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error fetching users",
+//       error: error.message
+//     });
+//   }
+// };
 exports.getAllUsers = async (req, res) => {
   try {
-    const { search, status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    const { 
+      search, 
+      status, 
+      sortBy = 'createdAt', 
+      sortOrder = 'desc',
+      page = 1,
+      limit = 5
+    } = req.query;
 
-    // Build query
+    // Convert page and limit to numbers
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
     const query = {};
-
-    // Add search filter
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -1200,56 +1287,82 @@ exports.getAllUsers = async (req, res) => {
         { phone: { $regex: search, $options: 'i' } }
       ];
     }
-
-    // Add status filter
-    if (status) {
+    if (status && status !== 'all') {
       query.status = status;
     }
 
-    // Build sort object
     const sort = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // Get all users without pagination
-    const users = await User.find(query)
-      .select('name email phone addresses status selectedAddress createdAt')
-      .sort(sort);
-
-    // Get total count
+    // Get total count for pagination
     const total = await User.countDocuments(query);
 
-    // Get booking counts for each user
+    // Get users with pagination
+    const users = await User.find(query)
+      .select('name email phone addresses status selectedAddress createdAt')
+      .sort(sort)
+      .skip(skip)
+      .limit(limitNum);
+
     const userIds = users.map(user => user._id);
-    const bookingCounts = await booking.aggregate([
+
+    // Get booking stats for the paginated users
+    const bookingStats = await booking.aggregate([
       { $match: { user: { $in: userIds } } },
-      { $group: { _id: '$user', count: { $sum: 1 } } }
+      {
+        $group: {
+          _id: '$user',
+          count: { $sum: 1 },
+          lastBookingDate: { $max: '$createdAt' }
+        }
+      }
     ]);
 
-    // Create a map of user ID to booking count
-    const bookingCountMap = {};
-    bookingCounts.forEach(item => {
-      bookingCountMap[item._id] = item.count;
+    const bookingMap = {};
+    bookingStats.forEach(item => {
+      bookingMap[item._id.toString()] = {
+        count: item.count,
+        lastBookingDate: item.lastBookingDate
+      };
     });
 
-    // Format the response
-    const formattedUsers = users.map((user, index) => ({
-      slNo: index + 1,
-      _id: user._id,
-      customerName: user.name,
-      phoneNo: user.phone,
-      email: user.email,
-      address: user.addresses||"N/A",
-      noOfBookings: bookingCountMap[user._id] || 0,
-      accountStatus: user.status,
-      createdAt: user.createdAt,
-      selectedAddress: user?.selectedAddress|| 'N/A'
-      
-    }));
+    const formattedUsers = users.map((user, index) => {
+      const bookingData = bookingMap[user._id.toString()] || {};
+      return {
+        slNo: skip + index + 1, // Adjusted for pagination
+        _id: user._id,
+        customerName: user.name,
+        phoneNo: user.phone,
+        email: user.email,
+        address: user.addresses || "N/A",
+        noOfBookings: bookingData.count || 0,
+        lastBookingDate: bookingData.lastBookingDate
+          ? dayjs(bookingData.lastBookingDate).format('DD MMM YYYY, hh:mm A')
+          : "N/A",
+        accountStatus: user.status,
+        createdAt: user.createdAt,
+        selectedAddress: user.selectedAddress || 'N/A'
+      };
+    });
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
 
     res.json({
       success: true,
       data: formattedUsers,
-      total,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limitNum,
+        hasNextPage,
+        hasPrevPage,
+        startIndex: skip + 1,
+        endIndex: Math.min(skip + limitNum, total)
+      },
       message: "Users fetched successfully"
     });
 
@@ -1362,7 +1475,7 @@ exports.assignedbooking = async (req, res) => {
     }
 
 
-  const notification = new Notification({
+    const notification = new Notification({
       title: 'Booking Assigned',
       userId: partnerId,
       message: `You have been assigned a new booking ${book.subService?.name} by wave admin`,
