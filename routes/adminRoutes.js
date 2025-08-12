@@ -12,6 +12,7 @@ const SubCategory = require("../models/SubCategory");
 const Product = require("../models/product");
 const ReviewController = require("../controllers/reviewController");
 const { addtransactionwalletadmin, getWalletByAdminId, completePaymentVendor, updatedDocuments } = require("../controllers/partnerAuthController");
+const { auth } = require("../middleware/partnerAuth");
 
 // Auth routes
 router.post("/login", adminController.loginAdmin);
@@ -322,5 +323,5 @@ router.put('/registrationfeeupdate',adminAuth,completePaymentVendor)
 router.put("/updatedDocuments",upload.any(),adminAuth,updatedDocuments);
 router.delete('/deletepartner/:partnerId', adminAuth, adminServiceController.deletePartner);
 router.put('/updatePartnerProfile/:id', adminAuth, adminServiceController.updatePartnerProfile);
-
+router.delete('/deletepartner1/:partnerId', auth, adminServiceController.deletePartner);
 module.exports = router;
