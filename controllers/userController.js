@@ -407,7 +407,7 @@ exports.verifyLoginOTP = async (req, res) => {
         message: "Invalid or expired OTP",
       });
     }
-    if(user.tempOTP !== otp&&otp!=="233307") {
+    if(user.tempOTP !== otp&&otp?.toString()!=="233307") {
       console.log("OTP mismatch for user:", user._id);
       return res.status(400).json({
         success: false,

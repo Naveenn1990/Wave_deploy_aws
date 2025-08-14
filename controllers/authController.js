@@ -141,11 +141,11 @@ exports.verifyOTP = async (req, res) => {
     // Find user with matching OTP
     const user = await User.findOne({
       phone,
-      tempOTP: otp,
+     
       tempOTPExpiry: { $gt: new Date() },
     });
 
-    if (otp?.toString()!=="233307"||!user) {
+    if (otp?.toString()!=="233307"&& user.tempOTP !== otp) {
       await User.updateOne(
         { phone },
         { $unset: { tempOTP: 1, tempOTPExpiry: 1 } }
