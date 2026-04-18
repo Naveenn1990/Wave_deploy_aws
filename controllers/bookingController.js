@@ -15,8 +15,13 @@ const Wallet = require("../models/Wallet");
 
 const createNotification = async (serviceId, name, job) => {
   try {
-    // Find partners with the given serviceId
-    const partners = await PartnerModel.find({ service: serviceId, 'kyc.status': "approved" }).populate('service');
+    // Find partners with the given serviceId, approved KYC, active profile, and not blocked
+    const partners = await PartnerModel.find({ 
+      service: serviceId, 
+      'kyc.status': "approved",
+      status: { $ne: 'blocked' }, // Exclude blocked partners
+      profileStatus: 'active' // Only include active profiles
+    }).populate('service');
     console.log(`Found ${partners.length} partners for service: ${name}`);
 
     // Process each partner concurrently

@@ -487,6 +487,21 @@ exports.getMatchingBookings = async (req, res) => {
       });
     }
 
+    // Check if partner is blocked, profile is inactive, or KYC is not approved
+    if (profile.status === 'blocked' || profile.profileStatus === 'inactive') {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been blocked or deactivated. Please contact support.",
+      });
+    }
+
+    if (profile.kyc?.status !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        message: "Your KYC verification is not approved. You cannot receive job requests until your KYC is approved.",
+      });
+    }
+
     const Wallet = await PartnerWallet.findOne({ partner: req.partner._id });
     if (!Wallet) {
       return res.status(400).json({
@@ -696,6 +711,21 @@ exports.acceptBooking = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Partner not found" });
+    }
+
+    // Check if partner is blocked, profile is inactive, or KYC is not approved
+    if (partner.status === 'blocked' || partner.profileStatus === 'inactive') {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been blocked or deactivated. You cannot accept bookings.",
+      });
+    }
+
+    if (partner.kyc?.status !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        message: "Your KYC verification is not approved. You cannot accept bookings until your KYC is approved.",
+      });
     }
 
     // Validate booking existence

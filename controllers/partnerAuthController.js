@@ -807,13 +807,55 @@ exports.updateKYCStatus = async (req, res) => {
       });
     }
 
+    // Store previous status to check if it changed
+    const previousStatus = partner.kyc.status;
+
     // Update KYC status
     partner.kyc.status = status;
     partner.kyc.remarks = remarks || null;
     partner.agentName = agent || null;
 
+    // Update both partner status and profile status based on KYC status
+    if (status === 'approved') {
+      partner.status = 'approved'; // Allow partner to get jobs
+      partner.profileStatus = 'active'; // Activate profile
+    } else if (status === 'rejected') {
+      partner.status = 'blocked'; // Block partner from getting jobs
+      partner.profileStatus = 'inactive'; // Deactivate profile
+    } else if (status === 'pending') {
+      partner.status = 'pending'; // Set to pending
+      partner.profileStatus = 'inactive'; // Keep profile inactive until approved
+    }
+
     await partner.save();
-    // console.log("Partner : " , partner)
+
+    // Send notification to partner if status changed
+    if (previousStatus !== status) {
+      const Notification = require('../models/Notification');
+      
+      let notificationTitle, notificationMessage;
+      
+      if (status === 'approved') {
+        notificationTitle = 'KYC Approved! 🎉';
+        notificationMessage = `Congratulations! Your KYC verification has been approved. Your profile is now active and you can start receiving job requests. ${remarks ? `Admin note: ${remarks}` : ''}`;
+      } else if (status === 'rejected') {
+        notificationTitle = 'KYC Rejected ❌';
+        notificationMessage = `Your KYC verification has been rejected and your profile has been deactivated. Please contact support for assistance. ${remarks ? `Reason: ${remarks}` : ''}`;
+      } else {
+        notificationTitle = 'KYC Status Updated';
+        notificationMessage = `Your KYC verification status has been updated to ${status}. ${remarks ? `Note: ${remarks}` : ''}`;
+      }
+
+      // Create notification
+      await Notification.create({
+        userId: partnerId,
+        title: notificationTitle,
+        message: notificationMessage,
+        type: 'alert'
+      });
+
+      console.log(`Notification sent to partner ${partnerId} for KYC ${status}`);
+    }
 
     res.json({
       success: true,
@@ -822,6 +864,8 @@ exports.updateKYCStatus = async (req, res) => {
         status: partner.kyc.status,
         remarks: partner.kyc.remarks,
       },
+      partnerStatus: partner.status,
+      profileStatus: partner.profileStatus
     });
   } catch (error) {
     console.error("Update KYC Status Error:", error);
@@ -859,6 +903,30 @@ exports.getProfile = async (req, res) => {
       });
     }
 
+    // Check if partner is blocked or profile is inactive
+    if (profile.status === 'blocked' || profile.profileStatus === 'inactive') {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been blocked or deactivated. Please contact support for assistance.",
+        blocked: true,
+        kycStatus: profile.kyc?.status || 'pending',
+        kycRemarks: profile.kyc?.remarks || null,
+        profileStatus: profile.profileStatus
+      });
+    }
+
+    // Check if KYC is rejected
+    if (profile.kyc?.status === 'rejected') {
+      return res.status(403).json({
+        success: false,
+        message: "Your KYC verification has been rejected. Please contact support for assistance.",
+        blocked: true,
+        kycStatus: profile.kyc?.status,
+        kycRemarks: profile.kyc?.remarks || null,
+        profileStatus: profile.profileStatus
+      });
+    }
+
     res.json({
       success: true,
       profile: {
@@ -881,6 +949,9 @@ exports.getProfile = async (req, res) => {
         referralCode: profile.referralCode,
         referredBy: profile.referredBy,
         referredPartners: profile.referredPartners || [],
+        kycStatus: profile.kyc?.status || 'pending',
+        partnerStatus: profile.status || 'pending',
+        profileStatus: profile.profileStatus || 'active'
       },
     });
   } catch (error) {
