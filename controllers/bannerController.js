@@ -60,7 +60,15 @@ const bannerController = {
   // Get all banners
   getAllBanners: async (req, res) => {
     try {
-      const banners = await Banner.find().sort({ order: 1 }).lean();
+      // Get sort parameters from query string, default to order ascending
+      const sortBy = req.query.sortBy || 'order';
+      const sortOrder = req.query.sortOrder === 'desc' ? -1 : 1;
+      
+      // Build sort object
+      const sortObj = {};
+      sortObj[sortBy] = sortOrder;
+      
+      const banners = await Banner.find().sort(sortObj).lean();
       
       // Clean image paths
       const bannersWithCleanImages = banners.map(banner => ({
@@ -85,8 +93,16 @@ const bannerController = {
   // Get active banners for users
   getActiveBanners: async (req, res) => {
     try {
+      // Get sort parameters from query string, default to order ascending
+      const sortBy = req.query.sortBy || 'order';
+      const sortOrder = req.query.sortOrder === 'desc' ? -1 : 1;
+      
+      // Build sort object
+      const sortObj = {};
+      sortObj[sortBy] = sortOrder;
+      
       const banners = await Banner.find({ isActive: true })
-        .sort({ order: 1 })
+        .sort(sortObj)
         .lean();
 
       // Clean image paths
@@ -219,13 +235,22 @@ const bannerController = {
         });
       }
 
+      // Validate orderNumber
+      if (!req.body.orderNumber || req.body.orderNumber <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Valid order number is required",
+        });
+      }
+
       // Get just the filename without any path
       const filename = await uploadFile2(req.file,"banner");
 
       const PromotionalVideo = new Promovideo({
         image: filename,
         title: req.body.title,
-        description: req.body.description, 
+        description: req.body.description,
+        orderNumber: parseInt(req.body.orderNumber),
         isActive: true
       });
 
@@ -252,7 +277,16 @@ const bannerController = {
   // Get all Promovideos
   getAllPromovideos: async (req, res) => {
       try {
-        const banners = await Promovideo.find().sort({ order: 1 }).lean();
+        // Get sort parameters from query string
+        const sortBy = req.query.sortBy || 'orderNumber';
+        const sortOrder = req.query.sortOrder === 'desc' ? -1 : 1;
+        
+        // Build sort object
+        const sortObj = {};
+        sortObj[sortBy] = sortOrder;
+        
+        // Fetch and sort promotional videos
+        const banners = await Promovideo.find().sort(sortObj).lean();
         
         // Clean video paths
         const promoVideos = banners.map(banner => ({
@@ -289,8 +323,18 @@ const bannerController = {
         });
       }
   
-      // Allow partial updates for title, description, and isActive
+      // Allow partial updates for title, description, orderNumber, and isActive
       if (req.body?.title) updateFields.title = req.body.title;
+      if (req.body?.orderNumber) {
+        const orderNum = parseInt(req.body.orderNumber);
+        if (orderNum <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Order number must be greater than 0",
+          });
+        }
+        updateFields.orderNumber = orderNum;
+      }
       // if (req.body?.description) updateFields.description = req.body.description;
       // if (req.body?.isActive !== undefined) updateFields.isActive = req.body.isActive;
   

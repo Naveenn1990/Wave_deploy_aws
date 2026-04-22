@@ -41,7 +41,15 @@ const adminBannerController = {
 
     getAllPromotionalBanners: async (req, res) => {
         try {
-            const banners = await PromotionalBanner.find().sort({ order: 1 });
+            // Get sort parameters from query string, default to order ascending
+            const sortBy = req.query.sortBy || 'order';
+            const sortOrder = req.query.sortOrder === 'desc' ? -1 : 1;
+            
+            // Build sort object
+            const sortObj = {};
+            sortObj[sortBy] = sortOrder;
+            
+            const banners = await PromotionalBanner.find().sort(sortObj);
             res.status(200).json({
                 success: true,
                 data: banners
@@ -90,7 +98,15 @@ const adminBannerController = {
 
     getAllCompanyBanners: async (req, res) => {
         try {
-            const banners = await CompanyBanner.find().sort({ order: 1 });
+            // Get sort parameters from query string, default to order ascending
+            const sortBy = req.query.sortBy || 'order';
+            const sortOrder = req.query.sortOrder === 'desc' ? -1 : 1;
+            
+            // Build sort object
+            const sortObj = {};
+            sortObj[sortBy] = sortOrder;
+            
+            const banners = await CompanyBanner.find().sort(sortObj);
             res.status(200).json({
                 success: true,
                 data: banners
