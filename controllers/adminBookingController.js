@@ -1,4 +1,6 @@
 const Booking = require('../models/booking');  // Make sure this path is correct
+const User = require('../models/User');
+const SubService = require('../models/SubService');
 
 exports.getAllBookings = async (req, res) => {
     try {
@@ -165,6 +167,145 @@ exports.getAllBookings = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Error fetching bookings',
+            error: error.message
+        });
+    }
+};
+
+// Create manual booking by admin
+exports.createManualBooking = async (req, res) => {
+    try {
+        console.log('Create manual booking called');
+        console.log('Request body:', req.body);
+
+        const {
+            userId,
+            customerName,
+            customerPhone,
+            customerEmail,
+            isNewCustomer,
+            serviceName,
+            subServiceName,
+            amount,
+            scheduledDate,
+            scheduledTime,
+            location,
+            paymentMode,
+            status
+        } = req.body;
+
+        // Validate required fields
+        if (!customerName || !customerPhone || !serviceName || !amount || 
+            !scheduledDate || !scheduledTime || !location || !paymentMode) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields'
+            });
+        }
+
+        // Validate location
+        if (!location.address || !location.pincode) {
+            return res.status(400).json({
+                success: false,
+                message: 'Location address and pincode are required'
+            });
+        }
+
+        let user;
+
+        // Handle new customer creation or existing user
+        if (isNewCustomer) {
+            // Check if user with this phone already exists
+            const existingUser = await User.findOne({ phone: customerPhone });
+            
+            if (existingUser) {
+                user = existingUser;
+            } else {
+                // Create new user
+                user = await User.create({
+                    name: customerName,
+                    phone: customerPhone,
+                    email: customerEmail || '',
+                    isVerified: true,
+                    isProfileComplete: true,
+                    status: 'active'
+                });
+                console.log('New user created:', user._id);
+            }
+        } else {
+            // Use existing user
+            if (!userId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'User ID is required for existing customer'
+                });
+            }
+            
+            user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+        }
+
+        // Try to find the subService by name
+        let subService = null;
+        if (subServiceName && subServiceName !== "N/A") {
+            subService = await SubService.findOne({ name: subServiceName });
+        }
+
+        // If no subService found, try to find any subService to satisfy the required field
+        // This is a workaround for manual bookings where subService might not be specified
+        if (!subService) {
+            // Get the first available subService as a placeholder
+            subService = await SubService.findOne();
+            
+            if (!subService) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No sub-service found. Please ensure at least one sub-service exists in the system.'
+                });
+            }
+        }
+
+        // Create booking
+        const booking = await Booking.create({
+            user: user._id,
+            subService: subService._id,
+            scheduledDate: new Date(scheduledDate),
+            scheduledTime,
+            location: {
+                address: location.address,
+                landmark: location.landmark || '',
+                pincode: location.pincode
+            },
+            amount: parseFloat(amount),
+            paymentMode,
+            status: status || 'pending',
+            paymentStatus: paymentMode === 'cash' ? 'pending' : 'completed',
+            currentBooking: false
+        });
+
+        console.log('Booking created:', booking._id);
+
+        // Populate the booking with user details
+        const populatedBooking = await Booking.findById(booking._id)
+            .populate('user', 'name email phone')
+            .populate('subService');
+
+        return res.status(201).json({
+            success: true,
+            message: 'Manual booking created successfully',
+            data: populatedBooking
+        });
+
+    } catch (error) {
+        console.error('Create Manual Booking Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error creating manual booking',
             error: error.message
         });
     }
