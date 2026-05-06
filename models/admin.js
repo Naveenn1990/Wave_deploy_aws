@@ -41,6 +41,8 @@ const adminSchema = new mongoose.Schema(
     // Permissions for Subadmins (Controlled by Admin)
     permissions: {
       dashboard: { type: Boolean, default: false },
+      firebaseAnalytics: { type: Boolean, default: false }, // Firebase Analytics permission
+      webAnalytics: { type: Boolean, default: false }, // Web Analytics permission
       subadmin: { type: Boolean, default: false },
       banner: { type: Boolean, default: false },
       categories: { type: Boolean, default: false },

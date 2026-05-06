@@ -50,11 +50,11 @@ const processFilePath = (req, res, next) => {
 const stripUrl = (filename) => {
     if (!filename) return filename;
     // Handle various URL patterns
-    if (filename.includes('https://wavetechservice.in/uploads/')) {
-        return filename.replace('https://wavetechservice.in/uploads/', '');
+    if (filename.includes('http://localhost:9000/uploads/')) {
+        return filename.replace('http://localhost:9000/uploads/', '');
     }
-    if (filename.includes('https://wavetechservice.in/')) {
-        return filename.replace('https://wavetechservice.in/', '');
+    if (filename.includes('http://localhost:9000/')) {
+        return filename.replace('http://localhost:9000/', '');
     }
     if (filename.includes('/')) {
         return filename.split('/').pop();

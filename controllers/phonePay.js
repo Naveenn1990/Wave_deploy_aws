@@ -3,7 +3,7 @@
 // const crypto = require('crypto');
 // const MERCHANT_ID = "M22TSD1Q44NGY";
 // const SECRET_KEY = "883088e0-5c29-40a0-8577-bda713f8da3f";
-// const CALLBACK_URL = "https://wavetechservice.in";
+// const CALLBACK_URL = "http://localhost:9000";
 
 
 // // PayU Configuration from environment variables
@@ -75,8 +75,8 @@
 //       const firstname = username;
 //       const userEmail = email || `${userId}@wavetechservice.in`;
 //       const phone = Mobile.toString();
-//       const surl = `https://wavetechservice.in/api/phonepay/payment-success`;
-//       const furl = `https://wavetechservice.in/api/phonepay/payment-failed`;
+//       const surl = `http://localhost:9000/api/phonepay/payment-success`;
+//       const furl = `http://localhost:9000/api/phonepay/payment-failed`;
 
 //       // Hash sequence: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||salt
 //       const hashString = `${PAYU_CONFIG.key}|${txnid}|${formattedAmount}|${productinfo}|${firstname}|${userEmail}|||||||||||${PAYU_CONFIG.salt}`;
@@ -111,7 +111,7 @@
 //       await data.save();
 
 //       // Return a URL to our redirect endpoint
-//       const redirectUrl = `https://wavetechservice.in/api/phonepay/payu-redirect/${data._id}`;
+//       const redirectUrl = `http://localhost:9000/api/phonepay/payu-redirect/${data._id}`;
 
 //       // Return response in same format as PhonePe (with nested url object)
 //       return res.status(200).json({
@@ -227,7 +227,7 @@
 //         const calculatedHash = crypto.createHash('sha512').update(hashString).digest('hex');
 //         if (calculatedHash !== hash) {
 //           console.log('Hash verification failed');
-//           return res.redirect(`https://wavetechservice.in/payment-success?transactionId=${txnid}&userID=${data?.userId || ''}`);
+//           return res.redirect(`http://localhost:9000/payment-success?transactionId=${txnid}&userID=${data?.userId || ''}`);
 //         }
 //       }
 
@@ -251,10 +251,10 @@
 //       console.log(`PayU Transaction ${txnid} completed successfully`);
 
 //       // Redirect to success page
-//       res.redirect(`https://wavetechservice.in/payment-success?transactionId=${txnid}&userID=${data?.userId || ''}`);
+//       res.redirect(`http://localhost:9000/payment-success?transactionId=${txnid}&userID=${data?.userId || ''}`);
 //     } catch (error) {
 //       console.error('Payment Success Error:', error);
-//       res.redirect(`https://wavetechservice.in/payment-success?error=processing_error`);
+//       res.redirect(`http://localhost:9000/payment-success?error=processing_error`);
 //     }
 //   }
 
@@ -271,7 +271,7 @@
 //         const calculatedHash = crypto.createHash('sha512').update(hashString).digest('hex');
 //         if (calculatedHash !== hash) {
 //           console.log('Hash verification failed');
-//           return res.redirect(`https://wavetechservice.in/payment-success?transactionId=${txnid}&userID=${data?.userId || ''}`);
+//           return res.redirect(`http://localhost:9000/payment-success?transactionId=${txnid}&userID=${data?.userId || ''}`);
 //         }
 //       }
 
@@ -285,10 +285,10 @@
 //       console.log(`PayU Transaction ${txnid} failed`);
 
 //       // Redirect to failed page (do NOT call config API)
-//       res.redirect(`https://wavetechservice.in/payment-success?transactionId=${txnid}&userID=${data?.userId || ''}`);
+//       res.redirect(`http://localhost:9000/payment-success?transactionId=${txnid}&userID=${data?.userId || ''}`);
 //     } catch (error) {
 //       console.error('Payment Failed Error:', error);
-//       res.redirect(`https://wavetechservice.in/payment-success?error=processing_error`);
+//       res.redirect(`http://localhost:9000/payment-success?error=processing_error`);
 //     }
 //   }
 
@@ -390,8 +390,8 @@
 //       const firstname = merchantUserId || 'Customer';
 //       const userEmail = email || `${merchantUserId}@wavetechservice.in`;
 //       const phone = mobileNumber ? mobileNumber.toString() : '';
-//       const surl = `https://wavetechservice.in/api/phonepay/payment-success`;
-//       const furl = `https://wavetechservice.in/api/phonepay/payment-failed`;
+//       const surl = `http://localhost:9000/api/phonepay/payment-success`;
+//       const furl = `http://localhost:9000/api/phonepay/payment-failed`;
 
 //       const hashString = `${PAYU_CONFIG.key}|${txnid}|${formattedAmount}|${productinfo}|${firstname}|${userEmail}|||||||||||${PAYU_CONFIG.salt}`;
 //       const hash = crypto.createHash('sha512').update(hashString).digest('hex');
@@ -420,7 +420,7 @@
 //         paymentData: JSON.stringify(paymentData)
 //       });
 
-//       const redirectUrl = `https://wavetechservice.in/api/phonepay/payu-redirect/${tempTransaction._id}`;
+//       const redirectUrl = `http://localhost:9000/api/phonepay/payu-redirect/${tempTransaction._id}`;
 
 //       return res.status(200).json({
 //         url: { url: redirectUrl }
@@ -438,7 +438,7 @@
 const transactionModel = require("../models/phonePay")
 const MERCHANT_ID = "M22TSD1Q44NGY";
 const SECRET_KEY = "883088e0-5c29-40a0-8577-bda713f8da3f";
-const CALLBACK_URL = "https://wavetechservice.in";
+const CALLBACK_URL = "http://localhost:9000";
 const axios = require("axios");
 const crypto = require('crypto');
 
@@ -477,9 +477,9 @@ class Transaction {
         merchantTransactionId: data._id,
         merchantUserId: userId,
         amount: amount * 100,
-        redirectUrl: `https://wavetechservice.in/payment-success?transactionId=${data._id}&userID=${userId}`,
+        redirectUrl: `http://localhost:9000/payment-success?transactionId=${data._id}&userID=${userId}`,
         redirectMode: "GET",
-        callbackUrl: "https://wavetechservice.in/api/phonepay/payment-callback",
+        callbackUrl: "http://localhost:9000/api/phonepay/payment-callback",
         mobileNumber: Mobile.toString(),
         paymentInstrument: {
           type: "PAY_PAGE",

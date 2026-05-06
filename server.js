@@ -789,6 +789,8 @@ const phonePayRoutes = require('./routes/phonePay');
 const tokenRoutes=require('./routes/tokenRoute');
 const RegisterFee=require('./routes/registerFeeRoutes');
 const RefferralAmount= require('./routes/referralAmountRoutes');
+const firebaseAnalyticsRoutes = require('./routes/firebaseAnalyticsRoutes');
+const webAnalyticsRoutes = require('./routes/webAnalyticsRoutes');
 // Initialize Firebase Admin
 // const serviceAccount = require('./firebase-admin.json');   
 // admin.initializeApp({
@@ -819,6 +821,8 @@ app.use('/api/phonepay', phonePayRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/admin', RegisterFee);
 app.use('/api/referral', RefferralAmount);
+app.use('/api/admin/firebase-analytics', firebaseAnalyticsRoutes);
+app.use('/api/admin/web-analytics', webAnalyticsRoutes);
 // Add this route to your backend
 app.post('/api/admin/proxy-image', async (req, res) => {
   try {
