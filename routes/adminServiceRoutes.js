@@ -326,7 +326,6 @@ router.get('/sub-services', getAllSubServices);
 
 // Admin Booking Management routes
 router.get('/bookings', adminBookingController.getAllBookings);
-router.post('/bookings/manual', adminBookingController.createManualBooking);
 // router.get('/bookings/:bookingId', adminBookingController.getBookingDetails);
 // router.put('/bookings/:bookingId/status', adminBookingController.updateBookingStatus);
 

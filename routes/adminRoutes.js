@@ -203,11 +203,8 @@ router.put(
   adminController.completeBooking
 );
 
-router.put("/bookings/assign-partner", adminAuth, adminController.assignedbooking);
 
-// Manual booking creation
-const adminBookingController = require('../controllers/adminBookingController');
-router.post("/bookings/manual", adminAuth, adminBookingController.createManualBooking);
+router.put("/bookings/assign-partner", adminAuth, adminController.assignedbooking);
 
 // Promotional Video Management
 router.post("/promovideo", adminAuth, upload.single("image"), bannerController.uploadPromovideo);
