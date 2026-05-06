@@ -90,19 +90,19 @@ npm start
 
 #### 1. Test Dashboard Summary
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/dashboard-summary?period=last30Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/dashboard-summary?period=last30Days" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 ```
 
 #### 2. Test Active Users
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/active-users" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/active-users" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 ```
 
 #### 3. Test Device Breakdown
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/device-breakdown?period=last7Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/device-breakdown?period=last7Days" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 ```
 
@@ -257,7 +257,7 @@ Analytics data is cached for **5 minutes** to improve performance and reduce API
 
 ### Clear Cache
 ```bash
-curl -X POST "http://localhost:9000/api/admin/firebase-analytics/clear-cache" \
+curl -X POST "https://wavetechservice.in/api/admin/firebase-analytics/clear-cache" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 ```
 
@@ -289,7 +289,7 @@ import axios from 'axios';
 const fetchDashboardSummary = async () => {
   try {
     const response = await axios.get(
-      'http://localhost:9000/api/admin/firebase-analytics/dashboard-summary',
+      'https://wavetechservice.in/api/admin/firebase-analytics/dashboard-summary',
       {
         params: { period: 'last30Days' },
         headers: {
@@ -312,7 +312,7 @@ const [analytics, setAnalytics] = useState(null);
 useEffect(() => {
   const fetchAnalytics = async () => {
     const response = await axios.get(
-      'http://localhost:9000/api/admin/firebase-analytics/active-users',
+      'https://wavetechservice.in/api/admin/firebase-analytics/active-users',
       {
         headers: { Authorization: `Bearer ${adminToken}` }
       }

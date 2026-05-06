@@ -108,7 +108,7 @@ npm start
 
 ### 5. Test API
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/dashboard-summary?period=last30Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/dashboard-summary?period=last30Days" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 ```
 
@@ -419,19 +419,19 @@ const TrafficChart = () => {
 
 #### Dashboard Summary
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/dashboard-summary?period=last30Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/dashboard-summary?period=last30Days" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 #### Active Users
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/active-users" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/active-users" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 #### Device Breakdown
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/device-breakdown?period=last7Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/device-breakdown?period=last7Days" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 

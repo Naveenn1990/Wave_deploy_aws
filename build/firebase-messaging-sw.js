@@ -1,7 +1,6 @@
 // Import Firebase scripts
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
-import logo from './logo.png'
 
 // Initialize Firebase
 firebase.initializeApp({
@@ -24,17 +23,32 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || 'New Message';
   const notificationOptions = {
     body: payload.notification?.body || '',
-    icon: logo // Your app icon
+    icon: '/logo192.png', // Use logo from public folder
+    badge: '/logo192.png',
+    data: payload.data
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// // Optional: Add click handler for notifications
-// self.addEventListener('notificationclick', (event) => {
-//   event.notification.close();
-//   // Handle notification click
-//   event.waitUntil(
-//     clients.openWindow('/') // Open your app when notification is clicked
-//   );
-// });
+// Optional: Add click handler for notifications
+self.addEventListener('notificationclick', (event) => {
+  console.log('[firebase-messaging-sw.js] Notification clicked', event);
+  event.notification.close();
+  
+  // Handle notification click - open your app
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If app is already open, focus it
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
+  );
+});

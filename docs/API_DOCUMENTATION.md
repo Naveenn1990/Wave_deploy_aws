@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-http://localhost:9000/api/admin/firebase-analytics
+https://wavetechservice.in/api/admin/firebase-analytics
 ```
 
 ## Authentication
@@ -39,7 +39,7 @@ Get overall dashboard metrics summary.
 
 **Example Request:**
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/dashboard-summary?period=last30Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/dashboard-summary?period=last30Days" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -74,7 +74,7 @@ Get daily, weekly, and monthly active users with trends.
 
 **Example Request:**
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/active-users" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/active-users" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -120,7 +120,7 @@ Get platform, device, OS, and browser analytics.
 
 **Example Request:**
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/device-breakdown?period=last7Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/device-breakdown?period=last7Days" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -195,7 +195,7 @@ Get geographic and demographic data.
 
 **Example Request:**
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/audience?period=last30Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/audience?period=last30Days" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -262,7 +262,7 @@ Get daily traffic trends over time.
 
 **Example Request:**
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/traffic-trends?period=last7Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/traffic-trends?period=last7Days" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -320,7 +320,7 @@ Get most viewed screens and pages.
 
 **Example Request:**
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/top-screens?period=last30Days&limit=10" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/top-screens?period=last30Days&limit=10" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -378,7 +378,7 @@ Get user retention for Day 1, 7, and 30.
 
 **Example Request:**
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/retention?period=last90Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/retention?period=last90Days" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -422,7 +422,7 @@ Get notification open rates and click rates.
 
 **Example Request:**
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/notifications?period=last30Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/notifications?period=last30Days" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -467,7 +467,7 @@ Get currently active users (last 30 minutes).
 
 **Example Request:**
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/realtime" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/realtime" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -511,7 +511,7 @@ Get traffic source breakdown (organic, direct, referral, etc.).
 
 **Example Request:**
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/traffic-sources?period=last30Days" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/traffic-sources?period=last30Days" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -567,7 +567,7 @@ Get custom event tracking data.
 
 **Example Request:**
 ```bash
-curl -X GET "http://localhost:9000/api/admin/firebase-analytics/custom-events?period=last7Days&events=booking_completed,service_viewed" \
+curl -X GET "https://wavetechservice.in/api/admin/firebase-analytics/custom-events?period=last7Days&events=booking_completed,service_viewed" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -615,7 +615,7 @@ Clear the analytics cache to force fresh data fetch.
 
 **Example Request:**
 ```bash
-curl -X POST "http://localhost:9000/api/admin/firebase-analytics/clear-cache" \
+curl -X POST "https://wavetechservice.in/api/admin/firebase-analytics/clear-cache" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
