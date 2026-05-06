@@ -19,7 +19,7 @@ const adminBookingController = require('../controllers/adminBookingController');
  *       500:
  *         description: Server error
  */
-router.get('/bookings', adminAuth, adminBookingController.getAllBookings);
+router.get('/', adminAuth, adminBookingController.getAllBookings);
 
 /**
  * @swagger
@@ -39,7 +39,7 @@ router.get('/bookings', adminAuth, adminBookingController.getAllBookings);
  *       500:
  *         description: Server error
  */
-router.post('/bookings/manual', adminAuth, adminBookingController.createManualBooking);
+router.post('/manual', adminAuth, adminBookingController.createManualBooking);
 
 // Add a test route to verify controller is loaded
 router.get('/test', (req, res) => {

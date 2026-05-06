@@ -835,8 +835,6 @@ app.post('/api/admin/proxy-image', async (req, res) => {
 });
 // Root route for WebSocket server
 
-app.get("/admin/bookings", adminBookingController.getAllBookings);
-
 app.use(express.static(path.join(__dirname, 'build'))); // Change 'build' to your frontend folder if needed
 
 // Redirect all requests to the index.html file
