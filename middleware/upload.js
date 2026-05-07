@@ -49,12 +49,15 @@ const processFilePath = (req, res, next) => {
 // Strip URL from filename
 const stripUrl = (filename) => {
     if (!filename) return filename;
+    
+    const baseUrl = process.env.BASE_URL || 'https://wavetechservice.in';
+    
     // Handle various URL patterns
-    if (filename.includes('https://wavetechservice.in/uploads/')) {
-        return filename.replace('https://wavetechservice.in/uploads/', '');
+    if (filename.includes(`${baseUrl}/uploads/`)) {
+        return filename.replace(`${baseUrl}/uploads/`, '');
     }
-    if (filename.includes('https://wavetechservice.in/')) {
-        return filename.replace('https://wavetechservice.in/', '');
+    if (filename.includes(`${baseUrl}/`)) {
+        return filename.replace(`${baseUrl}/`, '');
     }
     if (filename.includes('/')) {
         return filename.split('/').pop();

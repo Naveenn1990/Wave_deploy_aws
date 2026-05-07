@@ -43,12 +43,12 @@ const fetch = require('node-fetch');
 
 exports.sendOTP=async (phone, otp) => {
 
-  const apiUrl = `http://1.rapidsms.co.in/api/push`;
+  const apiUrl = process.env.SMS_API_URL || 'https://1.rapidsms.co.in/api/push';
 
     const params = {
-        apikey: "6874d06f3053b",
-        route: "TRANS",
-        sender: "WVETEC",
+        apikey: process.env.SMS_API_KEY,
+        route: process.env.SMS_ROUTE ,
+        sender: process.env.SMS_SENDER ,
         mobileno: phone,
         text: `Welcome to Wave Tech Services your Mobile Number Verification Code is ${otp}`
     };

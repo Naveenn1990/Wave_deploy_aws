@@ -341,7 +341,7 @@ exports.sendLoginOTP = async (req, res) => {
       });
     }
 
-    const apiUrl = `https://1.rapidsms.co.in/api/push`;
+    const apiUrl = process.env.SMS_API_URL || 'https://1.rapidsms.co.in/api/push';
 
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -350,9 +350,9 @@ exports.sendLoginOTP = async (req, res) => {
     user.tempOTP = otp;
     user.tempOTPExpiry = tempOTPExpiry;
     const params = {
-      apikey: "6874d06f3053b",
-      route: "TRANS",
-      sender: "WVETEC",
+      apikey: process.env.SMS_API_KEY,
+      route: process.env.SMS_ROUTE || 'TRANS',
+      sender: process.env.SMS_SENDER || 'WVETEC',
       mobileno: phone,
       text: `Welcome to Wave Tech Services your Mobile Number Verification Code is ${otp}`
     };

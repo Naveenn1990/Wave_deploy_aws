@@ -436,9 +436,9 @@
 
 
 const transactionModel = require("../models/phonePay")
-const MERCHANT_ID = "M22TSD1Q44NGY";
-const SECRET_KEY = "883088e0-5c29-40a0-8577-bda713f8da3f";
-const CALLBACK_URL = "https://wavetechservice.in";
+const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID ;
+const SECRET_KEY = process.env.PHONEPE_SECRET_KEY ;
+const CALLBACK_URL = process.env.BASE_URL || "https://wavetechservice.in";
 const axios = require("axios");
 const crypto = require('crypto');
 
@@ -477,9 +477,9 @@ class Transaction {
         merchantTransactionId: data._id,
         merchantUserId: userId,
         amount: amount * 100,
-        redirectUrl: `https://wavetechservice.in/payment-success?transactionId=${data._id}&userID=${userId}`,
+        redirectUrl: `${CALLBACK_URL}/payment-success?transactionId=${data._id}&userID=${userId}`,
         redirectMode: "GET",
-        callbackUrl: "https://wavetechservice.in/api/phonepay/payment-callback",
+        callbackUrl: `${CALLBACK_URL}/api/phonepay/payment-callback`,
         mobileNumber: Mobile.toString(),
         paymentInstrument: {
           type: "PAY_PAGE",
