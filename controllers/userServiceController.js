@@ -833,6 +833,30 @@ const getAllCompletedBookingsinsystem = async (req, res) => {
 
 
 
+
+// New dedicated endpoint: services with subCategory + category populated
+// Used by mobile app CategoryList screen to filter services by category
+const getServicesWithCategory = async (req, res) => {
+  try {
+    const services = await Service.find({ isActive: true })
+      .populate({
+        path: 'subCategory',
+        populate: {
+          path: 'category',
+          model: 'ServiceCategory'
+        }
+      })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: services
+    });
+  } catch (error) {
+    console.error('Error fetching services with category:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 module.exports = {
   getCategories,
   getCategoryServices,
@@ -854,5 +878,6 @@ module.exports = {
   viewPartnerCart,
   bookSubService,
   approvePartnerCart,
-  getAllCompletedBookingsinsystem
+  getAllCompletedBookingsinsystem,
+  getServicesWithCategory
 };

@@ -473,4 +473,9 @@ router.get(
   "/completed-bookings",
   userServiceController.getAllCompletedBookingsinsystem
 );
+
+// Services with full subCategory->category population (for mobile category filtering)
+router.get("/services-with-category", userServiceController.getServicesWithCategory);
+
+
 module.exports = router;
