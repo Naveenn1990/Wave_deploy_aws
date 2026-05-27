@@ -93,7 +93,7 @@ exports.getAllBookings = async (req, res) => {
             })
             .populate({
                 path: "partner", // Populate partner details
-                select: 'profile.name profile.email profile.phone profilePicture'
+                select: 'profile.name profile.email profile.phone whatsappNumber profilePicture'
             })
             .populate({
                 path: "cart.product", // Populate product details inside cart
