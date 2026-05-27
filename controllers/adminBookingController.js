@@ -110,7 +110,34 @@ exports.getAllBookings = async (req, res) => {
         // Step 5: Format the bookings
         const formattedBookings = bookings.map(booking => ({
             _id: booking._id,
-            booking,
+            booking: {
+                ...booking,
+                // Explicitly include media and review fields
+                photos: booking.photos || [],
+                videos: booking.videos || [],
+                afterPhotos: booking.afterPhotos || [],
+                afterVideos: booking.afterVideos || [],
+                review: booking.review || null,
+                quotation: booking.quotation || null,
+                cart: booking.cart || [],
+                otp: booking.otp || null,
+                otpActive: booking.otpActive || false,
+                otpGeneratedAt: booking.otpGeneratedAt || null,
+                acceptedAt: booking.acceptedAt || null,
+                completedAt: booking.completedAt || null,
+                rideStart: booking.rideStart || false,
+                currentBooking: booking.currentBooking || false,
+                pauseDetails: booking.pauseDetails || null,
+                cancellationReason: booking.cancellationReason || null,
+                cancellationTime: booking.cancellationTime || null,
+                subService: booking.subService,
+                payamount: booking.payamount || 0,
+                discount: booking.discount || 0,
+                tax: booking.tax || 0,
+                usewallet: booking.usewallet || 0,
+                lat: booking.lat || null,
+                lng: booking.lng || null
+            },
             customerName: booking.user?.name || 'N/A',
             customerEmail: booking.user?.email || 'N/A',
             customerPhone: booking.user?.phone || 'N/A',
@@ -128,14 +155,14 @@ exports.getAllBookings = async (req, res) => {
             status: booking.status || 'N/A',
             scheduledDate: booking.scheduledDate,
             scheduledTime: booking.scheduledTime,
-            chat: booking.chat,
-            booking,
+            chat: booking.chat || [],
             location: {
                 address: booking.location?.address || 'N/A',
                 landmark: booking.location?.landmark || 'N/A',
                 pincode: booking.location?.pincode || 'N/A'
             },
-            createdAt: booking.createdAt
+            createdAt: booking.createdAt,
+            updatedAt: booking.updatedAt
         }));
 
         // Calculate pagination info
