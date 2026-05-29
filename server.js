@@ -9,10 +9,12 @@ const fs = require("fs");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
 require("dotenv").config();
+require("./config/firebase"); // Initialize Firebase Admin
 const bodyParser = require("body-parser");
 const socketIo = require("socket.io");
 const http = require("http");
 const Booking = require("./models/booking");
+const admin = require('firebase-admin');
 // const Notification = require("./models/Notification");
 
 
@@ -44,7 +46,7 @@ app.use(
 const upload = multer()
 app.post("/upload-image", upload.single("image"), async (req, res) => {
   try {
-    let chat = await Booking.findById(req.body.bookingId);
+    let chat = await Booking.findById(req.body.bookingId).populate('user partner');
     if (!chat) {
       return res.status(404).json({ error: "Booking not found." });
     }
@@ -60,6 +62,7 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
         bookingId: req.body.bookingId,
         senderId: req.body.senderId,
         image: imageUrl,
+        timestamp: new Date().toISOString(),
       },
     };
 
@@ -68,6 +71,70 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
 
     // Emit the event
     io.emit("receive message", { bookingId: chat._id, messages: chat.chat });
+
+    // Send FCM notification to receiver
+    try {
+      const senderId = req.body.senderId;
+      
+      // Determine if sender is user or partner
+      const isUserSender = chat.user._id.toString() === senderId.toString();
+      const receiver = isUserSender ? chat.partner : chat.user;
+      const sender = isUserSender ? chat.user : chat.partner;
+      const receiverId = receiver._id.toString();
+      
+      if (receiver) {
+        const fcmToken = isUserSender ? receiver.fcmtoken : receiver.fcmToken;
+        
+        if (fcmToken) {
+          const fcmMessage = {
+            token: fcmToken,
+            notification: {
+              title: `New message from ${sender.name || 'User'}`,
+              body: '📷 Sent a photo',
+            },
+            data: {
+              type: 'chat_message',
+              bookingId: chat._id.toString(),
+              senderId: senderId.toString(),
+              receiverId: receiverId,
+              image: imageUrl,
+              timestamp: imageMessage.data.timestamp,
+            },
+            android: {
+              priority: 'high',
+              notification: {
+                channelId: 'chat-channel',
+                sound: 'default',
+                priority: 'high',
+              },
+            },
+            apns: {
+              headers: {
+                'apns-priority': '10',
+              },
+              payload: {
+                aps: {
+                  alert: {
+                    title: `New message from ${sender.name || 'User'}`,
+                    body: '📷 Sent a photo',
+                  },
+                  sound: 'default',
+                  badge: 1,
+                },
+              },
+            },
+          };
+
+          await admin.messaging().send(fcmMessage);
+          console.log(`FCM notification sent to receiver: ${receiverId}`);
+        } else {
+          console.log(`No FCM token found for receiver: ${receiverId}`);
+        }
+      }
+    } catch (fcmError) {
+      console.error("Error sending FCM notification:", fcmError);
+      // Don't fail the image upload if FCM fails
+    }
 
     res.json({ success: true, imageUrl });
   } catch (error) {
@@ -157,6 +224,70 @@ const message = {
 // Register the only API
 app.post('/api/initiate-call', initiateCall);
 
+const sendNotification=async(message,chat)=>{
+   try {
+        const senderId = message.data.senderId;
+        const receiverId = message.data.receiverId;
+        
+        // Determine if sender is user or partner
+        const isUserSender = chat.user._id.toString() === senderId.toString();
+        const receiver = isUserSender ? chat.partner : chat.user;
+        const sender = isUserSender ? chat.user : chat.partner;
+        
+        if (receiver) {
+          const fcmToken = isUserSender ? receiver.fcmtoken : receiver.fcmToken;
+          
+          if (fcmToken) {
+            const fcmMessage = {
+              token: fcmToken,
+              notification: {
+                title: `New message from ${sender.name || 'User'}`,
+                body: message.data.message || 'Sent an attachment',
+              },
+              data: {
+                type: 'chat_message',
+                bookingId: chat._id.toString(),
+                senderId: senderId.toString(),
+                receiverId: receiverId.toString(),
+                message: message.data.message || '',
+                timestamp: message.data.timestamp,
+              },
+              android: {
+                priority: 'high',
+                notification: {
+                  channelId: 'chat-channel',
+                  sound: 'default',
+                  priority: 'high',
+                },
+              },
+              apns: {
+                headers: {
+                  'apns-priority': '10',
+                },
+                payload: {
+                  aps: {
+                    alert: {
+                      title: `New message from ${sender.name || 'User'}`,
+                      body: message.data.message || 'Sent an attachment',
+                    },
+                    sound: 'default',
+                    badge: 1,
+                  },
+                },
+              },
+            };
+
+            await admin.messaging().send(fcmMessage);
+            console.log(`FCM notification sent to receiver: ${receiverId}`);
+          } else {
+            console.log(`No FCM token found for receiver: ${receiverId}`);
+          }
+        }
+      } catch (fcmError) {
+        console.error("Error sending FCM notification:", fcmError);
+        // Don't fail the message sending if FCM fails
+      }
+}
 io.on("connection", (socket) => {
   console.log("User/Admin connected:", socket.id);
  
@@ -164,7 +295,7 @@ io.on("connection", (socket) => {
   socket.on("chat message", async (message) => {
     console.log("Message received:", message);
     try {
-      let chat = await Booking.findById(message?.data?.bookingId);
+      let chat = await Booking.findById(message?.data?.bookingId).populate('user partner');
       if (!chat) {
         return socket.emit("error", "Booking not found.");
       }
@@ -184,6 +315,9 @@ io.on("connection", (socket) => {
         bookingId: chat._id,
         messages: chat.chat,
       });
+
+      // Send FCM notification to receiver
+      sendNotification(message,chat)
     } catch (error) {
       console.error("Error saving chat message:", error);
       socket.emit("error", "Server error occurred.");
@@ -214,7 +348,7 @@ io.on("connection", (socket) => {
             bookingId: data.bookingId,
             senderId: data.senderId,
             image: imageUrl,
-            timestamp: new Date().toISOString(),
+            timestamp: new Datdatae().toISOString(),
           },
         };
 
@@ -230,6 +364,7 @@ io.on("connection", (socket) => {
           messages: chat.chat,
         });
         callback({ success: true, imageUrl });
+        sendNotification(data,chat)
       });
     } catch (error) {
       console.error("Error saving chat image:", error);
@@ -782,7 +917,6 @@ const adminBookingController = require("./controllers/adminBookingController");
 const notificationRoute = require('./routes/notificationRoute');
 const partnerNotification = require('./routes/partnerNotification');
 const firbasecall = require('./routes/notificationRoutes')
-const admin = require('firebase-admin');
 const { uploadFile2 } = require("./middleware/aws");
 const driverFareRoutes = require('./routes/driverFareRoutes');
 const phonePayRoutes = require('./routes/phonePay');
