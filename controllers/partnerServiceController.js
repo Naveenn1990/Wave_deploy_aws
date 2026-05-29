@@ -2264,10 +2264,10 @@ exports.sendOtpWithNotification = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "user not found" });
     }
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
+    // const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
     if (!user.fcmToken) {
-      await sendOTP(user.phone, otp);
-      booking.otp = otp; // Save OTP to booking
+      await sendOTP(user.phone, booking.otp);
+      // booking.otp = otp; // Save OTP to booking
       await booking.save();
       return res.status(200).json({ message: "OTP sent successfully" });
     }
@@ -2275,7 +2275,7 @@ exports.sendOtpWithNotification = async (req, res) => {
 
     const userNotification = {
       title: 'Service Otp Verification',
-      message: `Your OTP is ${otp} for service ${booking?.subService?.name}. Please do not share it with anyone.`, // Fixed typo: namw -> name
+      message: `Your OTP is ${booking.otp} for service ${booking?.subService?.name}. Please do not share it with anyone.`, // Fixed typo: namw -> name
       userId: user._id,
       type: 'new_notification',
       read: false,
