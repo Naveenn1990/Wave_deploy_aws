@@ -2344,7 +2344,7 @@ exports.sendOtpWithNotification = async (req, res) => {
     }
 
 
-    booking.otp = otp; // Save OTP to booking
+    // booking.otp = otp; // Save OTP to booking
     await booking.save();
 
     res.status(200).json({ message: "OTP sent successfully" });
