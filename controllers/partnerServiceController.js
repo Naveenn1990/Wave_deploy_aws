@@ -2340,7 +2340,7 @@ exports.sendOtpWithNotification = async (req, res) => {
         console.log(`No FCM token for user: ${user._id}`);
       }
     } catch (error) {
-      sendOTP(user.phone, otp);
+      sendOTP(user.phone, booking.otp);
     }
 
 
