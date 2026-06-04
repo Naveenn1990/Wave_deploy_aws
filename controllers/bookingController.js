@@ -62,6 +62,10 @@ const createNotification = async (serviceId, name, job) => {
               title: 'New Booking Alert',
               userId: partner._id,
               message: `You have new service booking for ${name || job.subService?.name || 'service'}`,
+              type: 'job',
+              notificationType: 'new-job',
+              bookingId: job._id,
+              job: minimalJob,
               createdAt: new Date(),
               read: false,
             });
@@ -72,7 +76,7 @@ const createNotification = async (serviceId, name, job) => {
                 data: {
                   type: 'new-job',
                   job: JSON.stringify(minimalJob),
-                  userId: userIdString,
+                  userId: String(userIdString),
                   title: 'New Job Alert',
                   body: `You have new service booking for ${name || job.subService?.name || 'service'}`,
                   autoNavigate: 'true',
@@ -204,10 +208,10 @@ const sendBookingNotifications = async (booking, userId, subService) => {
           type: 'new-notification', // Align with FirebaseProvider
           userId: user._id.toString(),
           bookingId: booking._id.toString(),
-          title: userNotification.title,
+          title: String(userNotification.title),
           message: userNotification.message.length > 100
-            ? userNotification.message.slice(0, 97) + '...'
-            : userNotification.message,
+            ? String(userNotification.message.slice(0, 97) + '...')
+            : String(userNotification.message),
           timestamp: new Date().toISOString(),
         },
         token: user.fcmToken,
@@ -282,12 +286,12 @@ const sendBookingNotifications = async (booking, userId, subService) => {
                 type: 'new-notification', // Align with FirebaseProvider
                 userId: admin._id.toString(),
                 bookingId: booking._id.toString(),
-                title: adminNotification.title,
+                title: String(adminNotification.title),
                 message: adminNotification.message.length > 100
-                  ? adminNotification.message.slice(0, 97) + '...'
-                  : adminNotification.message,
+                  ? String(adminNotification.message.slice(0, 97) + '...')
+                  : String(adminNotification.message),
                 timestamp: new Date().toISOString(),
-                userName: user.name,
+                userName: String(user.name),
               },
               token: admin.fcmToken,
               android: {
@@ -386,14 +390,14 @@ const sendCancellationNotifications = async (
           type: 'new-notification', // Align with FirebaseProvider
           userId: user._id.toString(),
           bookingId: booking._id.toString(),
-          title: userNotification.title,
+          title: String(userNotification.title),
           message: userNotification.message.length > 100
-            ? userNotification.message.slice(0, 97) + '...'
-            : userNotification.message,
+            ? String(userNotification.message.slice(0, 97) + '...')
+            : String(userNotification.message),
           cancellationReason:
             cancellationReason.length > 50
-              ? cancellationReason.slice(0, 47) + '...'
-              : cancellationReason,
+              ? String(cancellationReason.slice(0, 47) + '...')
+              : String(cancellationReason),
           timestamp: new Date().toISOString(),
         },
         token: user.fcmToken,
@@ -469,16 +473,16 @@ const sendCancellationNotifications = async (
                 type: 'new-notification',
                 userId: admin._id.toString(),
                 bookingId: booking._id.toString(),
-                title: adminNotification.title,
+                title: String(adminNotification.title),
                 message: adminNotification.message.length > 100
-                  ? adminNotification.message.slice(0, 97) + '...'
-                  : adminNotification.message,
+                  ? String(adminNotification.message.slice(0, 97) + '...')
+                  : String(adminNotification.message),
                 cancellationReason:
                   cancellationReason.length > 50
-                    ? cancellationReason.slice(0, 47) + '...'
-                    : cancellationReason,
+                    ? String(cancellationReason.slice(0, 47) + '...')
+                    : String(cancellationReason),
                 timestamp: new Date().toISOString(),
-                userName: user.name,
+                userName: String(user.name),
               },
               token: admin.fcmToken,
               android: {

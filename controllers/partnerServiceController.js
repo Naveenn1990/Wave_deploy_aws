@@ -18,10 +18,11 @@ const DriverBooking = require("../models/DriverBooking");
 const { sendOTP } = require("../utils/sendOTP");
 const sendBookingAcceptanceNotifications = async (booking, user, subService, partner, admins) => {
   try {
+    const partnerName = partner.profile?.name || partner.name || partner.agentName || 'Partner';
     // User notification
     const userNotification = {
       title: 'Booking Accepted',
-      message: `Your booking for ${subService.name} has been accepted by ${partner.name}!`,
+      message: `Your booking for ${subService.name} has been accepted by ${partnerName}!`,
       userId: user._id,
       type: 'booking_accepted',
       read: false,
@@ -45,10 +46,10 @@ const sendBookingAcceptanceNotifications = async (booking, user, subService, par
           type: 'new-notification', // Align with FirebaseProvider
           userId: user._id.toString(),
           bookingId: booking._id.toString(),
-          title: userNotification.title,
+          title: String(userNotification.title),
           message: userNotification.message.length > 100
-            ? userNotification.message.slice(0, 97) + '...'
-            : userNotification.message,
+            ? String(userNotification.message.slice(0, 97) + '...')
+            : String(userNotification.message),
           timestamp: new Date().toISOString(),
         },
         token: user.fcmToken,
@@ -90,7 +91,7 @@ const sendBookingAcceptanceNotifications = async (booking, user, subService, par
     }
 
     // Admin notifications
-    const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been accepted by partner ${partner.name}`;
+    const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been accepted by partner ${partnerName}`;
     const adminNotification = {
       title: 'Booking Accepted',
       message: adminNotificationMessage,
@@ -123,12 +124,12 @@ const sendBookingAcceptanceNotifications = async (booking, user, subService, par
                 type: 'new-notification', // Align with FirebaseProvider
                 userId: admin._id.toString(),
                 bookingId: booking._id.toString(),
-                title: adminNotification.title,
+                title: String(adminNotification.title),
                 message: adminNotification.message.length > 100
-                  ? adminNotification.message.slice(0, 97) + '...'
-                  : adminNotification.message,
+                  ? String(adminNotification.message.slice(0, 97) + '...')
+                  : String(adminNotification.message),
                 timestamp: new Date().toISOString(),
-                partnerName: partner.name,
+                partnerName: String(partnerName),
               },
               token: admin.fcmToken,
               android: {
@@ -959,9 +960,10 @@ exports.rejectBooking = async (req, res) => {
 
 const sendBookingCompletionNotifications = async (booking, user, subService, partner, admins) => {
   try {
+    const partnerName = partner.profile?.name || partner.name || partner.agentName || 'Partner';
     // User notification
     const userNotification = {
-      message: `Your booking for ${subService.name} has been completed by ${partner.name}. Please provide your feedback!`,
+      message: `Your booking for ${subService.name} has been completed by ${partnerName}. Please provide your feedback!`,
       booking: booking._id,
       seen: false,
       date: new Date(),
@@ -969,8 +971,9 @@ const sendBookingCompletionNotifications = async (booking, user, subService, par
     };
 
     // Add notification to user
-    user.notifications.push(userNotification);
-    await user.save();
+    await User.findByIdAndUpdate(user._id, {
+      $push: { notifications: userNotification }
+    });
 
     // Send FCM to user if token exists
     if (user.fcmToken) {
@@ -983,9 +986,9 @@ const sendBookingCompletionNotifications = async (booking, user, subService, par
           bookingId: booking._id.toString(),
           type: 'booking_completed',
           title: 'Booking Completed',
-          body: userNotification.message,
+          body: String(userNotification.message),
           timestamp: new Date().toISOString(),
-          partnerName: partner.name,
+          partnerName: String(partnerName),
           action: 'rate_booking'
         },
         token: user.fcmToken,
@@ -1019,8 +1022,9 @@ const sendBookingCompletionNotifications = async (booking, user, subService, par
     };
 
     // Add notification to partner
-    partner.notifications.push(partnerNotification);
-    await partner.save();
+    await Partner.findByIdAndUpdate(partner._id, {
+      $push: { notifications: partnerNotification }
+    });
 
     // Send FCM to partner if token exists
     if (partner.fcmToken) {
@@ -1033,9 +1037,9 @@ const sendBookingCompletionNotifications = async (booking, user, subService, par
           bookingId: booking._id.toString(),
           type: 'partner_booking_completed',
           title: 'Booking Completed',
-          body: partnerNotification.message,
+          body: String(partnerNotification.message),
           timestamp: new Date().toISOString(),
-          paymentStatus: booking.paymentStatus
+          paymentStatus: String(booking.paymentStatus)
         },
         token: partner.fcmToken,
         android: {
@@ -1048,8 +1052,7 @@ const sendBookingCompletionNotifications = async (booking, user, subService, par
     }
 
     // Admin notifications
-    const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been completed by partner ${partner.name}.`;
-
+    const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been completed by partner ${partnerName}.`;
     const adminNotification = {
       message: adminNotificationMessage,
       booking: booking._id,
@@ -1059,7 +1062,7 @@ const sendBookingCompletionNotifications = async (booking, user, subService, par
     };
 
     // Add notification to all admins
-    await Admin.updateMany(
+     Admin.updateMany(
       {},
       { $push: { notifications: adminNotification } }
     );
@@ -1076,10 +1079,10 @@ const sendBookingCompletionNotifications = async (booking, user, subService, par
           bookingId: booking._id.toString(),
           type: 'admin_booking_completed',
           title: 'Booking Completed',
-          body: adminNotificationMessage,
+          body: String(adminNotificationMessage),
           timestamp: new Date().toISOString(),
-          partnerName: partner.name,
-          paymentStatus: booking.paymentStatus
+          partnerName: String(partnerName),
+          paymentStatus: String(booking.paymentStatus)
         },
         tokens: adminTokens,
         android: {
@@ -1153,25 +1156,53 @@ exports.completeBooking = async (req, res) => {
       booking.paymentMode = paymentMode;
     }
 
-    if (paymentMode === "cash" && payamout) {
-      const partnerWallet = await PartnerWallet.findOne({ partner: booking.partner._id });
-      if (!partnerWallet) {
-        return res.status(404).json({
-          success: false,
-          message: "Partner wallet not found",
-        });
+    const partnerWallet = await PartnerWallet.findOne({ partner: booking.partner._id });
+    if (partnerWallet) {
+      const commissionPercentage = booking.subService?.commission || 0;
+      
+      // Calculate commissions
+      const bookingCommission = (commissionPercentage / 100) * (Number(payamout) || 0);
+      
+      let cartCommission = 0;
+      if (booking.cart && booking.cart.length > 0) {
+        const approvedCartTotal = booking.cart
+          .filter(item => item.approved)
+          .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        cartCommission = (commissionPercentage / 100) * approvedCartTotal;
       }
-      partnerWallet.balance = partnerWallet.balance - Number(payamout);
-      partnerWallet.transactions.push({
-        amount: payamout,
-        type: "debit",
-        description: `Payment for booking ${booking.subService.name} completed`,
-        reference: booking._id,
-        balance: partnerWallet.balance,
-      })
-      await partnerWallet.save();
-    }
 
+      // Logic: If cash, deduct both. If online, deduct only cart commission.
+      let totalDeduction = 0;
+      let description = "";
+
+      if (paymentMode === "cash") {
+        totalDeduction = bookingCommission + cartCommission;
+        description = `Commission for cash booking ${booking.subService.name} completed (Booking: ₹${bookingCommission.toFixed(2)}, Cart: ₹${cartCommission.toFixed(2)})`;
+      } else {
+        totalDeduction = cartCommission;
+        description = `Cart commission for online booking ${booking.subService.name} completed (Cart: ₹${cartCommission.toFixed(2)})`;
+      }
+
+      if (totalDeduction > 0) {
+        // Check if partner has enough balance
+        if (partnerWallet.balance < totalDeduction) {
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient wallet balance. Required: ₹${totalDeduction.toFixed(2)}, Available: ₹${partnerWallet.balance.toFixed(2)}`,
+          });
+        }
+
+        partnerWallet.balance = partnerWallet.balance - totalDeduction;
+        partnerWallet.transactions.push({
+          amount: totalDeduction,
+          type: "debit",
+          description: description,
+          reference: booking._id,
+          balance: partnerWallet.balance,
+        });
+        await partnerWallet.save();
+      }
+    }
 
     booking.paymentStatus = "completed";
     await booking.save();
@@ -1386,6 +1417,7 @@ exports.getRejectedBookings = async (req, res) => {
 
 const sendBookingPauseNotifications = async (booking, user, subService, partner, admins, pauseDetails) => {
   try {
+    const partnerName = partner.profile?.name || partner.name || partner.agentName || 'Partner';
     // Validate required parameters
     if (!booking || !user || !subService || !partner || !pauseDetails) {
       console.error('Missing required parameters for booking pause notification');
@@ -1402,7 +1434,7 @@ const sendBookingPauseNotifications = async (booking, user, subService, partner,
 
     // User notification
     const userNotification = {
-      message: `Your booking for ${subService.name} has been paused. Reason: ${pauseDetails.pauseReason}. Will resume on ${pauseDetails.nextScheduledDate}`,
+      message: `Your booking for ${subService.name} has been paused by ${partnerName}. Reason: ${pauseDetails.pauseReason}. Will resume on ${pauseDetails.nextScheduledDate}`,
       booking: booking._id,
       seen: false,
       date: new Date(),
@@ -1410,8 +1442,9 @@ const sendBookingPauseNotifications = async (booking, user, subService, partner,
     };
 
     // Add notification to user
-    user.notifications.push(userNotification);
-    await user.save();
+    await User.findByIdAndUpdate(user._id, {
+      $push: { notifications: userNotification }
+    });
 
     // Send FCM to user if token exists
     if (user.fcmToken) {
@@ -1424,10 +1457,10 @@ const sendBookingPauseNotifications = async (booking, user, subService, partner,
           bookingId: booking._id.toString(),
           type: 'booking_paused',
           title: 'Booking Paused',
-          body: userNotification.message,
+          body: String(userNotification.message),
           timestamp: new Date().toISOString(),
-          resumeDate: pauseDetails.nextScheduledDate.toISOString(),
-          pauseReason: pauseDetails.pauseReason
+          resumeDate: String(pauseDetails.nextScheduledDate.toISOString()),
+          pauseReason: String(pauseDetails.pauseReason)
         },
         token: user.fcmToken,
         android: {
@@ -1459,8 +1492,9 @@ const sendBookingPauseNotifications = async (booking, user, subService, partner,
     };
 
     // Add notification to partner
-    partner.notifications.push(partnerNotification);
-    await partner.save();
+    await Partner.findByIdAndUpdate(partner._id, {
+      $push: { notifications: partnerNotification }
+    });
 
     // Send FCM to partner if token exists
     if (partner.fcmToken) {
@@ -1473,10 +1507,10 @@ const sendBookingPauseNotifications = async (booking, user, subService, partner,
           bookingId: booking._id.toString(),
           type: 'partner_booking_paused',
           title: 'Booking Paused',
-          body: partnerNotification.message,
+          body: String(partnerNotification.message),
           timestamp: new Date().toISOString(),
-          resumeDate: pauseDetails.nextScheduledDate.toISOString(),
-          pauseReason: pauseDetails.pauseReason
+          resumeDate: String(pauseDetails.nextScheduledDate.toISOString()),
+          pauseReason: String(pauseDetails.pauseReason)
         },
         token: partner.fcmToken,
         android: {
@@ -1489,7 +1523,7 @@ const sendBookingPauseNotifications = async (booking, user, subService, partner,
     }
 
     // Admin notifications
-    const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been paused by partner ${partner.name}. Reason: ${pauseDetails.pauseReason}. Will resume on ${pauseDetails.nextScheduledDate}`;
+    const adminNotificationMessage = `Booking #${booking._id} for ${subService.name} has been paused by partner ${partnerName}. Reason: ${pauseDetails.pauseReason}. Will resume on ${pauseDetails.nextScheduledDate}`;
 
     const adminNotification = {
       message: adminNotificationMessage,
@@ -1518,11 +1552,11 @@ const sendBookingPauseNotifications = async (booking, user, subService, partner,
             bookingId: booking._id.toString(),
             type: 'admin_booking_paused',
             title: 'Booking Paused',
-            body: adminNotificationMessage,
+            body: String(adminNotificationMessage),
             timestamp: new Date().toISOString(),
-            partnerName: partner.name,
-            resumeDate: pauseDetails.nextScheduledDate.toISOString(),
-            pauseReason: pauseDetails.pauseReason
+            partnerName: String(partnerName),
+            resumeDate: String(pauseDetails.nextScheduledDate.toISOString()),
+            pauseReason: String(pauseDetails.pauseReason)
           },
           tokens: adminTokens,
           android: {
@@ -1790,6 +1824,136 @@ exports.getProductsByCategory = async (req, res) => {
 
 // add to cart (Products)
 // Add Product to Booking Cart
+const sendCartNotification = async (booking, user, productName, partner) => {
+  try {
+    const partnerName = partner.profile?.name || partner.name || partner.agentName || 'Partner';
+    console.log(`Preparing cart notification for product: ${productName}, User: ${user?._id}, Partner: ${partnerName}`);
+    
+    const message = `A new item "${productName}" has been added to your booking for ${booking.subService?.name || 'service'} by ${partnerName}. Please review and approve it.`;
+    
+    // User notification
+    const userNotification = {
+      message: message,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'cart_item_added'
+    };
+
+    // Add notification to user
+    await User.findByIdAndUpdate(user._id, {
+      $push: { notifications: userNotification }
+    });
+    console.log(`Internal notification saved for user: ${user._id}`);
+
+    // Send FCM to user if token exists
+    if (user.fcmToken) {
+      console.log(`Sending FCM to user: ${user._id} with token: ${user.fcmToken.substring(0, 10)}...`);
+      const userMessage = {
+        notification: {
+          title: 'New Item Added to Cart',
+          body: message
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'cart_item_added',
+          title: 'New Item Added to Cart',
+          body: String(message),
+          timestamp: new Date().toISOString(),
+          partnerName: String(partnerName),
+          productName: String(productName)
+        },
+        token: user.fcmToken,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24
+        },
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true
+            }
+          }
+        }
+      };
+
+      await admin.messaging().send(userMessage);
+      console.log(`FCM sent successfully to user: ${user._id}`);
+    } else {
+      console.log(`No FCM token found for user: ${user._id}`);
+    }
+    return true;
+  } catch (error) {
+    console.error('Cart notification error:', error);
+    return false;
+  }
+};
+
+const sendRemoveCartNotification = async (booking, user, productName, partner) => {
+  try {
+    const partnerName = partner.profile?.name || partner.name || partner.agentName || 'Partner';
+    console.log(`Preparing remove cart notification for product: ${productName}, User: ${user?._id}, Partner: ${partnerName}`);
+    
+    const message = `An item "${productName}" has been removed from your cart for ${booking.subService?.name || 'service'} by ${partnerName}.`;
+    
+    // User notification
+    const userNotification = {
+      message: message,
+      booking: booking._id,
+      seen: false,
+      date: new Date(),
+      type: 'cart_item_removed'
+    };
+
+    // Add notification to user
+    await User.findByIdAndUpdate(user._id, {
+      $push: { notifications: userNotification }
+    });
+    console.log(`Internal notification saved for user: ${user._id}`);
+
+    // Send FCM to user if token exists
+    if (user.fcmToken) {
+      console.log(`Sending FCM to user: ${user._id} with token: ${user.fcmToken.substring(0, 10)}...`);
+      const userMessage = {
+        notification: {
+          title: 'Item Removed from Cart',
+          body: message
+        },
+        data: {
+          bookingId: booking._id.toString(),
+          type: 'cart_item_removed',
+          title: 'Item Removed from Cart',
+          body: String(message),
+          timestamp: new Date().toISOString(),
+          partnerName: String(partnerName),
+          productName: String(productName)
+        },
+        token: user.fcmToken,
+        android: {
+          priority: 'high',
+          ttl: 60 * 60 * 24
+        },
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true
+            }
+          }
+        }
+      };
+
+      await admin.messaging().send(userMessage);
+      console.log(`FCM sent successfully to user: ${user._id}`);
+    } else {
+      console.log(`No FCM token found for user: ${user._id}`);
+    }
+    return true;
+  } catch (error) {
+    console.error('Remove cart notification error:', error);
+    return false;
+  }
+};
+
 exports.addToCart = async (req, res) => {
   try {
     const { bookingId, productId, change } = req.body;
@@ -1811,8 +1975,7 @@ exports.addToCart = async (req, res) => {
     let booking = await Booking.findOne({
       _id: bookingId,
       partner: partnerId, // Ensure booking belongs to this partner
-
-    });
+    }).populate('user').populate('subService');
 
     if (!booking) {
       return res.status(400).json({ message: "Invalid or unaccepted booking" });
@@ -1828,6 +1991,7 @@ exports.addToCart = async (req, res) => {
       (item) => item.product.toString() === productId
     );
 
+    let isNewItem = false;
     if (existingItemIndex !== -1) {
       // Update quantity
       booking.cart[existingItemIndex].quantity = change;
@@ -1835,10 +1999,10 @@ exports.addToCart = async (req, res) => {
       // Remove item if quantity is 0 or negative
       if (booking.cart[existingItemIndex].quantity <= 0) {
         booking.cart.splice(existingItemIndex, 1);
-
       }
     } else if (change > 0) {
       // Add new product to cart
+      isNewItem = true;
       booking.cart.push({
         product: productId,
         quantity: change,
@@ -1848,7 +2012,13 @@ exports.addToCart = async (req, res) => {
     }
 
     // Save the updated booking with the modified cart
+    const user = booking.user;
     booking = await booking.save();
+
+    // Notify customer if a new item was added
+    if (isNewItem && user) {
+      await sendCartNotification(booking, user, product.name, partner);
+    }
 
     return res.status(200).json({
       message: "Cart updated successfully",
@@ -1864,15 +2034,38 @@ exports.addToCart = async (req, res) => {
 exports.removeCart = async (req, res) => {
   try {
     let { bookid, cartId } = req.body;
-    let booking = await Booking.findByIdAndUpdate(bookid, { $pull: { cart: { _id: cartId } } }, { new: true });
+    const partnerId = req.partner.id;
+
+    // Find booking and populate necessary fields
+    let booking = await Booking.findOne({
+      _id: bookid,
+      partner: partnerId
+    }).populate('user').populate('subService').populate('cart.product');
+
     if (!booking) return res.status(404).json({ message: "Booking not found" });
-    // let cart=booking.cart.id(cartId);
-    // cart.remove();
+
+    // Find the cart item to get the name before removing
+    const cartItem = booking.cart.id(cartId);
+    if (!cartItem) {
+      return res.status(404).json({ message: "Cart item not found" });
+    }
+
+    const productName = cartItem.product ? cartItem.product.name : cartItem.name;
+
+    // Remove the item
+    booking.cart.pull(cartId);
+    await booking.save();
+
+    // Notify customer
+    const partner = await Partner.findById(partnerId);
+    if (booking.user && partner) {
+      await sendRemoveCartNotification(booking, booking.user, productName, partner);
+    }
 
     return res.status(200).json({ message: "Cart item removed successfully", cart: booking.cart });
   } catch (error) {
-    console.log(error);
-
+    console.error("Error removing cart item:", error);
+    return res.status(500).json({ message: "Error removing item", error: error.message });
   }
 }
 
@@ -1884,10 +2077,13 @@ exports.AddManulProductCart = async (req, res) => {
     if (!bookingId || !name || !amount || !description) {
       return res.status(400).json({ message: "All fields are required" });
     }
-    const checkBooking = await Booking.findById(bookingId);
+    const checkBooking = await Booking.findById(bookingId).populate('user').populate('subService');
     if (!checkBooking) {
       return res.status(404).json({ message: "Booking not found" });
     }
+
+    const partner = await Partner.findById(partnerId);
+
     const carts = checkBooking.cart || [];
     if (name && price && amount && description) {
 
@@ -1920,7 +2116,14 @@ exports.AddManulProductCart = async (req, res) => {
     if (carts.length > 0) {
       checkBooking.cart = carts;
     }
+    const user = checkBooking.user;
     const updatedBooking = await checkBooking.save();
+
+    // Notify customer
+    if (user && partner) {
+      await sendCartNotification(updatedBooking, user, name, partner);
+    }
+
     return res.status(200).json({
       message: "Manual product added to cart successfully",
       cart: updatedBooking.cart,
@@ -2296,10 +2499,10 @@ exports.sendOtpWithNotification = async (req, res) => {
             type: 'new-notification', // Align with FirebaseProvider
             userId: user._id.toString(),
             bookingId: booking._id.toString(),
-            title: userNotification.title,
+            title: String(userNotification.title),
             message: userNotification.message.length > 100
-              ? userNotification.message.slice(0, 97) + '...'
-              : userNotification.message,
+              ? String(userNotification.message.slice(0, 97) + '...')
+              : String(userNotification.message),
             timestamp: new Date().toISOString(),
           },
           token: user.fcmToken,

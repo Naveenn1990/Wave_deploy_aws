@@ -560,6 +560,28 @@ io.on("connection", (socket) => {
 
       await Booking.findByIdAndUpdate(rideId, { rideStart: true });
       console.log(`Ride ${rideId} started. Driver: ${driverId}, User: ${userId}`);
+
+      // Send Push Notification to User
+      try {
+        const booking = await Booking.findById(rideId).populate('user');
+        if (booking && booking.user && booking.user.fcmToken) {
+          const fcmMessage = {
+            token: booking.user.fcmToken,
+            notification: {
+              title: 'Partner Started Navigation',
+              body: 'Your service partner has started navigation to your location.',
+            },
+            data: {
+              type: 'ride_started',
+              bookingId: rideId.toString(),
+            }
+          };
+          await admin.messaging().send(fcmMessage);
+          console.log(`Push notification sent to user ${userId} for ride start`);
+        }
+      } catch (fcmError) {
+        console.error('Error sending ride_started FCM:', fcmError.message);
+      }
     } catch (error) {
       console.error(`Error starting ride ${rideId}:`, error.message);
       socket.emit('error', { message: error.message });
@@ -686,15 +708,14 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on('driver_arrived', (data) => {
+  socket.on('driver_arrived', async (data) => {
     const { rideId, userId, isFinalDestination } = data;
     // Update ride status in database
     // ...
     // Notify user
     const ride = rides.get(rideId);
-    const userSocketId = ride[userId];
-    if (userSocketId) {
-      io.to(userSocketId).emit('driver_arrived', {
+    if (ride && ride.userId) {
+      io.to(ride.userId).emit('driver_arrived', {
         rideId,
         isFinalDestination,
         message: isFinalDestination ?
@@ -702,6 +723,31 @@ io.on("connection", (socket) => {
           'Approaching waypoint',
         timestamp: new Date().toISOString()
       });
+
+      // Send Push Notification to User
+      try {
+        const booking = await Booking.findById(rideId).populate('user');
+        if (booking && booking.user && booking.user.fcmToken) {
+          const fcmMessage = {
+            token: booking.user.fcmToken,
+            notification: {
+              title: isFinalDestination ? 'Partner Arrived' : 'Partner Nearby',
+              body: isFinalDestination ? 
+                'Your service partner has reached your location.' : 
+                'Your service partner is approaching your location.',
+            },
+            data: {
+              type: 'driver_arrived',
+              bookingId: rideId.toString(),
+              isFinalDestination: String(isFinalDestination)
+            }
+          };
+          await admin.messaging().send(fcmMessage);
+          console.log(`Push notification sent to user ${userId} for driver arrival`);
+        }
+      } catch (fcmError) {
+        console.error('Error sending driver_arrived FCM:', fcmError.message);
+      }
     }
   });
  

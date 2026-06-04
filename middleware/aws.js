@@ -100,13 +100,15 @@ const uploadFile = (file, bucketname) => {
 
 const uploadFile2 = (file, bucketname) => {
   return new Promise((resolve, reject) => {
-    console.log("uploadFile2 called with:", {
-      bucketname,
-      originalname: file.originalname,
-      mimetype: file.mimetype,
-      size: file.size,
-      hasBuffer: !!file.buffer
-    });
+
+    // console.log("uploadFile2 called with:", {
+    //   bucketname,
+    //   originalname: file.originalname,
+    //   mimetype: file.mimetype,
+    //   size: file.size,
+    //   hasBuffer: !!file.buffer
+    // });
+    // resolve(`https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${file.originalname}`)
     
     const params = {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
@@ -115,11 +117,7 @@ const uploadFile2 = (file, bucketname) => {
       ContentType: file.mimetype,
     };
     
-    console.log("S3 upload params:", {
-      Bucket: params.Bucket,
-      Key: params.Key,
-      ContentType: params.ContentType
-    });
+
     
     const command = new PutObjectCommand(params);
     s3Client.send(command, (err, data) => {

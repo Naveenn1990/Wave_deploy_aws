@@ -1615,6 +1615,9 @@ exports.assignedbooking = async (req, res) => {
       title: 'Booking Assigned',
       userId: partnerId,
       message: `You have been assigned a new booking ${book.subService?.name} by wave admin`,
+      type: 'job',
+      notificationType: 'booking_assigned',
+      bookingId: bookingId,
       createdAt: new Date(),
       read: false,
     });

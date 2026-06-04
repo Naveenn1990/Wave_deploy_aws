@@ -35,6 +35,17 @@ const pricingSettingsSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  categoryFees: [{
+    categories: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ServiceCategory'
+    }],
+    fee: {
+      type: Number,
+      required: true,
+      min: 0
+    }
+  }],
   isActive: {
     type: Boolean,
     default: true

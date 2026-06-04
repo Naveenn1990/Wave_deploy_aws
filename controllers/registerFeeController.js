@@ -1,4 +1,5 @@
 const { PricingSettings,PlanFeature ,HelpContent  } = require('../models/RegisterFee');
+const Partner = require('../models/PartnerModel');
 const Joi = require('joi');
 
 // Validation schema
@@ -9,7 +10,11 @@ const pricingValidationSchema = Joi.object({
   specialOfferText: Joi.string().allow(''),
   commissionRate: Joi.number().min(0).max(100).required(),
   freeCommissionThreshold: Joi.number().min(0).required(),
-  refundPolicy: Joi.string().required()
+  refundPolicy: Joi.string().required(),
+  categoryFees: Joi.array().items(Joi.object({
+    categories: Joi.array().items(Joi.string()).required(),
+    fee: Joi.number().min(0).required()
+  }))
 });
 
 const featureValidationSchema = Joi.object({
@@ -22,7 +27,7 @@ const featureValidationSchema = Joi.object({
 // Get current pricing settings
 const getPricingSettings = async (req, res) => {
   try {
-    let settings = await PricingSettings.findOne();
+    let settings = await PricingSettings.findOne().populate('categoryFees.categories');
     
     if (!settings) {
       // Create default settings if none exist

@@ -23,8 +23,17 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['info', 'alert', 'message', 'job'], // Added 'job' for createNotification
       default: 'info',
+    },
+    bookingId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Booking',
+    },
+    job: {
+      type: Object, // To store minimal job data for easy access
+    },
+    notificationType: {
+      type: String, // To differentiate between new-job, booking-accepted, etc.
     },
     skipFcm: {
       type: Boolean,
@@ -58,8 +67,8 @@ notificationSchema.post('save', async function (doc) {
       data: {
         type: 'new-notification',
         userId: userIdString,
-        title: doc.title,
-        message: doc.message.length > 100 ? doc.message.slice(0, 97) + '...' : doc.message,
+        title: String(doc.title),
+        message: doc.message.length > 100 ? String(doc.message.slice(0, 97) + '...') : String(doc.message),
         timestamp: new Date().toISOString(),
       },
       token: partner.fcmtoken,
