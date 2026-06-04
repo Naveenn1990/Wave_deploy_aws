@@ -815,6 +815,7 @@ io.on("connection", (socket) => {
 
   socket.on("join", (userId) => {
     console.log(`Received join event from user ${userId}`);
+    socket.userId = userId; // Set userId for signaling compatibility
     socket.join(userId);
 
     if (!userSockets[userId]) {
@@ -826,6 +827,7 @@ io.on("connection", (socket) => {
 
   socket.on("join admin", (adminId) => {
     console.log(`Received join event from admin ${adminId}`);
+    socket.userId = adminId; // Set userId for signaling compatibility
     socket.join(adminId); // Join the admin-specific room
 
     if (!adminSockets[adminId]) {
