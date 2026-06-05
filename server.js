@@ -540,6 +540,7 @@ io.on("connection", (socket) => {
   
   socket.on('start_ride', async ({ rideId, driverId, userId }) => {
     try {
+       console.log(`Ride ${rideId} started. Driver: ${driverId}, User: ${userId}`);
       if (!rideId || !driverId || !userId) {
         throw new Error('Invalid ride details');
       }
@@ -634,7 +635,7 @@ io.on("connection", (socket) => {
         message: 'Ride is active',
       });
       let driver = await Partner.findById(ride.driverId);
-      io.to(ride.userId).emit(' ', {
+      io.to(ride.userId).emit('ride_check_response', {
         rideId,
         message: 'Ride is active',
         driverLocation: {
