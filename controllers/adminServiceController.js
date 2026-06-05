@@ -779,7 +779,7 @@ exports.bulkUpdateSubServices = async (req, res) => {
 exports.updateService = async (req, res) => {
   try {
     const { serviceId } = req.params;
-    const { name, description } = req.body;
+    const { name, description, subCategory: newSubCategoryId } = req.body;
 
     // Find service
     const service = await Service.findById(serviceId);
@@ -788,6 +788,26 @@ exports.updateService = async (req, res) => {
         success: false,
         message: "Service not found"
       });
+    }
+
+    // Handle subCategory change
+    if (newSubCategoryId && newSubCategoryId !== service.subCategory?.toString()) {
+      // Remove service from old subcategory if it exists
+      if (service.subCategory) {
+        await SubCategory.findByIdAndUpdate(service.subCategory, {
+          $pull: { services: serviceId }
+        });
+      }
+
+      // Add service to new subcategory
+      const newSubCategory = await SubCategory.findById(newSubCategoryId);
+      if (newSubCategory) {
+        if (!newSubCategory.services.includes(serviceId)) {
+          newSubCategory.services.push(serviceId);
+          await newSubCategory.save();
+        }
+        service.subCategory = newSubCategoryId;
+      }
     }
 
     // Update fields
