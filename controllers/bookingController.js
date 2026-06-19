@@ -262,6 +262,16 @@ const sendBookingNotifications = async (booking, userId, subService) => {
       skipFcm: true,
     };
 
+    // Emit socket event for real-time admin panel notification
+    if (global.io) {
+      admins.forEach((adminUser) => {
+        global.io.to(adminUser._id.toString()).emit("admin booking confirmed", {
+          message: adminNotificationMessage,
+          booking: booking,
+        });
+      });
+    }
+
     // Save admin notifications individually
     await Promise.all(
       admins.map(async (admin) => {
@@ -1244,6 +1254,14 @@ exports.cancelBooking = async (req, res) => {
     booking.cancellationReason = cancellationReason || "No reason provided";
     booking.cancellationTime = new Date();
     await booking.save();
+
+    // Notify admin panel in real-time
+    if (global.io) {
+      global.io.emit("admin booking cancelled", {
+        message: `Booking #${booking._id} has been cancelled. Reason: ${booking.cancellationReason}`,
+        booking,
+      });
+    }
 
     // Get admin details for notifications
     const admins = await Admin.find({});

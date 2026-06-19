@@ -62,6 +62,14 @@ exports.acceptJob = async (req, res) => {
     booking.status = "accepted";
     await booking.save();
 
+    // Notify admin panel in real-time
+    if (global.io) {
+      global.io.emit("admin booking accepted", {
+        message: `Booking #${booking._id} has been accepted by a provider.`,
+        booking,
+      });
+    }
+
     res.json({ message: "Job accepted successfully", booking });
   } catch (error) {
     console.error("Accept Job Error:", error);
@@ -94,6 +102,14 @@ exports.startJob = async (req, res) => {
     booking.startTime = new Date();
     await booking.save();
 
+    // Notify admin panel in real-time
+    if (global.io) {
+      global.io.emit("admin booking paused", {
+        message: `Booking #${booking._id} is now in progress.`,
+        booking,
+      });
+    }
+
     res.json({ message: "Job started successfully", booking });
   } catch (error) {
     console.error("Start Job Error:", error);
@@ -121,6 +137,14 @@ exports.completeJob = async (req, res) => {
     booking.completionVideo = video;
     booking.completionTime = new Date();
     await booking.save();
+
+    // Notify admin panel in real-time
+    if (global.io) {
+      global.io.emit("admin booking completed", {
+        message: `Booking #${booking._id} has been completed successfully.`,
+        booking,
+      });
+    }
 
     // Update partner statistics
     const profile = await PartnerProfile.findOne({ partner: req.partner._id });

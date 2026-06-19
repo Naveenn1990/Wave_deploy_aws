@@ -1,4 +1,8 @@
 const mongoose = require("mongoose");
+const dns = require("dns");
+
+// Force Node.js to use Google DNS for resolving MongoDB Atlas SRV records
+dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
 
 const connectDB = async () => {
   try {
@@ -11,7 +15,7 @@ const connectDB = async () => {
     const options = {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      serverSelectionTimeoutMS: 10000, // Timeout after 10s
       family: 4 // Use IPv4, skip trying IPv6
     };
 

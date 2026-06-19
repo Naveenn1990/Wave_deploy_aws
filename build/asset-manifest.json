@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.19a7e584.css",
-    "main.js": "/static/js/main.50465a2b.js",
+    "main.css": "/static/css/main.cb069f14.css",
+    "main.js": "/static/js/main.9537556f.js",
     "static/js/977.d3ad2402.chunk.js": "/static/js/977.d3ad2402.chunk.js",
     "static/js/667.92cabee0.chunk.js": "/static/js/667.92cabee0.chunk.js",
     "static/js/453.308ed537.chunk.js": "/static/js/453.308ed537.chunk.js",
@@ -12,20 +12,19 @@
     "static/media/provider-23.jpg": "/static/media/provider-23.979811e87d2a88d92953.jpg",
     "static/media/provider-19.jpg": "/static/media/provider-19.f4400785f5fc9d74c489.jpg",
     "static/media/logo.png": "/static/media/logo.04d0290b20e2371c2dd3.png",
-    "static/media/avatar-16.jpg": "/static/media/avatar-16.11567e5731d8a7edb7b9.jpg",
     "static/media/logo-dark.jpg": "/static/media/logo-dark.ab8baa569977a2865982.jpg",
     "static/media/success.png": "/static/media/success.e39fa5f54a849d8fc1a5.png",
     "static/media/icons8-whatsapp-480.png": "/static/media/icons8-whatsapp-480.b65560823b1a84769363.png",
     "static/media/app-store.svg": "/static/media/app-store.332f251c86f86da558ef9ba1590052fd.svg",
     "static/media/google-play.svg": "/static/media/google-play.d58c052c65cf6b53c9b5221f6325cf71.svg",
     "index.html": "/index.html",
-    "main.19a7e584.css.map": "/static/css/main.19a7e584.css.map",
-    "main.50465a2b.js.map": "/static/js/main.50465a2b.js.map",
+    "main.cb069f14.css.map": "/static/css/main.cb069f14.css.map",
+    "main.9537556f.js.map": "/static/js/main.9537556f.js.map",
     "667.92cabee0.chunk.js.map": "/static/js/667.92cabee0.chunk.js.map",
     "453.308ed537.chunk.js.map": "/static/js/453.308ed537.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.19a7e584.css",
-    "static/js/main.50465a2b.js"
+    "static/css/main.cb069f14.css",
+    "static/js/main.9537556f.js"
   ]
 }

@@ -1006,6 +1006,48 @@ app.use('/api/admin', RegisterFee);
 app.use('/api/referral', RefferralAmount);
 app.use('/api/admin/firebase-analytics', firebaseAnalyticsRoutes);
 app.use('/api/admin/web-analytics', webAnalyticsRoutes);
+
+// Public enquiry route for landing page (no auth required)
+const Contact = require('./models/Contact');
+app.post('/api/public/enquiry', async (req, res) => {
+  try {
+    const { fullName, email, phone, message, service } = req.body;
+    
+    if (!fullName || !phone) {
+      return res.status(400).json({ error: "Name and phone are required" });
+    }
+
+    const enquiryMessage = service 
+      ? `Service: ${service}${message ? '\n' + message : ''}`
+      : message || 'Enquiry from landing page';
+
+    const newContact = new Contact({ 
+      fullName, 
+      email: email || 'N/A', 
+      phone, 
+      message: enquiryMessage 
+    });
+    await newContact.save();
+
+    // Emit real-time notification to admin panel
+    if (global.io) {
+      global.io.emit("new_enquiry", {
+        _id: newContact._id,
+        fullName,
+        email: email || 'N/A',
+        phone,
+        message: enquiryMessage,
+        createdAt: newContact.createdAt,
+      });
+    }
+    
+    res.status(201).json({ message: "Your appointment has been booked successfully!" });
+  } catch (error) {
+    console.error("Error saving enquiry:", error);
+    res.status(500).json({ error: "Server error. Please try again later." });
+  }
+});
+
 // Add this route to your backend
 app.post('/api/admin/proxy-image', async (req, res) => {
   try {

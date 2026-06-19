@@ -346,6 +346,18 @@ exports.ContactUs = async (req, res) => {
   
       const newContact = new Contact({ fullName, email, phone, message });
       await newContact.save();
+
+      // Send real-time alert to admin panel
+      if (global.io) {
+        global.io.emit("new_enquiry", {
+          _id: newContact._id,
+          fullName,
+          email,
+          phone,
+          message,
+          createdAt: newContact.createdAt,
+        });
+      }
       
       res.status(201).json({ message: "Your query has been sent successfully!" });
     } catch (error) {
@@ -356,19 +368,43 @@ exports.ContactUs = async (req, res) => {
   
   exports.getAllContactUs = async (req, res) => {
     try {
-      // const { fullName, email, phone, message } = req.body;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const search = req.query.search || "";
+      const skip = (page - 1) * limit;
+
+      // Build search filter
+      let filter = {};
+      if (search) {
+        filter = {
+          $or: [
+            { fullName: { $regex: search, $options: "i" } },
+            { email: { $regex: search, $options: "i" } },
+            { phone: { $regex: search, $options: "i" } },
+            { message: { $regex: search, $options: "i" } },
+          ],
+        };
+      }
+
+      const totalItems = await Contact.countDocuments(filter);
+      const totalPages = Math.ceil(totalItems / limit);
+
+      const allContacts = await Contact.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
       
-      // if (!fullName || !email || !phone || !message) {
-      //   return res.status(400).json({ error: "All fields are required" });
-      // }
-  
-      // const newContact = new Contact({ fullName, email, phone, message });
-      // await newContact.save();
-      const allContacts = await Contact.find(); 
-      
-      res.status(201).json({ data : allContacts });
+      res.status(200).json({
+        data: allContacts,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems,
+          itemsPerPage: limit,
+        },
+      });
     } catch (error) {
-      console.error("Error fetching contact  data:", error);
+      console.error("Error fetching contact data:", error);
       res.status(500).json({ error: "Server error. Please try again later." });
     }
   }
