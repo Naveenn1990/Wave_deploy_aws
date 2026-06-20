@@ -827,9 +827,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("join admin", (adminId) => {
-    console.log(`Received join event from admin ${adminId}`);
-    socket.userId = adminId; // Set userId for signaling compatibility
-    socket.join(adminId); // Join the admin-specific room
+    console.log(`✅ Admin ${adminId} joined socket room`);
+    socket.userId = adminId;
+    socket.join(adminId);
 
     if (!adminSockets[adminId]) {
       adminSockets[adminId] = [];
@@ -1031,6 +1031,8 @@ app.post('/api/public/enquiry', async (req, res) => {
 
     // Emit real-time notification to admin panel
     if (global.io) {
+      const connectedClients = global.io.engine.clientsCount;
+      console.log(`🔔 Emitting new_enquiry to ${connectedClients} connected clients`);
       global.io.emit("new_enquiry", {
         _id: newContact._id,
         fullName,
@@ -1039,6 +1041,9 @@ app.post('/api/public/enquiry', async (req, res) => {
         message: enquiryMessage,
         createdAt: newContact.createdAt,
       });
+      console.log(`✅ new_enquiry emitted for ${fullName}`);
+    } else {
+      console.log(`❌ global.io is not set — socket not initialized`);
     }
     
     res.status(201).json({ message: "Your appointment has been booked successfully!" });
