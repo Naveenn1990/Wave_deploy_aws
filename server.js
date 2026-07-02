@@ -1013,8 +1013,8 @@ app.post('/api/public/enquiry', async (req, res) => {
   try {
     const { fullName, email, phone, message, service } = req.body;
     
-    if (!fullName || !phone) {
-      return res.status(400).json({ error: "Name and phone are required" });
+    if (!fullName || !phone || !email) {
+      return res.status(400).json({ error: "Name, email and phone are required" });
     }
 
     const enquiryMessage = service 
@@ -1023,7 +1023,7 @@ app.post('/api/public/enquiry', async (req, res) => {
 
     const newContact = new Contact({ 
       fullName, 
-      email: email || 'N/A', 
+      email, 
       phone, 
       message: enquiryMessage 
     });
@@ -1036,7 +1036,7 @@ app.post('/api/public/enquiry', async (req, res) => {
       global.io.emit("new_enquiry", {
         _id: newContact._id,
         fullName,
-        email: email || 'N/A',
+        email,
         phone,
         message: enquiryMessage,
         createdAt: newContact.createdAt,
