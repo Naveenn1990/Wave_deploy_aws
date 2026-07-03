@@ -1009,6 +1009,81 @@ app.use('/api/admin/web-analytics', webAnalyticsRoutes);
 
 // Public enquiry route for landing page (no auth required)
 const Contact = require('./models/Contact');
+const { sendOTP } = require('./utils/sendOTP');
+
+// Temporary storage for landing page OTPs (in production, use Redis or database)
+const landingPageOTPs = new Map();
+
+// Send OTP for landing page form
+app.post('/api/public/enquiry/send-otp', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    
+    if (!phone) {
+      return res.status(400).json({ error: "Phone number is required" });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store OTP with 10 minutes expiry
+    landingPageOTPs.set(phone, {
+      otp,
+      expiresAt: Date.now() + 10 * 60 * 1000
+    });
+
+    // Send OTP via SMS
+    await sendOTP(phone, otp);
+    
+    console.log(`Landing page OTP sent to ${phone}: ${otp}`);
+    
+    res.status(200).json({ 
+      success: true,
+      message: "OTP sent successfully" 
+    });
+  } catch (error) {
+    console.error("Error sending landing page OTP:", error);
+    res.status(500).json({ error: "Failed to send OTP. Please try again." });
+  }
+});
+
+// Verify OTP for landing page form
+app.post('/api/public/enquiry/verify-otp', async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+    
+    if (!phone || !otp) {
+      return res.status(400).json({ error: "Phone and OTP are required" });
+    }
+
+    const storedData = landingPageOTPs.get(phone);
+    
+    if (!storedData) {
+      return res.status(400).json({ error: "OTP not found or expired" });
+    }
+
+    if (Date.now() > storedData.expiresAt) {
+      landingPageOTPs.delete(phone);
+      return res.status(400).json({ error: "OTP has expired" });
+    }
+
+    if (storedData.otp !== otp) {
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
+
+    // OTP is valid, remove it
+    landingPageOTPs.delete(phone);
+    
+    res.status(200).json({ 
+      success: true,
+      message: "OTP verified successfully" 
+    });
+  } catch (error) {
+    console.error("Error verifying landing page OTP:", error);
+    res.status(500).json({ error: "Failed to verify OTP. Please try again." });
+  }
+});
+
 app.post('/api/public/enquiry', async (req, res) => {
   try {
     const { fullName, email, phone, message, service } = req.body;
