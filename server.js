@@ -1071,8 +1071,9 @@ app.post('/api/public/enquiry/verify-otp', async (req, res) => {
       return res.status(400).json({ error: "Invalid OTP" });
     }
 
-    // OTP is valid, remove it
-    landingPageOTPs.delete(phone);
+    // Mark as verified instead of deleting
+    storedData.verified = true;
+    landingPageOTPs.set(phone, storedData);
     
     res.status(200).json({ 
       success: true,
@@ -1091,6 +1092,15 @@ app.post('/api/public/enquiry', async (req, res) => {
     if (!fullName || !phone || !email) {
       return res.status(400).json({ error: "Name, email and phone are required" });
     }
+
+    // SECURITY CHECK: Verify OTP was completed for this phone number on backend
+    const otpData = landingPageOTPs.get(phone);
+    if (!otpData || !otpData.verified) {
+      return res.status(403).json({ error: "Please verify your phone number with OTP first" });
+    }
+
+    // Clear the verified OTP after successful submission
+    landingPageOTPs.delete(phone);
 
     const enquiryMessage = service 
       ? `Service: ${service}${message ? '\n' + message : ''}`
