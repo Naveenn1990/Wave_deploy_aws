@@ -16,6 +16,21 @@ const contactSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  city: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  area: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  pincode: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   message: {
     type: String,
     required: true,

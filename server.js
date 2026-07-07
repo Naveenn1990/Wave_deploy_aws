@@ -1087,10 +1087,26 @@ app.post('/api/public/enquiry/verify-otp', async (req, res) => {
 
 app.post('/api/public/enquiry', async (req, res) => {
   try {
-    const { fullName, email, phone, message, service } = req.body;
+    const { fullName, email, phone, message, service, city, area, pincode } = req.body;
     
-    if (!fullName || !phone || !email) {
-      return res.status(400).json({ error: "Name, email and phone are required" });
+    // Required field validation
+    if (!fullName || !phone || !email || !city || !area || !pincode) {
+      return res.status(400).json({ error: "Name, email, phone, city, area and pincode are required" });
+    }
+
+    // Bangalore-only PIN code validation
+    const BANGALORE_PINCODES = [
+      '560026', '560040', '560010', '560100', '560064', '560054',
+      '560085', '560056', '560058', '560002', '560083', '562162',
+      '560074', '560098', '560092', '560068', '560051', '560032',
+      '560029', '577139', '560018', '560073', '560062', '560060',
+      '560026', '560078'
+    ];
+
+    if (!BANGALORE_PINCODES.includes(pincode.trim())) {
+      return res.status(400).json({ 
+        error: "Sorry, we currently provide services only in Bangalore. Your PIN code is not in our service area." 
+      });
     }
 
     // SECURITY CHECK: Verify OTP was completed for this phone number on backend
@@ -1109,7 +1125,10 @@ app.post('/api/public/enquiry', async (req, res) => {
     const newContact = new Contact({ 
       fullName, 
       email, 
-      phone, 
+      phone,
+      city,
+      area,
+      pincode,
       message: enquiryMessage 
     });
     await newContact.save();
@@ -1123,6 +1142,9 @@ app.post('/api/public/enquiry', async (req, res) => {
         fullName,
         email,
         phone,
+        city,
+        area,
+        pincode,
         message: enquiryMessage,
         createdAt: newContact.createdAt,
       });
